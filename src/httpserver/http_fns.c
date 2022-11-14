@@ -1027,7 +1027,7 @@ int http_fn_cfg_name(http_request_t* request) {
 
 int http_fn_cfg_wifi_set(http_request_t* request) {
 	char tmpA[128];
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_wifi_set \r\n");
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_wifi_set \r\n");
 
 	http_setup(request, httpMimeTypeHTML);
 	http_html_start(request, "Saving Wifi");
@@ -1061,7 +1061,7 @@ int http_fn_cfg_wifi_set(http_request_t* request) {
 
 int http_fn_cfg_loglevel_set(http_request_t* request) {
 	char tmpA[128];
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_loglevel_set \r\n");
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_loglevel_set \r\n");
 
 	http_setup(request, httpMimeTypeHTML);
 	http_html_start(request, "Set log level");
@@ -1487,7 +1487,7 @@ int http_fn_ha_discovery(http_request_t* request) {
 	}
 	else if (pwmCount > 0) {
 		if (pwmCount == 4) {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "4 PWM device not yet handled\r\n");
+			ADDLOG_ERROR(LOG_FEATURE_HTTP, "4 PWM device not yet handled\r\n");
 		}
 		else if (pwmCount == 3) {
 			// Enable + RGB control
@@ -2554,7 +2554,7 @@ int http_fn_ota_exec(http_request_t* request) {
 	http_html_start(request, "OTA request");
 	if (http_getArg(request->url, "host", tmpA, sizeof(tmpA))) {
 		hprintf255(request, "<h3>OTA requested for %s!</h3>", tmpA);
-		addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "http_fn_ota_exec: will try to do OTA for %s \r\n", tmpA);
+		ADDLOG_INFO(LOG_FEATURE_HTTP, "http_fn_ota_exec: will try to do OTA for %s \r\n", tmpA);
 #if WINDOWS
 
 #elif PLATFORM_BL602

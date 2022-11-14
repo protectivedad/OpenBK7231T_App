@@ -87,7 +87,7 @@ void HAL_PrintNetworkInfo()
 	struct tls_ethif* tmpethif = tls_netif_get_ethif();
 	char buffer[256];
 	wm_vsnprintf(buffer, 256, "ip=%v,gate=%v,mask=%v,dns=%v\r\n", &tmpethif->ip_addr, &tmpethif->gw, &tmpethif->netmask, &tmpethif->dns1);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, buffer);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, buffer);
 }
 
 int HAL_GetWifiStrength()

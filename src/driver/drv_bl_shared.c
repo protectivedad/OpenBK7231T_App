@@ -221,7 +221,7 @@ int BL09XX_SetupEnergyStatistic(const void *context, const char *cmd, const char
 
     if(Tokenizer_GetArgsCount() < 3) 
     {
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "BL09XX_SetupEnergyStatistic: requires 3 arguments (enable, sample_time, sample_count)\n");
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "BL09XX_SetupEnergyStatistic: requires 3 arguments (enable, sample_time, sample_count)\n");
         return -1;
     }
 
@@ -248,7 +248,7 @@ int BL09XX_SetupEnergyStatistic(const void *context, const char *cmd, const char
     /* process changes */
     if (enable != 0)
     {
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Consumption History enabled\n");
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Consumption History enabled\n");
         /* Enable function */
         energyCounterStatsEnable = true;
         if (energyCounterSampleCount != sample_count)
@@ -259,7 +259,7 @@ int BL09XX_SetupEnergyStatistic(const void *context, const char *cmd, const char
             energyCounterMinutes = NULL;
             energyCounterSampleCount = sample_count;
         }
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Sample Count:    %d\n", energyCounterSampleCount);
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Sample Count:    %d\n", energyCounterSampleCount);
         if (energyCounterSampleInterval != sample_time)
         {
             /* change sample time */            
@@ -277,13 +277,13 @@ int BL09XX_SetupEnergyStatistic(const void *context, const char *cmd, const char
                 memset(energyCounterMinutes, 0, energyCounterSampleCount*sizeof(float));
             }
         }
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Sample Interval: %d\n", energyCounterSampleInterval);
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Sample Interval: %d\n", energyCounterSampleInterval);
 
         energyCounterMinutesStamp = xTaskGetTickCount();
         energyCounterMinutesIndex = 0;
     } else {
         /* Disable Consimption Nistory */
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Consumption History disabled\n");
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Consumption History disabled\n");
         energyCounterStatsEnable = false;
         if (energyCounterMinutes != NULL)
         {
@@ -306,7 +306,7 @@ int BL09XX_SetupConsumptionThreshold(const void *context, const char *cmd, const
 
     if(Tokenizer_GetArgsCount() < 1)
     {
-          addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "BL09XX_SetupConsumptionThreshold: requires argument (threshold)\n");
+          ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "BL09XX_SetupConsumptionThreshold: requires argument (threshold)\n");
           return -1;
     }
     
@@ -317,7 +317,7 @@ int BL09XX_SetupConsumptionThreshold(const void *context, const char *cmd, const
     if (threshold>200.0f)
         threshold = 200.0f;
     changeSavedThresholdEnergy = threshold;
-    addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "ConsumptionThreshold: %1.1f\n", changeSavedThresholdEnergy);
+    ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "ConsumptionThreshold: %1.1f\n", changeSavedThresholdEnergy);
 
     return 0;
 }
@@ -465,7 +465,7 @@ void BL_ProcessUpdate(float voltage, float current, float power)
                 msg = cJSON_PrintUnformatted(root);
                 cJSON_Delete(root);
 
-                addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "JSON Printed: %d bytes\n", strlen(msg));
+                ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "JSON Printed: %d bytes\n", strlen(msg));
 
                 MQTT_PublishMain_StringString(counter_mqttNames[2], msg, 0);
                 stat_updatesSent++;
@@ -617,7 +617,7 @@ void BL_Shared_Init()
         dailyStats[i] = 0;
     }
 
-    addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Read ENERGYMETER status values. sizeof(ENERGY_METERING_DATA)=%d\n", sizeof(ENERGY_METERING_DATA));
+    ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Read ENERGYMETER status values. sizeof(ENERGY_METERING_DATA)=%d\n", sizeof(ENERGY_METERING_DATA));
 
     HAL_GetEnergyMeterStatus(&data);
     energyCounter = data.TotalConsumption;

@@ -111,7 +111,7 @@ cJSON* hass_build_device_node(cJSON* ids) {
 /// @return 
 HassDeviceInfo* hass_init_device_info(ENTITY_TYPE type, int index, char* payload_on, char* payload_off) {
 	HassDeviceInfo* info = os_malloc(sizeof(HassDeviceInfo));
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HASS, "hass_init_device_info=%p", info);
+	ADDLOG_DEBUG(LOG_FEATURE_HASS, "hass_init_device_info=%p", info);
 
 	hass_populate_unique_id(type, index, info->unique_id);
 	hass_populate_device_config_channel(type, info->unique_id, info);
@@ -158,7 +158,7 @@ HassDeviceInfo* hass_init_device_info(ENTITY_TYPE type, int index, char* payload
 	cJSON_AddStringToObject(info->root, "uniq_id", info->unique_id);  //unique_id
 	cJSON_AddNumberToObject(info->root, "qos", 1);
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HASS, "root=%p", info->root);
+	ADDLOG_DEBUG(LOG_FEATURE_HASS, "root=%p", info->root);
 	return info;
 }
 
@@ -210,7 +210,7 @@ HassDeviceInfo* hass_init_light_device_info(ENTITY_TYPE type) {
 		break;
 
 	default:
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HASS, "Unsupported light type %s", type);
+		ADDLOG_ERROR(LOG_FEATURE_HASS, "Unsupported light type %s", type);
 	}
 
 	if ((type == ENTITY_LIGHT_PWMCW) || (type == ENTITY_LIGHT_RGBCW)) {
@@ -285,7 +285,7 @@ char* hass_build_discovery_json(HassDeviceInfo* info) {
 /// @param info 
 void hass_free_device_info(HassDeviceInfo* info) {
 	if (info == NULL) return;
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HASS, "hass_free_device_info \r\n");
+	ADDLOG_DEBUG(LOG_FEATURE_HASS, "hass_free_device_info \r\n");
 
 	if (info->root != NULL) {
 		cJSON_Delete(info->root);

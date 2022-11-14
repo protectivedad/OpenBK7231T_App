@@ -84,19 +84,19 @@ void PIN_SetupPins() {
 	for(i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		PIN_SetPinRoleForPinIndex(i,g_cfg.pins.roles[i]);
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"PIN_SetupPins pins have been set up.\r\n");
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"PIN_SetupPins pins have been set up.\r\n");
 }
 
 int PIN_GetPinRoleForPinIndex(int index) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinRoleForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinRoleForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.roles[index];
 }
 int PIN_GetPinChannelForPinIndex(int index) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinChannelForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannelForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.channels[index];
@@ -134,14 +134,14 @@ int PIN_FindPinIndexForRole(int role, int defaultIndexToReturnIfNotFound) {
 }
 int PIN_GetPinChannel2ForPinIndex(int index) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.channels2[index];
 }
 void RAW_SetPinValue(int index, int iVal){
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "RAW_SetPinValue: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "RAW_SetPinValue: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return;
 	}
 	if (g_enable_pins) {
@@ -154,7 +154,7 @@ void Button_OnPressRelease(int index) {
 }
 void Button_OnInitialPressDown(int index) 
 {
-	//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"%i Button_OnInitialPressDown\r\n", index);
+	//ADDLOG_INFO(LOG_FEATURE_GENERAL,"%i Button_OnInitialPressDown\r\n", index);
 	
 	// so-called SetOption13 - instant reaction to touch instead of waiting for release
 	if(CFG_HasFlag(OBK_FLAG_BTN_INSTANTTOUCH)) {
@@ -184,7 +184,7 @@ void Button_OnInitialPressDown(int index)
 }
 void Button_OnShortClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"%i key_short_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"%i key_short_press\r\n", index);
 	// fire event - button on pin <index> was clicked
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ONCLICK,index);
 	// so-called SetOption13 - instant reaction to touch instead of waiting for release
@@ -215,7 +215,7 @@ void Button_OnShortClick(int index)
 }
 void Button_OnDoubleClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"%i key_double_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"%i key_double_press\r\n", index);
 	if(g_cfg.pins.roles[index] == IOR_Button_ToggleAll || g_cfg.pins.roles[index] == IOR_Button_ToggleAll_n)
 	{
 		CHANNEL_DoSpecialToggleAll();
@@ -231,7 +231,7 @@ void Button_OnDoubleClick(int index)
 	}
 }
 void Button_OnLongPressHold(int index) {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"%i Button_OnLongPressHold\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"%i Button_OnLongPressHold\r\n", index);
 	// fire event - button on pin <index> was held
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ONHOLD,index);
 
@@ -240,14 +240,14 @@ void Button_OnLongPressHold(int index) {
 	}
 }
 void Button_OnLongPressHoldStart(int index) {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"%i Button_OnLongPressHoldStart\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"%i Button_OnLongPressHoldStart\r\n", index);
 	// fire event - button on pin <index> was held
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ONHOLDSTART,index);
 }
 
 bool BTN_ShouldInvert(int index) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return false;
 	}
 	if(g_cfg.pins.roles[index] == IOR_Button_n || g_cfg.pins.roles[index] == IOR_Button_ToggleAll_n||
@@ -387,7 +387,7 @@ void CHANNEL_DoSpecialToggleAll() {
 }
 void PIN_SetPinRoleForPinIndex(int index, int role) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return;
 	}
 #if 0
@@ -630,7 +630,7 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 	EventHandlers_FireEvent(CMD_EVENT_CHANNEL_ONCHANGE,ch);
 	// more advanced events - change FROM value TO value
 	EventHandlers_ProcessVariableChange_Integer(CMD_EVENT_CHANGE_CHANNEL0 + ch, prevValue, iVal);
-	//addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_OnChanged: Channel index %i startChannelValues %i\n\r",ch,g_cfg.startChannelValues[ch]);
+	//ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_OnChanged: Channel index %i startChannelValues %i\n\r",ch,g_cfg.startChannelValues[ch]);
 
 	Channel_SaveInFlashIfNeeded(ch);
 }
@@ -649,7 +649,7 @@ void CFG_ApplyChannelStartValues() {
 }
 int CHANNEL_Get(int ch) {
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return 0;
 	}
 	return g_channelValues[ch];
@@ -677,7 +677,7 @@ void CHANNEL_Set(int ch, int iVal, int iFlags) {
 	}
 	if(ch < 0 || ch >= CHANNEL_MAX) {
 		//if(bMustBeSilent==0) {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Set: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+			ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_Set: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		//}
 		return;
 	}
@@ -685,13 +685,13 @@ void CHANNEL_Set(int ch, int iVal, int iFlags) {
 	if(bForce == 0) {
 		if(prevValue == iVal) {
 			if(bSilent==0) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"No change in channel %i (still set to %i) - ignoring\n\r",ch, prevValue);
+				ADDLOG_INFO(LOG_FEATURE_GENERAL,"No change in channel %i (still set to %i) - ignoring\n\r",ch, prevValue);
 			}
 			return;
 		}
 	}
 	if(bSilent==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"CHANNEL_Set channel %i has changed to %i (flags %i)\n\r",ch,iVal,iFlags);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL,"CHANNEL_Set channel %i has changed to %i (flags %i)\n\r",ch,iVal,iFlags);
 	}
 	g_channelValues[ch] = iVal;
 
@@ -700,7 +700,7 @@ void CHANNEL_Set(int ch, int iVal, int iFlags) {
 void CHANNEL_AddClamped(int ch, int iVal, int min, int max) {
 	int prevValue;
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_AddClamped: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_AddClamped: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return;
 	}
 	prevValue = g_channelValues[ch];
@@ -711,20 +711,20 @@ void CHANNEL_AddClamped(int ch, int iVal, int min, int max) {
 	if(g_channelValues[ch]<min)
 		g_channelValues[ch] = min;
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"CHANNEL_AddClamped channel %i has changed to %i\n\r",ch,g_channelValues[ch]);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"CHANNEL_AddClamped channel %i has changed to %i\n\r",ch,g_channelValues[ch]);
 
 	Channel_OnChanged(ch,prevValue,0);
 }
 void CHANNEL_Add(int ch, int iVal) {
 	int prevValue;
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Add: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_Add: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return;
 	}
 	prevValue = g_channelValues[ch];
 	g_channelValues[ch] = g_channelValues[ch] + iVal;
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"CHANNEL_Add channel %i has changed to %i\n\r",ch,g_channelValues[ch]);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"CHANNEL_Add channel %i has changed to %i\n\r",ch,g_channelValues[ch]);
 
 	Channel_OnChanged(ch,prevValue,0);
 }
@@ -762,7 +762,7 @@ void CHANNEL_Toggle(int ch) {
 		return;
 	}
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Toggle: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_Toggle: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return;
 	}
 	prev = g_channelValues[ch];
@@ -777,7 +777,7 @@ int CHANNEL_HasChannelPinWithRoleOrRole(int ch, int iorType, int iorType2) {
 	int i;
 
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return 0;
 	}
 	for(i = 0; i < PLATFORM_GPIO_MAX; i++) {
@@ -794,7 +794,7 @@ int CHANNEL_HasChannelPinWithRole(int ch, int iorType) {
 	int i;
 
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return 0;
 	}
 	for(i = 0; i < PLATFORM_GPIO_MAX; i++) {
@@ -810,7 +810,7 @@ bool CHANNEL_Check(int ch) {
 		return LED_GetEnableAll();
 	}
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_Check: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_Check: Channel index %i is out of range <0,%i)\n\r",ch,CHANNEL_MAX);
 		return 0;
 	}
 	if (g_channelValues[ch] > 0)
@@ -1063,7 +1063,7 @@ void PIN_ticks(void *param)
 			|| g_cfg.pins.roles[i] == IOR_Button_ToggleAll || g_cfg.pins.roles[i] == IOR_Button_ToggleAll_n
 			|| g_cfg.pins.roles[i] == IOR_Button_NextColor || g_cfg.pins.roles[i] == IOR_Button_NextColor_n
 			|| g_cfg.pins.roles[i] == IOR_Button_NextDimmer || g_cfg.pins.roles[i] == IOR_Button_NextDimmer_n) {
-			//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
+			//ADDLOG_INFO(LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
 			PIN_Input_Handler(i);
 		}
 		else if(g_cfg.pins.roles[i] == IOR_DigitalInput || g_cfg.pins.roles[i] == IOR_DigitalInput_n
@@ -1195,7 +1195,7 @@ static int CMD_setButtonHoldRepeat(const void *context, const char *cmd, const c
 	Tokenizer_TokenizeString(args,0);
 
 	if(Tokenizer_GetArgsCount() < 1) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"This command requires 1 argument - timeRepeat - current %i",
+		ADDLOG_INFO(LOG_FEATURE_GENERAL,"This command requires 1 argument - timeRepeat - current %i",
 			g_cfg.buttonHoldRepeat);
 		return 1;
 	}
@@ -1205,10 +1205,10 @@ static int CMD_setButtonHoldRepeat(const void *context, const char *cmd, const c
 
 	CFG_Save_IfThereArePendingChanges();
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Times set, %i. Config autosaved to flash.",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"Times set, %i. Config autosaved to flash.",
 		 g_cfg.buttonHoldRepeat
 		);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"If something is wrong, you can restore default %i",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"If something is wrong, you can restore default %i",
 		CFG_DEFAULT_BTN_REPEAT);
 	return 0;
 }
@@ -1218,7 +1218,7 @@ static int CMD_SetButtonTimes(const void *context, const char *cmd, const char *
 	Tokenizer_TokenizeString(args,0);
 
 	if(Tokenizer_GetArgsCount() < 3) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"This command requires 3 arguments - timeLong, timeShort, timeRepeat - current %i %i %i",
+		ADDLOG_INFO(LOG_FEATURE_GENERAL,"This command requires 3 arguments - timeLong, timeShort, timeRepeat - current %i %i %i",
 			g_cfg.buttonLongPress, g_cfg.buttonShortPress, g_cfg.buttonHoldRepeat);
 		return 1;
 	}
@@ -1231,10 +1231,10 @@ static int CMD_SetButtonTimes(const void *context, const char *cmd, const char *
 
 	CFG_Save_IfThereArePendingChanges();
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Times set, %i %i %i. Config autosaved to flash.",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"Times set, %i %i %i. Config autosaved to flash.",
 		g_cfg.buttonLongPress, g_cfg.buttonShortPress, g_cfg.buttonHoldRepeat
 		);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"If something is wrong, you can restore defaults - %i %i %i",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"If something is wrong, you can restore defaults - %i %i %i",
 		CFG_DEFAULT_BTN_LONG, CFG_DEFAULT_BTN_SHORT,CFG_DEFAULT_BTN_REPEAT);
 	return 0;
 }
@@ -1243,7 +1243,7 @@ static int CMD_ShowChannelValues(const void *context, const char *cmd, const cha
 
 	for(i = 0; i < CHANNEL_MAX; i++) {
 		if(g_channelValues[i] > 0) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Channel %i value is %i", i, g_channelValues[i]);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL,"Channel %i value is %i", i, g_channelValues[i]);
 		}
 	}
 
@@ -1257,7 +1257,7 @@ static int CMD_SetChannelType(const void *context, const char *cmd, const char *
 	Tokenizer_TokenizeString(args,0);
 
 	if(Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"This command requires 2 arguments");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL,"This command requires 2 arguments");
 		return 1;
 	}
 	channel = Tokenizer_GetArgInteger(0);
@@ -1266,13 +1266,13 @@ static int CMD_SetChannelType(const void *context, const char *cmd, const char *
 	typeCode = CHANNEL_ParseChannelType(type);
 	if(typeCode == ChType_Error) {
 
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Channel %i type not set because %s is not a known type", channel,type);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL,"Channel %i type not set because %s is not a known type", channel,type);
 		return 1;
 	}
 
 	CHANNEL_SetType(channel,typeCode);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Channel %i type changed to %s", channel,type);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"Channel %i type changed to %s", channel,type);
 	return 0;
 }
 
@@ -1318,7 +1318,7 @@ static int showgpi(const void *context, const char *cmd, const char *args, int c
 
 		value |= ((val & 1)<<i);
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"GPIs are 0x%x", value);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,"GPIs are 0x%x", value);
 	return 1;
 }
 

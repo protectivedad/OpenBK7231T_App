@@ -82,7 +82,7 @@ void UART_SendByte(byte b) {
 	bk_send_byte(BK_UART_1, b);
 #elif WINDOWS
 	// STUB - for testing
-    addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU,"%02X", b);
+    ADDLOG_INFO(LOG_FEATURE_TUYAMCU,"%02X", b);
 #else
 
 

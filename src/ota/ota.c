@@ -31,30 +31,30 @@ int init_ota(unsigned int startaddr){
 	  flash_protection_op(FLASH_XTX_16M_SR_WRITE_ENABLE, FLASH_PROTECT_NONE);
     if (startaddr > 0xff000){
         if (sector){
-            addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"aborting OTS, sector already non-null\n");
+            ADDLOG_INFO(LOG_FEATURE_OTA,"aborting OTS, sector already non-null\n");
             return 0;
         }
         sector = os_malloc(SECTOR_SIZE);
         sectorlen = 0;
         addr = startaddr;
-        addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"init OTA, startaddr 0x%x\n", startaddr);
+        ADDLOG_INFO(LOG_FEATURE_OTA,"init OTA, startaddr 0x%x\n", startaddr);
         return 1;
     }
-    addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"aborting OTA, startaddr 0x%x < 0xff000\n", startaddr);
+    ADDLOG_INFO(LOG_FEATURE_OTA,"aborting OTA, startaddr 0x%x < 0xff000\n", startaddr);
     return 0;
 }
 
 void close_ota(){
-    addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"\r\n");
+    ADDLOG_INFO(LOG_FEATURE_OTA,"\r\n");
     if (sectorlen){
-        addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"close OTA, additional 0x%x FF added \n", SECTOR_SIZE - sectorlen);
+        ADDLOG_INFO(LOG_FEATURE_OTA,"close OTA, additional 0x%x FF added \n", SECTOR_SIZE - sectorlen);
         memset(sector+sectorlen, 0xff, SECTOR_SIZE - sectorlen);
         sectorlen = SECTOR_SIZE;
         store_sector(addr, sector);
         addr += 1024;
         sectorlen = 0;
     }
-    addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"close OTA, addr 0x%x\n", addr);
+    ADDLOG_INFO(LOG_FEATURE_OTA,"close OTA, addr 0x%x\n", addr);
 
     os_free(sector);
     sector = (void *)0;
@@ -64,7 +64,7 @@ void close_ota(){
 void add_otadata(unsigned char *data, int len)
 {
     if (!sector) return;
-    //addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"OTA DataRxed start: %02.2x %02.2x len %d\r\n", data[0], data[1], len);
+    //ADDLOG_INFO(LOG_FEATURE_OTA,"OTA DataRxed start: %02.2x %02.2x len %d\r\n", data[0], data[1], len);
     while (len > 0)
     {
         // force it to sleep...  we MUST have some idle task processing
@@ -79,7 +79,7 @@ void add_otadata(unsigned char *data, int len)
             data += lenstore;
             len -= lenstore;
             sectorlen += lenstore;
-            //addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"OTA sector start: %02.2x %02.2x len %d\r\n", sector[0], sector[1], sectorlen);
+            //ADDLOG_INFO(LOG_FEATURE_OTA,"OTA sector start: %02.2x %02.2x len %d\r\n", sector[0], sector[1], sectorlen);
         }
 
         if (sectorlen == SECTOR_SIZE){
@@ -87,7 +87,7 @@ void add_otadata(unsigned char *data, int len)
             addr += SECTOR_SIZE;
             sectorlen = 0;
         } else {
-            //addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"OTA sectorlen 0x%x not yet 0x%x\n", sectorlen, SECTOR_SIZE);
+            //ADDLOG_INFO(LOG_FEATURE_OTA,"OTA sectorlen 0x%x not yet 0x%x\n", sectorlen, SECTOR_SIZE);
             rtos_delay_milliseconds(10);
         }
     }
@@ -96,9 +96,9 @@ void add_otadata(unsigned char *data, int len)
 static void store_sector(unsigned int addr, unsigned char *data){
     //if (!(addr % 0x4000))
     {
-      addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"%x", addr);
+      ADDLOG_INFO(LOG_FEATURE_OTA,"%x", addr);
     }
-    //addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"writing OTA, addr 0x%x\n", addr);
+    //ADDLOG_INFO(LOG_FEATURE_OTA,"writing OTA, addr 0x%x\n", addr);
     flash_ctrl(CMD_FLASH_WRITE_ENABLE, (void *)0);
     flash_ctrl(CMD_FLASH_ERASE_SECTOR, &addr);
     flash_ctrl(CMD_FLASH_WRITE_ENABLE, (void *)0);
@@ -123,7 +123,7 @@ int myhttpclientcallback(httprequest_t* request){
       //init_ota(0xff000);
 
       init_ota(START_ADR_OF_BK_PARTITION_OTA);
-      addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"\r\nmyhttpclientcallback state %d total %d/%d\r\n", request->state, total_bytes, request->client_data.response_content_len);
+      ADDLOG_INFO(LOG_FEATURE_OTA,"\r\nmyhttpclientcallback state %d total %d/%d\r\n", request->state, total_bytes, request->client_data.response_content_len);
       break;
     case 1: // data
       if (request->client_data.response_buf_filled){
@@ -135,9 +135,9 @@ int myhttpclientcallback(httprequest_t* request){
     case 2: // ended, write any remaining bytes to the sector
       close_ota();
       ota_status = -1;
-      addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"\r\nmyhttpclientcallback state %d total %d/%d\r\n", request->state, total_bytes, request->client_data.response_content_len);
+      ADDLOG_INFO(LOG_FEATURE_OTA,"\r\nmyhttpclientcallback state %d total %d/%d\r\n", request->state, total_bytes, request->client_data.response_content_len);
 
-      addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"Rebooting in 1 seconds...");
+      ADDLOG_INFO(LOG_FEATURE_OTA,"Rebooting in 1 seconds...");
 
       // record this OTA
       CFG_IncrementOTACount();
@@ -177,7 +177,7 @@ char *http_buf = (void *)0;
 void otarequest(const char *urlin){
   httprequest_t *request = &httprequest;
   if (request->state == 1){
-    addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"********************http in progress, not starting another\r\n");
+    ADDLOG_INFO(LOG_FEATURE_OTA,"********************http in progress, not starting another\r\n");
     return;
   }
 
@@ -191,7 +191,7 @@ void otarequest(const char *urlin){
   if (http_buf == (void *)0){
     http_buf = os_malloc(BUF_SIZE+1);
     if (http_buf == (void *)0) {
-        addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"startrequest Malloc failed.\r\n");
+        ADDLOG_INFO(LOG_FEATURE_OTA,"startrequest Malloc failed.\r\n");
         return;
     }
     memset(http_buf, 0, BUF_SIZE);

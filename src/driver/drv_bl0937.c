@@ -57,7 +57,7 @@ int BL0937_PowerSet(const void *context, const char *cmd, const char *args, int 
 	float realPower;
 
 	if(args==0||*args==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
 		return 1;
 	}
 	realPower = atof(args);
@@ -69,7 +69,7 @@ int BL0937_PowerSet(const void *context, const char *cmd, const char *args, int 
 	{
 		char dbg[128];
 		snprintf(dbg, sizeof(dbg),"PowerSet: you gave %f, set ref to %f\n", realPower, BL0937_PREF);
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,dbg);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,dbg);
 	}
 	return 0;
 }
@@ -78,7 +78,7 @@ int BL0937_PowerMax(const void *context, const char *cmd, const char *args, int 
     float maxPower;
 
     if(args==0||*args==0) {
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
         return 1;
     }
     maxPower = atof(args);
@@ -90,7 +90,7 @@ int BL0937_PowerMax(const void *context, const char *cmd, const char *args, int 
         {
             char dbg[128];
             snprintf(dbg, sizeof(dbg),"PowerMax: set max to %f\n", BL0937_PMAX);
-            addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,dbg);
+            ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,dbg);
         }
     }
     return 0;
@@ -99,7 +99,7 @@ int BL0937_PowerMax(const void *context, const char *cmd, const char *args, int 
 int BL0937_PowerRef(const void *context, const char *cmd, const char *args, int cmdFlags) {
 
 	if(args==0||*args==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
 		return 1;
 	}
 	BL0937_PREF = atof(args);
@@ -112,7 +112,7 @@ int BL0937_PowerRef(const void *context, const char *cmd, const char *args, int 
 int BL0937_CurrentRef(const void *context, const char *cmd, const char *args, int cmdFlags) {
 
 	if(args==0||*args==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
 		return 1;
 	}
 	BL0937_CREF = atof(args);
@@ -125,7 +125,7 @@ int BL0937_CurrentRef(const void *context, const char *cmd, const char *args, in
 int BL0937_VoltageRef(const void *context, const char *cmd, const char *args, int cmdFlags) {
 
 	if(args==0||*args==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
 		return 1;
 	}
 	BL0937_VREF = atof(args);
@@ -139,7 +139,7 @@ int BL0937_VoltageSet(const void *context, const char *cmd, const char *args, in
 	float realV;
 
 	if(args==0||*args==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
 		return 1;
 	}
 	realV = atof(args);
@@ -151,7 +151,7 @@ int BL0937_VoltageSet(const void *context, const char *cmd, const char *args, in
 	{
 		char dbg[128];
 		snprintf(dbg, sizeof(dbg),"VoltageSet: you gave %f, set ref to %f\n", realV, BL0937_VREF);
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,dbg);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,dbg);
 	}
 
 	return 0;
@@ -160,7 +160,7 @@ int BL0937_CurrentSet(const void *context, const char *cmd, const char *args, in
 	float realI;
 
 	if(args==0||*args==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"This command needs one argument");
 		return 1;
 	}
 	realI = atof(args);
@@ -172,7 +172,7 @@ int BL0937_CurrentSet(const void *context, const char *cmd, const char *args, in
 	{
 		char dbg[128];
 		snprintf(dbg, sizeof(dbg),"CurrentSet: you gave %f, set ref to %f\n", realI, BL0937_CREF);
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,dbg);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,dbg);
 	}
 	return 0;
 }
@@ -255,7 +255,7 @@ void BL0937_RunFrame()
 #endif
 
     pulseStamp = xTaskGetTickCount();
-	//addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"Voltage pulses %i, current %i, power %i\n", res_v, res_c, res_p);
+	//ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"Voltage pulses %i, current %i, power %i\n", res_v, res_c, res_p);
 
 	final_v = res_v * BL0937_VREF;
     final_v *= (float)ticksElapsed;
@@ -276,7 +276,7 @@ void BL0937_RunFrame()
         {
             char dbg[128];
             snprintf(dbg, sizeof(dbg),"Power reading: %f exceeded MAX limit: %f, Last: %f\n", final_p, BL0937_PMAX, last_p);
-            addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, dbg);
+            ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, dbg);
         }
         final_p = last_p;
     } else {
@@ -287,7 +287,7 @@ void BL0937_RunFrame()
 	{
 		char dbg[128];
 		snprintf(dbg, sizeof(dbg),"Voltage %f, current %f, power %f\n", final_v, final_c, final_p);
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,dbg);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,dbg);
 	}
 #endif
 	BL_ProcessUpdate(final_v,final_c,final_p);

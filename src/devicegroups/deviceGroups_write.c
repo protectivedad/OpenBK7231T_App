@@ -6,22 +6,22 @@ void DRV_DGR_Dump(byte *message, int len);
 
 int DGR_BeginWriting(bitMessage_t *msg, const char *groupName, unsigned short sequence, unsigned short flags) {
 	if(MSG_WriteBytes(msg,TASMOTA_DEVICEGROUPS_HEADER,strlen(TASMOTA_DEVICEGROUPS_HEADER))==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_BeginWriting: no space for header\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_BeginWriting: no space for header\n");
 		return 1;
 	}
 
 	if(MSG_WriteString(msg,groupName) <= 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_BeginWriting: no space for group name\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_BeginWriting: no space for group name\n");
 		return 1;
 	}
 
 	if(MSG_WriteU16(msg,sequence) <= 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_BeginWriting: no space for sequence\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_BeginWriting: no space for sequence\n");
 		return 1;
 	}
 
 	if(MSG_WriteU16(msg,flags) <= 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_BeginWriting: no space for flags\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_BeginWriting: no space for flags\n");
 		return 1;
 	}
 	return 0;

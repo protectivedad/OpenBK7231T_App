@@ -32,7 +32,7 @@ void RepeatingEvents_CancelRepeatingEvents(int userID)
 		if(ev->userID == userID) {
 			// mark as finished
 			ev->times = 0;
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"Event with id %i and cmd %s has been canceled\n",ev->userID,ev->command);
+			ADDLOG_INFO(LOG_FEATURE_CMD,"Event with id %i and cmd %s has been canceled\n",ev->userID,ev->command);
 		}
 	}
 
@@ -57,12 +57,12 @@ void RepeatingEvents_AddRepeatingEvent(const char *command, int secondsInterval,
 	// create new
 	ev = malloc(sizeof(repeatingEvent_t));
 	if(ev == 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc new event\n");
+		ADDLOG_INFO(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc new event\n");
 		return;
 	}
 	cmd_copy = strdup(command);
 	if(cmd_copy == 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc command text copy\n");
+		ADDLOG_INFO(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc command text copy\n");
 		free(ev);
 		return;
 	}
@@ -86,7 +86,7 @@ void RepeatingEvents_OnEverySecond() {
 		c_checked++;
 		// debug only check
 		if(cur == cur->next) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: single linked list was broken?\n");
+			ADDLOG_INFO(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: single linked list was broken?\n");
 			cur->next = 0;
 			return;
 		}
@@ -106,7 +106,7 @@ void RepeatingEvents_OnEverySecond() {
 		cur = cur->next;
 	}
 
-	//addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond checked %i events, ran %i\n",c_checked,c_ran);
+	//ADDLOG_INFO(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond checked %i events, ran %i\n",c_checked,c_ran);
 }
 int RepeatingEvents_Cmd_AddRepeatingEvent(const void *context, const char *cmd, const char *args, int cmdFlags) {
 	int interval;
@@ -115,11 +115,11 @@ int RepeatingEvents_Cmd_AddRepeatingEvent(const void *context, const char *cmd, 
 	int userID;
 
 	// linkTuyaMCUOutputToChannel dpID channelID [varType]
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"addRepeatingEvent: will tokenize %s\n",args);
+	ADDLOG_INFO(LOG_FEATURE_CMD,"addRepeatingEvent: will tokenize %s\n",args);
 	Tokenizer_TokenizeString(args,0);
 
 	if(Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"addRepeatingEvent: requires 2 arguments\n");
+		ADDLOG_INFO(LOG_FEATURE_CMD,"addRepeatingEvent: requires 2 arguments\n");
 		return -1;
 	}
 	interval = Tokenizer_GetArgInteger(0);
@@ -132,7 +132,7 @@ int RepeatingEvents_Cmd_AddRepeatingEvent(const void *context, const char *cmd, 
 		cmdToRepeat = Tokenizer_GetArgFrom(2);
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"addRepeatingEvent: interval %i, repeats %i, command [%s]\n",interval,times,cmdToRepeat);
+	ADDLOG_INFO(LOG_FEATURE_CMD,"addRepeatingEvent: interval %i, repeats %i, command [%s]\n",interval,times,cmdToRepeat);
 
 	RepeatingEvents_AddRepeatingEvent(cmdToRepeat,interval, times, userID);
 
@@ -142,16 +142,16 @@ int RepeatingEvents_Cmd_CancelRepeatingEvent(const void *context, const char *cm
 	int userID;
 
 	// linkTuyaMCUOutputToChannel dpID channelID [varType]
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"cancelRepeatingEvent: will tokenize %s\n",args);
+	ADDLOG_INFO(LOG_FEATURE_CMD,"cancelRepeatingEvent: will tokenize %s\n",args);
 	Tokenizer_TokenizeString(args,0);
 
 	if(Tokenizer_GetArgsCount() < 1) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"cancelRepeatingEvent: requires 1 argument\n");
+		ADDLOG_INFO(LOG_FEATURE_CMD,"cancelRepeatingEvent: requires 1 argument\n");
 		return -1;
 	}
 	userID = Tokenizer_GetArgInteger(0);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"cancelRepeatingEvent: will cancel events with id %i\n",userID);
+	ADDLOG_INFO(LOG_FEATURE_CMD,"cancelRepeatingEvent: will cancel events with id %i\n",userID);
 
 	RepeatingEvents_CancelRepeatingEvents(userID);
 

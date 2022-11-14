@@ -413,7 +413,7 @@ bool CFG_HasFlag(int flag) {
 
 void CFG_SetChannelStartupValue(int channelIndex,short newValue) {
 	if(channelIndex < 0 || channelIndex >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
 		return;
 	}
 	if(g_cfg.startChannelValues[channelIndex] != newValue) {
@@ -423,18 +423,18 @@ void CFG_SetChannelStartupValue(int channelIndex,short newValue) {
 }
 short CFG_GetChannelStartupValue(int channelIndex) {
 	if(channelIndex < 0 || channelIndex >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
 		return 0;
 	}
 	return g_cfg.startChannelValues[channelIndex];
 }
 void PIN_SetPinChannelForPinIndex(int index, int ch) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return;
 	}
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Channel index %i out of range <0,%i).",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Channel index %i out of range <0,%i).",ch,CHANNEL_MAX);
 		return;
 	}
 	if(g_cfg.pins.channels[index] != ch) {
@@ -444,7 +444,7 @@ void PIN_SetPinChannelForPinIndex(int index, int ch) {
 }
 void PIN_SetPinChannel2ForPinIndex(int index, int ch) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return;
 	}
 	if(g_cfg.pins.channels2[index] != ch) {
@@ -538,7 +538,7 @@ void CFG_InitAndLoad() {
 	chkSum = CFG_CalcChecksum(&g_cfg);
 	if(g_cfg.ident0 != CFG_IDENT_0 || g_cfg.ident1 != CFG_IDENT_1 || g_cfg.ident2 != CFG_IDENT_2
 		|| chkSum != g_cfg.crc) {
-			addLogAdv(LOG_WARN, LOG_FEATURE_CFG, "CFG_InitAndLoad: Config crc or ident mismatch. Default config will be loaded.");
+			ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Config crc or ident mismatch. Default config will be loaded.");
 		CFG_SetDefaultConfig();
 		// mark as changed
 		g_cfg_pendingChanges ++;
@@ -546,12 +546,12 @@ void CFG_InitAndLoad() {
 #if PLATFORM_XR809
 		WiFI_SetMacAddress(g_cfg.mac);
 #endif
-		addLogAdv(LOG_WARN, LOG_FEATURE_CFG, "CFG_InitAndLoad: Correct config has been loaded with %i changes count.",g_cfg.changeCounter);
+		ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Correct config has been loaded with %i changes count.",g_cfg.changeCounter);
 	}
 
 	// copy shortDeviceName to MQTT Client ID, set version=3
 	if (g_cfg.version<3) {
-		addLogAdv(LOG_WARN, LOG_FEATURE_CFG, "CFG_InitAndLoad: Old config version found, updating to v3.");
+		ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Old config version found, updating to v3.");
 		strcpy_safe(g_cfg.mqtt_clientId, g_cfg.shortDeviceName, sizeof(g_cfg.mqtt_clientId));
 		g_cfg.version = 3;
 		g_cfg_pendingChanges++;

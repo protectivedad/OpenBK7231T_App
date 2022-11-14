@@ -24,11 +24,11 @@ int log_command(const void *context, const char *cmd, const char *args, int cmdF
 #define ADDLOG_DEBUG(x, fmt, ...) addLogAdv(LOG_DEBUG, x, fmt, ##__VA_ARGS__)
 #define ADDLOG_EXTRADEBUG(x, fmt, ...) addLogAdv(LOG_EXTRADEBUG, x, fmt, ##__VA_ARGS__)
 
-#define ADDLOGF_ERROR(fmt, ...) addLogAdv(LOG_ERROR, LOG_FEATURE, fmt, ##__VA_ARGS__)
-#define ADDLOGF_WARN(fmt, ...)  addLogAdv(LOG_WARN, LOG_FEATURE, fmt, ##__VA_ARGS__)
-#define ADDLOGF_INFO(fmt, ...)  addLogAdv(LOG_INFO, LOG_FEATURE, fmt, ##__VA_ARGS__)
-#define ADDLOGF_DEBUG(fmt, ...) addLogAdv(LOG_DEBUG, LOG_FEATURE, fmt, ##__VA_ARGS__)
-#define ADDLOGF_EXTRADEBUG(fmt, ...) addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_ERROR(fmt, ...) ADDLOG_ERROR(LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_WARN(fmt, ...)  ADDLOG_WARN(LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_INFO(fmt, ...)  ADDLOG_INFO(LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_DEBUG(fmt, ...) ADDLOG_DEBUG(LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOGF_EXTRADEBUG(fmt, ...) ADDLOG_EXTRADEBUG(LOG_FEATURE, fmt, ##__VA_ARGS__)
 
 
 extern int loglevel;

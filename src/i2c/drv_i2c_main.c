@@ -53,14 +53,14 @@ int DRV_I2C_Begin(int dev_adr, int busID) {
 	} else if(busID == I2C_BUS_I2C2) {
 		i2c_hdl = ddev_open("i2c2", &status, oflag);
 	} else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_Begin bus type %i not supported!\n",busID);
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_Begin bus type %i not supported!\n",busID);
 		return 1;
 	}
     if(DD_HANDLE_UNVALID == i2c_hdl){
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_Begin ddev_open failed, status %i!\n",status);
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_Begin ddev_open failed, status %i!\n",status);
 		return 1;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_Begin ddev_open OK, adr %i!\n",dev_adr);
+	ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_Begin ddev_open OK, adr %i!\n",dev_adr);
 
     i2c_operater.salve_id = dev_adr;
 
@@ -183,11 +183,11 @@ int DRV_I2C_AddDevice_TC74(const void *context, const char *cmd, const char *arg
 	busType = DRV_I2C_ParseBusType(i2cModuleStr);
 
 	if(DRV_I2C_FindDevice(busType,address)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_TC74: there is already some device on this bus with such addr\n");
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_TC74: there is already some device on this bus with such addr\n");
 		return 1;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_TC74: module %s, address %i, target %i\n", i2cModuleStr, address, targetChannel);
+	ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_TC74: module %s, address %i, target %i\n", i2cModuleStr, address, targetChannel);
 
 	DRV_I2C_AddDevice_TC74_Internal(busType,address,targetChannel);
 
@@ -205,10 +205,10 @@ int DRV_I2C_AddDevice_MCP23017(const void *context, const char *cmd, const char 
 	busType = DRV_I2C_ParseBusType(i2cModuleStr);
 
 	if(DRV_I2C_FindDevice(busType,address)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_MCP23017: there is already some device on this bus with such addr\n");
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_MCP23017: there is already some device on this bus with such addr\n");
 		return 1;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_MCP23017: module %s, address %i\n", i2cModuleStr, address);
+	ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_MCP23017: module %s, address %i\n", i2cModuleStr, address);
 
 
 	DRV_I2C_AddDevice_MCP23017_Internal(busType,address);
@@ -230,10 +230,10 @@ int DRV_I2C_AddDevice_PCF8574(const void *context, const char *cmd, const char *
 	busType = DRV_I2C_ParseBusType(i2cModuleStr);
 
 	if(DRV_I2C_FindDevice(busType,address)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_PCF8574: there is already some device on this bus with such addr\n");
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_PCF8574: there is already some device on this bus with such addr\n");
 		return 1;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_PCF8574: module %s, address %i\n", i2cModuleStr, address);
+	ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_PCF8574: module %s, address %i\n", i2cModuleStr, address);
 
 	lcd_cols = Tokenizer_GetArgInteger(2);
 	lcd_rows = Tokenizer_GetArgInteger(3);
@@ -257,10 +257,10 @@ int DRV_I2C_AddDevice_LCM1602(const void *context, const char *cmd, const char *
 	busType = DRV_I2C_ParseBusType(i2cModuleStr);
 
 	if(DRV_I2C_FindDevice(busType,address)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_LCM1602: there is already some device on this bus with such addr\n");
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_LCM1602: there is already some device on this bus with such addr\n");
 		return 1;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_AddDevice_LCM1602: module %s, address %i\n", i2cModuleStr, address);
+	ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_AddDevice_LCM1602: module %s, address %i\n", i2cModuleStr, address);
 
 	// DRV_I2C_AddDevice_LCM1602_Internal(busType,address);
 
@@ -311,7 +311,7 @@ void DRC_I2C_RunDevice(i2cDevice_t *dev)
 		DRV_I2C_LCD_PCF8574_RunDevice(dev);
 		break;
 	default:
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRC_I2C_RunDevice: error, device of type %i at adr %i not handled\n", dev->type, dev->addr);
+		ADDLOG_INFO(LOG_FEATURE_I2C,"DRC_I2C_RunDevice: error, device of type %i at adr %i not handled\n", dev->type, dev->addr);
 		break;
 
 
@@ -323,7 +323,7 @@ void DRV_I2C_EverySecond()
 
 	cur = g_i2c_devices;
 	while(cur) {
-		//addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_EverySecond: going to run device of type %i with addr %i\n", cur->type, cur->addr);
+		//ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_EverySecond: going to run device of type %i with addr %i\n", cur->type, cur->addr);
 		DRC_I2C_RunDevice(cur);
 		cur = cur->next;
 	}
@@ -342,7 +342,7 @@ void I2C_OnChannelChanged_Device(i2cDevice_t *dev, int channel, int iVal)
 		// not needed
 		break;
 	default:
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"I2C_OnChannelChanged: error, device of type %i at adr %i not handled\n", dev->type, dev->addr);
+		ADDLOG_INFO(LOG_FEATURE_I2C,"I2C_OnChannelChanged: error, device of type %i at adr %i not handled\n", dev->type, dev->addr);
 		break;
 
 
@@ -353,7 +353,7 @@ void I2C_OnChannelChanged(int channel,int iVal) {
 
 	cur = g_i2c_devices;
 	while(cur) {
-		//addLogAdv(LOG_INFO, LOG_FEATURE_I2C,"DRV_I2C_EverySecond: going to run device of type %i with addr %i\n", cur->type, cur->addr);
+		//ADDLOG_INFO(LOG_FEATURE_I2C,"DRV_I2C_EverySecond: going to run device of type %i with addr %i\n", cur->type, cur->addr);
 		I2C_OnChannelChanged_Device(cur,channel,iVal);
 		cur = cur->next;
 	}

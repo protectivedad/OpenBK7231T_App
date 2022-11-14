@@ -275,7 +275,7 @@ int MQTT_RegisterCallback(const char* basetopic, const char* subscriptiontopic, 
 	if (!basetopic || !subscriptiontopic || !callback) {
 		return -1;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT_RegisterCallback called for bT %s subT %s", basetopic, subscriptiontopic);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT_RegisterCallback called for bT %s subT %s", basetopic, subscriptiontopic);
 
 	// find existing to replace
 	for (index = 0; index < numCallbacks; index++) {
@@ -392,7 +392,7 @@ int channelSet(obk_mqtt_request_t* request) {
 	int channel = 0;
 	int iValue = 0;
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "channelSet topic %i with arg %s", request->topic, request->received);
+	ADDLOG_DEBUG(LOG_FEATURE_MQTT, "channelSet topic %i with arg %s", request->topic, request->received);
 
 	// TODO: better
 	while (*p != '/') {
@@ -401,7 +401,7 @@ int channelSet(obk_mqtt_request_t* request) {
 		p++;
 	}
 	p++;
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelSet part topic %s", p);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "channelSet part topic %s", p);
 
 	if ((*p - '0' >= 0) && (*p - '0' <= 9)) {
 		channel = atoi(p);
@@ -410,7 +410,7 @@ int channelSet(obk_mqtt_request_t* request) {
 		channel = -1;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelSet channel %i", channel);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "channelSet channel %i", channel);
 
 	// if channel out of range, stop here.
 	if ((channel < 0) || (channel > 32)) {
@@ -427,7 +427,7 @@ int channelSet(obk_mqtt_request_t* request) {
 
 	// if not /set, then stop here
 	if (strcmp(p, "set")) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelSet NOT 'set'");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "channelSet NOT 'set'");
 		return 0;
 	}
 
@@ -439,7 +439,7 @@ int channelSet(obk_mqtt_request_t* request) {
 	// strncpy does not terminate??!!!!
 	copy[len] = '\0';
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_data_cb data is %s for ch %i\n", copy, channel);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_data_cb data is %s for ch %i\n", copy, channel);
 
 	iValue = atoi((char*)copy);
 	CHANNEL_Set(channel, iValue, 0);
@@ -498,7 +498,7 @@ static void mqtt_pub_request_cb(void* arg, err_t result)
 {
 	if (result != ERR_OK)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish result: %d(%s)\n", result, get_error_name(result));
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish result: %d(%s)\n", result, get_error_name(result));
 		mqtt_publish_errors++;
 	}
 }
@@ -525,7 +525,7 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 	else {
 		if (MQTT_Mutex_Take(500) == 0)
 		{
-			addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "MQTT_PublishTopicToClient: mutex failed for %s=%s\r\n", sChannel, sVal);
+			ADDLOG_ERROR(LOG_FEATURE_MQTT, "MQTT_PublishTopicToClient: mutex failed for %s=%s\r\n", sChannel, sVal);
 			return OBK_PUBLISH_MUTEX_FAIL;
 		}
 	}
@@ -555,10 +555,10 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 		sprintf(pub_topic, "%s/%s%s", sTopic, sChannel, (appendGet == true ? "/get" : ""));
 		if (sVal_len < 128)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publishing val %s to %s retain=%i\n", sVal, pub_topic, retain);
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val %s to %s retain=%i\n", sVal, pub_topic, retain);
 		}
 		else {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publishing val (%d bytes) to %s retain=%i\n", sVal_len, pub_topic, retain);
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val (%d bytes) to %s retain=%i\n", sVal_len, pub_topic, retain);
 		}
 
 		err = mqtt_publish(client, pub_topic, sVal, strlen(sVal), qos, retain, mqtt_pub_request_cb, 0);
@@ -568,14 +568,14 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 		{
 			if (err == ERR_CONN)
 			{
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish err: ERR_CONN aka %d\n", err);
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish err: ERR_CONN aka %d\n", err);
 			}
 			else if (err == ERR_MEM) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish err: ERR_MEM aka %d\n", err);
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish err: ERR_MEM aka %d\n", err);
 				g_memoryErrorsThisSession++;
 			}
 			else {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish err: %d\n", err);
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish err: %d\n", err);
 			}
 			mqtt_publish_errors++;
 			MQTT_Mutex_Free();
@@ -611,7 +611,7 @@ OBK_Publish_Result MQTT_Publish(char* sTopic, char* sChannel, char* sVal, int fl
 }
 
 void MQTT_OBK_Printf(char* s) {
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, s);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, s);
 }
 
 static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t flags)
@@ -627,7 +627,7 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 		g_mqtt_request.received = data;
 		g_mqtt_request.receivedLen = len;
 
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT in topic %s", g_mqtt_request.topic);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT in topic %s", g_mqtt_request.topic);
 		mqtt_received_events++;
 
 		for (i = 0; i < numCallbacks; i++)
@@ -665,7 +665,7 @@ static void mqtt_incoming_publish_cb(void* arg, const char* topic, u32_t tot_len
 			break;
 		}
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_publish_cb topic %s\n", topic);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_publish_cb topic %s\n", topic);
 }
 
 static void
@@ -673,7 +673,7 @@ mqtt_request_cb(void* arg, err_t err)
 {
 	const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT client \"%s\" request cb: err %d\n", client_info->client_id, (int)err);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT client \"%s\" request cb: err %d\n", client_info->client_id, (int)err);
 }
 
 static void mqtt_sub_request_cb(void* arg, err_t result)
@@ -681,7 +681,7 @@ static void mqtt_sub_request_cb(void* arg, err_t result)
 	/* Just print the result code here for simplicity,
 	   normal behaviour would be to take some action if subscribe fails like
 	   notifying user, retry subscribe or disconnect from server */
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Subscribe result: %i\n", result);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "Subscribe result: %i\n", result);
 }
 
 static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection_status_t status)
@@ -693,12 +693,12 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 	const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 	LWIP_UNUSED_ARG(client);
 
-	//   addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client < removed name > connection cb: status %d\n",  (int)status);
-	 //  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);
+	//   ADDLOG_INFO(LOG_FEATURE_MQTT,"MQTT client < removed name > connection cb: status %d\n",  (int)status);
+	 //  ADDLOG_INFO(LOG_FEATURE_MQTT,"MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);
 
 	if (status == MQTT_CONNECT_ACCEPTED)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_connection_cb: Successfully connected\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_connection_cb: Successfully connected\n");
 
 		mqtt_set_inpub_callback(mqtt_client,
 			mqtt_incoming_publish_cb,
@@ -716,10 +716,10 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 						mqtt_request_cb, LWIP_CONST_CAST(void*, client_info),
 						1);
 					if (err != ERR_OK) {
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
 					}
 					else {
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
 					}
 				}
 			}
@@ -730,7 +730,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 		snprintf(tmp, sizeof(tmp), "%s/connected", clientId);
 		err = mqtt_publish(client, tmp, "online", strlen("online"), 2, true, mqtt_pub_request_cb, 0);
 		if (err != ERR_OK) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish err: %d\n", err);
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish err: %d\n", err);
 			if (err == ERR_CONN) {
 				// g_my_reconnect_mqtt_after_time = 5;
 			}
@@ -754,7 +754,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 		//        1);
 	}
 	else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_connection_cb: Disconnected, reason: %d(%s)\n", status, get_callback_error(status));
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_connection_cb: Disconnected, reason: %d(%s)\n", status, get_callback_error(status));
 	}
 }
 
@@ -769,7 +769,7 @@ static void MQTT_do_connect(mqtt_client_t* client)
 	mqtt_host = CFG_GetMQTTHost();
 
 	if (!mqtt_host[0]) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host empty, not starting mqtt\r\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host empty, not starting mqtt\r\n");
 		snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host empty, not starting mqtt");
 		return;
 	}
@@ -779,7 +779,7 @@ static void MQTT_do_connect(mqtt_client_t* client)
 	mqtt_clientID = CFG_GetMQTTClientId();
 	mqtt_port = CFG_GetMQTTPort();
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
 		mqtt_userName,
 		mqtt_pass,
 		mqtt_clientID,
@@ -814,13 +814,13 @@ static void MQTT_do_connect(mqtt_client_t* client)
 		if (hostEntry->h_addr_list && hostEntry->h_addr_list[0]) {
 			int len = hostEntry->h_length;
 			if (len > 4) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host resolves to addr len > 4\r\n");
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host resolves to addr len > 4\r\n");
 				len = 4;
 			}
 			memcpy(&mqtt_ip, hostEntry->h_addr_list[0], len);
 		}
 		else {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host resolves no addresses?\r\n");
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host resolves no addresses?\r\n");
 			snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host resolves no addresses?");
 			return;
 		}
@@ -840,7 +840,7 @@ static void MQTT_do_connect(mqtt_client_t* client)
 		mqtt_connect_result = res;
 		if (res != ERR_OK)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Connect error in mqtt_client_connect - code: %d (%s)\n", res, get_error_name(res));
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Connect error in mqtt_client_connect - code: %d (%s)\n", res, get_error_name(res));
 			snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_client_connect connect failed");
 			if (res == ERR_ISCONN)
 			{
@@ -852,7 +852,7 @@ static void MQTT_do_connect(mqtt_client_t* client)
 		}
 	}
 	else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
 		snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host %s not found by gethostbyname", mqtt_host);
 	}
 }
@@ -886,7 +886,7 @@ OBK_Publish_Result MQTT_ChannelChangeCallback(int channel, int iVal)
 	char channelNameStr[8];
 	char valueStr[16];
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Channel has changed! Publishing change %i with %i \n", channel, iVal);
+	ADDLOG_INFO(LOG_FEATURE_MAIN, "Channel has changed! Publishing change %i with %i \n", channel, iVal);
 
 	sprintf(channelNameStr, "%i", channel);
 	sprintf(valueStr, "%i", iVal);
@@ -901,7 +901,7 @@ OBK_Publish_Result MQTT_ChannelPublish(int channel, int flags)
 
 	iValue = CHANNEL_Get(channel);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Forced channel publish! Publishing val %i to %i", iValue, channel);
+	ADDLOG_INFO(LOG_FEATURE_MAIN, "Forced channel publish! Publishing val %i to %i", iValue, channel);
 
 	sprintf(channelNameStr, "%i", channel);
 	sprintf(valueStr, "%i", iValue);
@@ -925,7 +925,7 @@ OBK_Publish_Result MQTT_PublishCommand(const void* context, const char* cmd, con
 	Tokenizer_TokenizeString(args, 0);
 
 	if (Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
 		return 0;
 	}
 	topic = Tokenizer_GetArg(0);
@@ -1008,7 +1008,7 @@ void MQTT_Test_Tick(void* param)
 					if (err == ERR_OK)
 					{
 						/* Report published */
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, info->value);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, info->value);
 						info->report_published = true;
 						/* Stop timer */
 					}
@@ -1236,7 +1236,7 @@ int MQTT_RunEverySecondUpdate()
 	// reconnect if went into MQTT library ERR_MEM forever loop
 	if (g_memoryErrorsThisSession >= 5)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT will reconnect soon to fix ERR_MEM errors\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT will reconnect soon to fix ERR_MEM errors\n");
 		g_memoryErrorsThisSession = 0;
 		mqtt_reconnect = 5;
 	}
@@ -1258,7 +1258,7 @@ int MQTT_RunEverySecondUpdate()
 
 	if (mqtt_client == 0 || mqtt_client_is_connected(mqtt_client) == 0)
 	{
-		//addLogAdv(LOG_INFO,LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",loopsWithDisconnected);
+		//ADDLOG_INFO(LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",loopsWithDisconnected);
 #if WINDOWS
 #elif PLATFORM_BL602
 #elif PLATFORM_W600 || PLATFORM_W800
@@ -1302,7 +1302,7 @@ int MQTT_RunEverySecondUpdate()
 #elif PLATFORM_BK7231N || PLATFORM_BK7231T
 		if (ota_progress() != -1)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
 			mqtt_disconnect(mqtt_client);
 			return 1;
 		}
@@ -1330,7 +1330,7 @@ int MQTT_RunEverySecondUpdate()
 					publishRes = MQTT_DoItemPublish(g_publishItemIndex);
 					if (publishRes != OBK_PUBLISH_WAS_NOT_REQUIRED)
 					{
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "[g_bPublishAllStatesNow] item %i result %i\n", g_publishItemIndex, publishRes);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, "[g_bPublishAllStatesNow] item %i result %i\n", g_publishItemIndex, publishRes);
 					}
 					// There are several things that can happen now
 					// OBK_PUBLISH_OK - it was required and was published
@@ -1407,14 +1407,14 @@ MqttPublishItem_t* find_queue_reusable_item(MqttPublishItem_t* head) {
 void MQTT_QueuePublishWithCommand(char* topic, char* channel, char* value, int flags, PostPublishCommands command) {
 	MqttPublishItem_t* newItem;
 	if (g_MqttPublishItemsQueued >= MQTT_MAX_QUEUE_SIZE) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Unable to queue! %i items already present\r\n", g_MqttPublishItemsQueued);
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "Unable to queue! %i items already present\r\n", g_MqttPublishItemsQueued);
 		return;
 	}
 
 	if ((strlen(topic) > MQTT_PUBLISH_ITEM_TOPIC_LENGTH) ||
 		(strlen(channel) > MQTT_PUBLISH_ITEM_CHANNEL_LENGTH) ||
 		(strlen(value) > MQTT_PUBLISH_ITEM_VALUE_LENGTH)) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Unable to queue! Topic (%i), channel (%i) or value (%i) exceeds size limit\r\n",
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "Unable to queue! Topic (%i), channel (%i) or value (%i) exceeds size limit\r\n",
 			strlen(topic), strlen(channel), strlen(value));
 		return;
 	}
@@ -1444,7 +1444,7 @@ void MQTT_QueuePublishWithCommand(char* topic, char* channel, char* value, int f
 	newItem->flags = flags;
 
 	g_MqttPublishItemsQueued++;
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Queued topic=%s/%s, %i items in queue", newItem->topic, newItem->channel, g_MqttPublishItemsQueued);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "Queued topic=%s/%s, %i items in queue", newItem->topic, newItem->channel, g_MqttPublishItemsQueued);
 }
 
 /// @brief Queue an entry for publish.
@@ -1467,7 +1467,7 @@ OBK_Publish_Result PublishQueuedItems() {
 
 	//The next actionable item might not be at the front. The queue size is limited to MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE
 	//so this traversal is fast.
-	//addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"PublishQueuedItems g_MqttPublishItemsQueued=%i",g_MqttPublishItemsQueued );
+	//ADDLOG_INFO(LOG_FEATURE_MQTT,"PublishQueuedItems g_MqttPublishItemsQueued=%i",g_MqttPublishItemsQueued );
 	while ((head != NULL) && (count < MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE) && (g_MqttPublishItemsQueued > 0)) {
 		if (!MQTT_QUEUE_ITEM_IS_REUSABLE(head)) {  //Skip reusable entries
 			count++;
@@ -1490,7 +1490,7 @@ OBK_Publish_Result PublishQueuedItems() {
 			}
 		}
 		else {
-			//addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"PublishQueuedItems item skipped reusable");
+			//ADDLOG_INFO(LOG_FEATURE_MQTT,"PublishQueuedItems item skipped reusable");
 		}
 
 		head = head->next;

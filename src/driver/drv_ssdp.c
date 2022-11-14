@@ -69,7 +69,7 @@ static void obkDeviceTick(uint32_t ip){
     for (i = 0; i < MAX_OBK_DEVICES; i++){
         if (obkDevices[i].ip == ip){
             obkDevices[i].timeout = OBK_DEVICE_TIMEOUT;
-            addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"SSDP obk device still present 0x%08x",ip);
+            ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"SSDP obk device still present 0x%08x",ip);
             break;
         }
     }
@@ -79,7 +79,7 @@ static void obkDeviceTick(uint32_t ip){
             if (obkDevices[i].ip == 0){
                 obkDevices[i].ip = ip;
                 obkDevices[i].timeout = OBK_DEVICE_TIMEOUT;
-                addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"SSDP new obk device 0x%08x",ip);
+                ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"SSDP new obk device 0x%08x",ip);
                 break;
             }
         }
@@ -89,7 +89,7 @@ static void obkDeviceTick(uint32_t ip){
 static void obkDeviceList(){
     for (int i = 0; i < MAX_OBK_DEVICES; i++){
         if (obkDevices[i].ip != 0){
-            addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"obk device 0x%08x", obkDevices[i].ip);
+            ADDLOG_INFO(LOG_FEATURE_HTTP,"obk device 0x%08x", obkDevices[i].ip);
         }
     }
 }
@@ -132,7 +132,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
     g_ssdp_socket_receive = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (g_ssdp_socket_receive < 0) {
 		g_ssdp_socket_receive = -1;
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do socket\n");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do socket\n");
         return ;
     }
 
@@ -142,7 +142,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 		iResult = setsockopt(g_ssdp_socket_receive, SOL_SOCKET, SO_BROADCAST, (char *)&flag, sizeof(flag));
 		if (iResult != 0)
 		{
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_BROADCAST\n");
+			ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_BROADCAST\n");
 			close(g_ssdp_socket_receive);
 			g_ssdp_socket_receive = -1;
 			return ;
@@ -156,7 +156,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 				g_ssdp_socket_receive, SOL_SOCKET, SO_REUSEADDR, (char*) &flag, sizeof(flag)
 			) < 0
 		){
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_REUSEADDR\n");
+			ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_REUSEADDR\n");
 			close(g_ssdp_socket_receive);
 			g_ssdp_socket_receive = -1;
 		  return ;
@@ -173,7 +173,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
     // bind to receive address
     //
     if (bind(g_ssdp_socket_receive, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_DGR_CreateSocket_Receive: failed to do bind\n");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_DGR_CreateSocket_Receive: failed to do bind\n");
 		close(g_ssdp_socket_receive);
 		g_ssdp_socket_receive = -1;
         return ;
@@ -198,7 +198,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 		if (
 			iResult < 0
 		){
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt IP_ADD_MEMBERSHIP %i\n",iResult);
+			ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt IP_ADD_MEMBERSHIP %i\n",iResult);
 			close(g_ssdp_socket_receive);
 			g_ssdp_socket_receive = -1;
 			return ;
@@ -207,7 +207,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 
 	lwip_fcntl(g_ssdp_socket_receive, F_SETFL,O_NONBLOCK);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: Socket created, waiting for packets\n");
+	ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: Socket created, waiting for packets\n");
 }
 
 
@@ -236,7 +236,7 @@ static void DRV_SSDP_Send_Advert_To(struct sockaddr_in *addr) {
     const char *myip = HAL_GetMyIPString();
 
 	if (g_ssdp_socket_receive <= 0) {
-    	addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Advert_To: no socket");
+    	ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Advert_To: no socket");
 		return ;
 	}
 
@@ -261,7 +261,7 @@ static void DRV_SSDP_Send_Advert_To(struct sockaddr_in *addr) {
         sizeof(struct sockaddr)
     );
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Advert_To: sent message");
+	ADDLOG_DEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Advert_To: sent message");
 }
 
 
@@ -289,7 +289,7 @@ static void DRV_SSDP_Send_Notify() {
     struct sockaddr_in multicastaddr;
 
     if (g_ssdp_socket_receive <= 0){
-    	addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: no socket");
+    	ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: no socket");
         return;
     }
     // set up destination address
@@ -310,8 +310,8 @@ static void DRV_SSDP_Send_Notify() {
 
     int len = strlen(notify_message);
 
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: space: %d msg:%d", strlen(notify_template) +  100, len);
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: \r\n%s\r\n", notify_message);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: space: %d msg:%d", strlen(notify_template) +  100, len);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: \r\n%s\r\n", notify_message);
 
     // set up destination address
     //
@@ -325,9 +325,9 @@ static void DRV_SSDP_Send_Notify() {
     );
 	
     if (nbytes <= 0){
-	    addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"#### ERROR ##### DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
+	    ADDLOG_INFO(LOG_FEATURE_HTTP,"#### ERROR ##### DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
     } else {
-	    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
+	    ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
     }
 }
 
@@ -380,7 +380,7 @@ static int DRV_SSDP_Service_Http(http_request_t* request){
         http_message = (char *)malloc(http_message_len+1);
     }
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HTTP, "DRV_SSDP_Service_Http");
+	ADDLOG_DEBUG(LOG_FEATURE_HTTP, "DRV_SSDP_Service_Http");
 
     snprintf(http_message, http_message_len, http_reply, 
         freindly_name,
@@ -409,14 +409,14 @@ static int Cmd_obkDeviceList(const void *context, const char *cmd, const char *a
 void DRV_SSDP_Init()
 {
     if (!Main_IsConnectedToWiFi()){
-        addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_Init - no wifi, so await connection");
+        ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Init - no wifi, so await connection");
         DRV_SSDP_Active = 1;
         return;
     }
 
     memset(obkDevices, 0, sizeof(obkDevices));
 
-    addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_Init");
+    ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Init");
     // like "e427ce1a-3e80-43d0-ad6f-89ec42e46363";
     snprintf(g_ssdp_uuid, sizeof(g_ssdp_uuid), "%08x-%04x-%04x-%04x-%04x%08x",
         (unsigned int)rand(), 
@@ -484,16 +484,16 @@ void DRV_SSDP_RunQuickTick() {
     );
     udp_msgbuf[UDP_MSGBUF_LEN] = 0;
     if (nbytes <= 0) {
-        //addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"nothing\n");
+        //ADDLOG_INFO(LOG_FEATURE_HTTP,"nothing\n");
         return ;
     }
     // just so we can terminate for print
     if (nbytes >= UDP_MSGBUF_LEN){
         nbytes = UDP_MSGBUF_LEN-1;
     }
-    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"Received %i bytes from %s",nbytes,inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
+    ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"Received %i bytes from %s",nbytes,inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
     udp_msgbuf[nbytes] = 0;
-    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"data: %s",udp_msgbuf);
+    ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"data: %s",udp_msgbuf);
     udp_msgbuf[nbytes] = '\0';
 
     /* we may get:
@@ -508,7 +508,7 @@ void DRV_SSDP_RunQuickTick() {
     // we SHOULD be a little more specific!!!
     if (!strncmp(udp_msgbuf, "M-SEARCH", 8)){
         // reply with our advert to the sender
-        addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"Is MSEARCH - responding");
+        ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"Is MSEARCH - responding");
         DRV_SSDP_Send_Advert_To(&addr);
     }
 
@@ -523,7 +523,7 @@ void DRV_SSDP_RunQuickTick() {
         if (*p == '\n'){
             p++;
             if (!strncmp(p, "SERVER: OpenBk", 14)){
-                addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"NOTIFY from a peer device");
+                ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"NOTIFY from a peer device");
                 // add the device to the device list, or set timeout to 0
                 obkDeviceTick(*(uint32_t *)(&((struct sockaddr_in *)&addr)->sin_addr));
             }
@@ -534,7 +534,7 @@ void DRV_SSDP_RunQuickTick() {
 
 
 void DRV_SSDP_Shutdown(){
-    addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_Shutdown");
+    ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Shutdown");
     DRV_SSDP_Active = 0;
 
 	if(g_ssdp_socket_receive>=0) {
