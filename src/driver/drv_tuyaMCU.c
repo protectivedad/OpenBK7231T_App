@@ -1938,10 +1938,23 @@ void TuyaMCU_V0_SendDPCacheReply() {
 void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 	int command = value[0];
 	addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU, "0x34 command %i\n", command);
-	// query: 55 AA 03 34 00 01 04 3B
-	// reply: 55 aa 00 34 00 02 04 00 39
-	byte reply[2] = { 0x04, 00 };
-	TuyaMCU_SendCommandWithData(0x34, reply, 2);
+	switch (command)
+	{
+	case 0x04:;
+		// query: 55 AA 03 34 00 01 04 3B
+		// reply: 55 aa 00 34 00 02 04 00 39
+		byte reply[2] = { 0x04, 00 };
+		TuyaMCU_SendCommandWithData(0x34, reply, 2);
+		break;
+	
+	case 0x0B:
+		// TuyaMCU version 3 equivalent packet to version 0 0x08 packet
+		// This packet includes first a DateTime, then DataUnits
+		TuyaMCU_V0_ParseRealTimeWithRecordStorage(value + 2, len - 2, true);
+		break;
+	default:
+		break;
+	}
 }
 void TuyaMCU_ProcessIncoming(const byte* data, int len) {
 	int checkLen;
