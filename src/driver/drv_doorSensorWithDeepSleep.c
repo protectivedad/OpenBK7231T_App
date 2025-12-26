@@ -95,6 +95,7 @@ void DoorDeepSleep_QueueNewEvents() {
 			// PublishQueuedItems(). 
 
 			curr_value = CHANNEL_Get(channel);
+			ADDLOG_DEBUG(LOG_FEATURE_DRV, "DRV_DOORSENSOR : Channel %i, Current Value %i, Last Value %i", channel, curr_value, g_lastEventState);
 			if (curr_value != g_lastEventState) {
 				g_lastEventState = curr_value;
 				sprintf(sValue, "%i", curr_value); // get the value of the channel
