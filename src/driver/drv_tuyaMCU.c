@@ -11,6 +11,9 @@ TuyaMCU version 0, aka low power protocol, documented here:
 https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccessprotocol?id=K95afs9h4tjjh
 */
 
+#include "../obk_config.h"
+#if ENABLE_DRIVER_TUYAMCU
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -2844,4 +2847,5 @@ void TuyaMCU_Init()
 // TP = 0x01    bool    1   Value range: 0x00/0x01.
 // TP = 0x04    enum    1   Enumeration type, ranging from 0 to 255.
 
+#endif // ENABLE_DRIVER_TUYAMCU
 
