@@ -13,6 +13,9 @@
 // copyright Simon Hailes & OpenBeken
 /////////////////////////////////////////////////////////
 
+#include "../obk_config.h"
+#if ENABLE_DRIVER_SSDP
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -597,6 +600,8 @@ void DRV_SSDP_Shutdown(){
         http_message = NULL;
     }
 }
+
+#endif // ENABLE_DRIVER_SSDP
 
 // end public
 ///////////////////////////////////////////////

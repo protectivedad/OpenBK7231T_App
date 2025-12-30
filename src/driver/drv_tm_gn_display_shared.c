@@ -1,3 +1,6 @@
+#include "../obk_config.h"
+#if ENABLE_DRIVER_TMGN
+
 // NOTE: This is my shared driver for 7-segment display drivers.
 // Currently supported:
 // - TM1637
@@ -720,3 +723,5 @@ void TM_GN_Display_SharedInit(tmGnType_t type) {
 	CMD_RegisterCommand("TMGN_SetupButtons", CMD_TMGN_SetupButtons, NULL);
 
 }
+
+#endif // ENABLE_DRIVER_TMGN
