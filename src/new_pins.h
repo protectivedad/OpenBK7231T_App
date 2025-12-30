@@ -1573,12 +1573,14 @@ extern int g_initialPinStates;
 
 void PIN_ticks(void* param);
 
+#if ENABLE_DEEPSLEEP
 void PIN_DeepSleep_SetWakeUpEdge(int pin, byte edgeCode);
 void PIN_DeepSleep_SetAllWakeUpEdges(byte edgeCode);
+void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime);
+#endif
 
 void PIN_set_wifi_led(int value);
 void PIN_AddCommands(void);
-void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime);
 void PIN_SetupPins();
 void PIN_OnReboot();
 void CFG_ClearPins();

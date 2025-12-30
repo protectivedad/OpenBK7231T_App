@@ -515,6 +515,7 @@ static commandResult_t CMD_FullBootTime(const void *context, const char *cmd, co
 commandResult_t CMD_SetChannelEnum(const void *context, const char *cmd,
 	const char *args, int cmdFlags);
 
+#if ENABLE_DEEPSLEEP
 static commandResult_t CMD_PinDeepSleep(const void *context, const char *cmd, const char *args, int cmdFlags){
 
 	Tokenizer_TokenizeString(args, 0); 
@@ -523,6 +524,7 @@ static commandResult_t CMD_PinDeepSleep(const void *context, const char *cmd, co
 	g_bWantPinDeepSleep = 1;
 	return CMD_RES_OK;
 }
+#endif
 void CMD_InitChannelCommands(){
 	//cmddetail:{"name":"SetChannel","args":"[ChannelIndex][ChannelValue]",
 	//cmddetail:"descr":"Sets a raw channel to given value. Relay channels are using 1 and 0 values. PWM channels are within [0,100] range. Do not use this for LED control, because there is a better and more advanced LED driver with dimming and configuration memory (remembers setting after on/off), LED driver commands has 'led_' prefix.",
@@ -584,11 +586,13 @@ void CMD_InitChannelCommands(){
 	//cmddetail:"fn":"CMD_FriendlyName","file":"cmnds/cmd_channels.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("FriendlyName", CMD_FriendlyName, NULL);
+#if ENABLE_DEEPSLEEP
 	//cmddetail:{"name":"PinDeepSleep","args":"[OptionalTimerForWakeup]",
 	//cmddetail:"descr":"Starts a pin deep sleep (deep sleep that can be interrupted by external IO events like a button press). The argument is an optional extra time to wake up also by timer. See [tutorial](https://www.elektroda.com/rtvforum/topic4041971.html)",
 	//cmddetail:"fn":"CMD_PinDeepSleep","file":"cmnds/cmd_channels.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("PinDeepSleep", CMD_PinDeepSleep, NULL);
+#endif
 	//cmddetail:{"name":"FullBootTime","args":"[Value]",
 	//cmddetail:"descr":"Sets time in seconds after which boot is marked as valid. This is related to emergency AP mode which is enabled by powering on/off device 5 times quickly.",
 	//cmddetail:"fn":"CMD_FullBootTime","file":"cmnds/cmd_channels.c","requires":"",
