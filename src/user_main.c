@@ -683,11 +683,13 @@ bool Main_HasFastConnect() {
 	if (CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT)) {
 		return true;
 	}
+#if ENABLE_DRIVER_DOORSENSOR
 	if ((PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep, -1) != -1) ||
 		(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_NoPup, -1) != -1))
 	{
 		return true;
 	}
+#endif
 	return false;
 }
 #if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266
@@ -1362,12 +1364,14 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 			{
 				DRV_StartDriver("Bridge");
 			}
+#if ENABLE_DRIVER_DOORSENSOR
 			if ((PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep, -1) != -1) ||
 				(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_NoPup, -1) != -1) ||
 				(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_pd, -1) != -1))
 			{
 				DRV_StartDriver("DoorSensor");
 			}
+#endif // ENABLE_DRIVER_DOORSENSOR
 			if (PIN_FindPinIndexForRole(IOR_CHT83XX_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_CHT83XX_DAT, -1) != -1) {
 				DRV_StartDriver("CHT83XX");
 			}

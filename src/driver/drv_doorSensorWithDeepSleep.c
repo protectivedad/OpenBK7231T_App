@@ -4,6 +4,9 @@
 // already reported, and with no futher door state changes, device goes to deep sleep 
 // and waits for wakeup from door sensor input state change.
 
+#include "../obk_config.h"
+#if ENABLE_DRIVER_DOORSENSOR
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -174,3 +177,5 @@ void DoorDeepSleep_OnChannelChanged(int ch, int value) {
 		g_emergencyTimeWithNoConnection = 0;
 	}
 }
+
+#endif // ENABLE_DRIVER_DOORSENSOR
