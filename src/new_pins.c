@@ -216,10 +216,13 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 
 	// door input always uses opposite level for wakeup
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep
+		if (
+#if ENABLE_DRIVER_DOORSENSOR
+			g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep
 			|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup
-			|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd
-			|| g_cfg.pins.roles[i] == IOR_DigitalInput
+			|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd ||
+#endif
+			g_cfg.pins.roles[i] == IOR_DigitalInput
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_n
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n) {
@@ -245,16 +248,21 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 			}
 #if PLATFORM_XRADIO
 			int pull = 1;
-			if(g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup
-				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
+			if(
+#if ENABLE_DRIVER_DOORSENSOR
+				g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup ||
+#endif
+				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
 				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n)
 			{
 				pull = 0;
 			}
+#if ENABLE_DRIVER_DOORSENSOR
 			else if(g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd)
 			{
 				pull = 2;
 			}
+#endif
 			SetWUPIO(i, pull, falling);
 #else
 			setGPIActive(i, 1, falling);
@@ -724,11 +732,13 @@ bool BTN_ShouldInvert(int index) {
 		|| role == IOR_SmartButtonForLEDs_n) {
 		return true;
 	}
+#if ENABLE_DRIVER_DOORSENSOR
 	if (CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE)) {
 		if (role == IOR_DoorSensorWithDeepSleep || role == IOR_DoorSensorWithDeepSleep_NoPup || role == IOR_DoorSensorWithDeepSleep_pd) {
 			return true;
 		}
 	}
+#endif
 	return false;
 }
 static uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index) {
@@ -1091,7 +1101,9 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		break;
 		case IOR_DigitalInput_n:
 			falling = 1;
+#if ENABLE_DRIVER_DOORSENSOR
 		case IOR_DoorSensorWithDeepSleep:
+#endif
 		case IOR_DigitalInput:
 		{
 			// add to active inputs
@@ -1102,6 +1114,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			bSampleInitialState = true;
 		}
 		break;
+#if ENABLE_DRIVER_DOORSENSOR
 		case IOR_DoorSensorWithDeepSleep_pd:
 		{
 			// add to active inputs
@@ -1112,9 +1125,12 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			bSampleInitialState = true;
 		}
 		break;
+#endif
 		case IOR_DigitalInput_NoPup_n:
 			falling = 1;
+#if ENABLE_DRIVER_DOORSENSOR
 		case IOR_DoorSensorWithDeepSleep_NoPup:
+#endif
 		case IOR_DigitalInput_NoPup:
 		{
 			// add to active inputs
@@ -1874,8 +1890,10 @@ bool CHANNEL_ShouldBePublished(int ch) {
 				|| role == IOR_ADC || role == IOR_BAT_ADC
 				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || role == IOR_SGP_DAT
 				|| role == IOR_DigitalInput || role == IOR_DigitalInput_n
+#if ENABLE_DRIVER_DOORSENSOR
 				|| role == IOR_DoorSensorWithDeepSleep || role == IOR_DoorSensorWithDeepSleep_NoPup
 				|| role == IOR_DoorSensorWithDeepSleep_pd
+#endif
 				|| IS_PIN_DHT_ROLE(role)
 				|| role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
 				return true;
@@ -2211,11 +2229,15 @@ void PIN_ticks(void* param)
 				//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
 				PIN_Input_Handler(i, t_diff);
 			}
-			else if (g_cfg.pins.roles[i] == IOR_DigitalInput || g_cfg.pins.roles[i] == IOR_DigitalInput_n
-				||
+			else if (
+				g_cfg.pins.roles[i] == IOR_DigitalInput || g_cfg.pins.roles[i] == IOR_DigitalInput_n ||
 				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup || g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n
+#if ENABLE_DRIVER_DOORSENSOR
 				|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep || g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup
-				|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd) {
+				|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd
+#endif
+				)
+			{
 				// read pin digital value (and already invert it if needed)
 				value = PIN_ReadDigitalInputValue_WithInversionIncluded(i);
 
@@ -2608,9 +2630,11 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 		case IOR_DigitalInput_n:
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
+#if ENABLE_DRIVER_DOORSENSOR
 		case IOR_DoorSensorWithDeepSleep:
 		case IOR_DoorSensorWithDeepSleep_NoPup:
 		case IOR_DoorSensorWithDeepSleep_pd:
+#endif
 			if (dInputCount) {
 				(*dInputCount)++;
 			}
@@ -2683,9 +2707,11 @@ int h_isChannelDigitalInput(int tg_ch) {
 		if (role == IOR_DigitalInput || role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
 			return true;
 		}
+#if ENABLE_DRIVER_DOORSENSOR
 		if (role == IOR_DoorSensorWithDeepSleep || role == IOR_DoorSensorWithDeepSleep_NoPup || role == IOR_DoorSensorWithDeepSleep_pd) {
 			return true;
 		}
+#endif
 	}
 	return false;
 }
