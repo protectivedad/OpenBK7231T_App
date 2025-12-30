@@ -1,3 +1,6 @@
+#include "../obk_config.h"
+#if ENABLE_DRIVER_TMGN
+
 // NOTE: qqq
 #include "../new_common.h"
 #include "../new_pins.h"
@@ -16,3 +19,5 @@
 void HD2015_Init() {
 	TM_GN_Display_SharedInit(TMGN_HD2015);
 }
+
+#endif

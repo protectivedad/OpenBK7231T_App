@@ -1,3 +1,6 @@
+#include "../obk_config.h"
+#if ENABLE_DRIVER_DRAWERS
+
 // for full presentation, see related topic:
 // https://www.elektroda.com/rtvforum/topic4054134.html
 #include "../new_common.h"
@@ -172,4 +175,4 @@ void Drawers_QuickTick() {
 	}
 }
 
-
+#endif // ENABLE_DRIVER_DRAWERS

@@ -1,3 +1,7 @@
+
+#include "../obk_config.h"
+#if ENABLE_DRIVER_TMGN
+
 // NOTE: qqq
 #include "../new_common.h"
 #include "../new_pins.h"
@@ -16,3 +20,5 @@
 void TM1637_Init() {
 	TM_GN_Display_SharedInit(TMGN_AUTO);
 }
+
+#endif
