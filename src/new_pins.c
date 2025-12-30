@@ -82,6 +82,7 @@ void FV_UpdateStartupSSIDIfChanged_StoredValue(int assidindex) {
 }
 #endif
 
+#if ENABLE_DEEPSLEEP
 void PIN_DeepSleep_MakeSureEdgesAreAlloced() {
 	int i;
 	if (g_defaultWakeEdge == 0) {
@@ -102,6 +103,7 @@ void PIN_DeepSleep_SetAllWakeUpEdges(byte edgeCode) {
 		g_defaultWakeEdge[i] = edgeCode;
 	}
 }
+#endif // ENABLE_DEEPSLEEP
 typedef enum {
 	BTN_PRESS_DOWN = 0,
 	BTN_PRESS_UP,
@@ -209,6 +211,7 @@ void setGPIActive(int index, int active, int falling) {
 			g_gpio_edge_map[0] &= ~(1 << index);
 	}
 }
+#if ENABLE_DEEPSLEEP
 void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	int i;
 	int value;
@@ -352,6 +355,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	HBN_Mode_Enter(&cfg);
 #endif
 }
+#endif // ENABLE_DEEPSLEEP
 
 
 #ifdef PLATFORM_BEKEN
