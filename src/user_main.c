@@ -1079,8 +1079,10 @@ static int g_wifiLedToggleTime = 0;
 static int g_wifi_ledState = 0;
 unsigned int g_timeMs = 0;
 static uint32_t g_last_time = 0;
+#if ENABLE_DEEPSLEEP
 int g_bWantPinDeepSleep;
 int g_pinDeepSleepWakeUp = 0;
+#endif
 unsigned int g_deltaTimeMS;
 
 
@@ -1088,11 +1090,13 @@ unsigned int g_deltaTimeMS;
 // this is what we do in a qucik tick
 void QuickTick(void* param)
 {
+#if ENABLE_DEEPSLEEP
 	if (g_bWantPinDeepSleep) {
 		g_bWantPinDeepSleep = 0;
 		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
 		return;
 	}
+#endif
 
 #if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
 	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick

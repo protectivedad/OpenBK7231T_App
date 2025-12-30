@@ -330,6 +330,7 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 	g_powersave = (bOn);
 	return CMD_RES_OK;
 }
+#if ENABLE_DEEPSLEEP
 static commandResult_t CMD_DeepSleep(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int timeMS;
 
@@ -403,6 +404,8 @@ static commandResult_t CMD_DeepSleep(const void* context, const char* cmd, const
 
 	return CMD_RES_OK;
 }
+#endif // ENABLE_DEEPSLEEP
+
 #if ENABLE_HA_DISCOVERY
 static commandResult_t CMD_ScheduleHADiscovery(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int delay;
@@ -920,6 +923,7 @@ commandResult_t CMD_IndexRefreshInterval(const void* context, const char* cmd, c
 	g_indexAutoRefreshInterval = Tokenizer_GetArgInteger(0);
 	return CMD_RES_OK;
 }
+#if ENABLE_DEEPSLEEP
 commandResult_t CMD_DeepSleep_SetEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
 
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
@@ -942,7 +946,7 @@ commandResult_t CMD_DeepSleep_SetEdge(const void* context, const char* cmd, cons
 
 	return CMD_RES_OK;
 }
-
+#endif
 #if MQTT_USE_TLS
 static commandResult_t CMD_WebServer(const void* context, const char* cmd, const char* args, int cmdFlags) {	
 	int arg_count;
@@ -1010,11 +1014,13 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_ClearAll","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("clearAll", CMD_ClearAll, NULL);
+#if ENABLE_DEEPSLEEP
 	//cmddetail:{"name":"DeepSleep","args":"[Seconds]",
 	//cmddetail:"descr":"Starts deep sleep for given amount of seconds. Please remember that there is also a separate command, called PinDeepSleep, which is not using a timer, but a GPIO to wake up device.",
 	//cmddetail:"fn":"CMD_DeepSleep","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DeepSleep", CMD_DeepSleep, NULL);
+#endif
 	//cmddetail:{"name":"PowerSave","args":"[Optional 1 or 0, by default 1 is assumed]",
 	//cmddetail:"descr":"Enables dynamic power saving mode on all platforms with the exception of TR6260. On LN882H PowerSave 1 = light sleep and Powersave >1 (eg PowerSave 2) = deeper sleep. On LN882H PowerSave 1 should be used if BL0937 metering is present. On all supported platforms PowerSave 0 can be used to disable power saving.",
 	//cmddetail:"fn":"CMD_PowerSave","file":"cmnds/cmd_main.c","requires":"",
@@ -1062,11 +1068,13 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_OpenAP","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("OpenAP", CMD_OpenAP, NULL);
+#if ENABLE_DEEPSLEEP
 	//cmddetail:{"name":"DSEdge","args":"[edgeCode][optionalPinIndex]",
 	//cmddetail:"descr":"DeepSleep (PinDeepSleep) wake configuration command. 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising. Default is 2. Second argument is optional and allows to set per-pin DSEdge instead of setting it for all pins.",
 	//cmddetail:"fn":"CMD_DeepSleep_SetEdge","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DSEdge", CMD_DeepSleep_SetEdge, NULL);
+#endif
 	//cmddetail:{"name":"SafeMode","args":"[OptionalDelayBeforeRestart]",
 	//cmddetail:"descr":"Forces device reboot into safe mode (open ap with disabled drivers). Argument is a delay to restart in seconds, optional, minimal delay is 1",
 	//cmddetail:"fn":"CMD_SafeMode","file":"cmnds/cmd_main.c","requires":"",
