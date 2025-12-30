@@ -567,8 +567,9 @@ const char* htmlPinRoleNames[] = {
 };
 
 const char* PIN_RoleToString(int role) {
-	return htmlPinRoleNames[role];
+	return htmlPinRoleNames[(role < IOR_Total_Options) ? role : IOR_Total_Options];
 }
+
 int PIN_ParsePinRoleName(const char* name) {
 	int i;
 
