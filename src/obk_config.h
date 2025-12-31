@@ -278,6 +278,8 @@
 #define ENABLE_DRIVER_BATTERY					1
 
 #if PLATFORM_BK7231N || PLATFORM_BEKEN_NEW
+// Default 250ms needs to be in increments of 10ms
+#define OBK_STARTUP_MS_DELAY					250
 // #define ENABLE_DRIVER_PWM_GROUP				1
 #define ENABLE_DRIVER_SM16703P					1
 #define ENABLE_DRIVER_PIXELANIM					1
