@@ -4,6 +4,9 @@
 #ifndef OBK_CONFIG_H
 #define OBK_CONFIG_H
 
+// Default 250ms needs to be in increments of 10ms
+#define OBK_STARTUP_MS_DELAY					250
+
 #define OBK_VARIANT_DEFAULT						0
 #define OBK_VARIANT_BERRY						1
 #define OBK_VARIANT_TUYAMCU						2
