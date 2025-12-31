@@ -204,7 +204,7 @@ void extended_app_waiting_for_launch2()
 	// wait 100ms at the start.
 	// TCP is being setup in a different thread, and there does not seem to be a way to find out if it's complete yet?
 	// so just wait a bit, and then start.
-	int startDelay = 250;
+	int startDelay = OBK_STARTUP_MS_DELAY;
 	bk_printf("\r\ndelaying start\r\n");
 	for(int i = 0; i < startDelay / 10; i++)
 	{
