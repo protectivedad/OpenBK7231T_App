@@ -179,7 +179,7 @@ void DRV_WEMO_Send_Advert_To(int mode, struct sockaddr_in *addr) {
 		useType = "upnp:rootdevice";
 	}
 
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP, "WEMO - sends reply %s",useType);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP, "WEMO - sends reply %s",useType);
 
 	if (buffer_out == 0) {
 		outBufferLen = strlen(g_wemo_msearch) + 256;
@@ -187,7 +187,7 @@ void DRV_WEMO_Send_Advert_To(int mode, struct sockaddr_in *addr) {
 	}
 	snprintf(buffer_out, outBufferLen, g_wemo_msearch, HAL_GetMyIPString(), useType, g_uid, useType);
 
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP, "WEMO - Sending %s", buffer_out);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP, "WEMO - Sending %s", buffer_out);
 	DRV_SSDP_SendReply(addr, buffer_out);
 }
 
