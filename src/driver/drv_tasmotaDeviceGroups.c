@@ -327,7 +327,7 @@ void DRV_DGR_CreateSocket_Receive() {
 
 #if ENABLE_LED_BASIC
 void DRV_DGR_processRGBCW(byte *rgbcw) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR, "DRV_DGR_setFinalRGBCW: %i,%i,%i,%i,%i\n", (int)rgbcw[0], (int)rgbcw[1], (int)rgbcw[2], (int)rgbcw[3], (int)rgbcw[4]);
+	ADDLOG_DEBUG(LOG_FEATURE_DGR, "DRV_DGR_setFinalRGBCW: %i,%i,%i,%i,%i\n", (int)rgbcw[0], (int)rgbcw[1], (int)rgbcw[2], (int)rgbcw[3], (int)rgbcw[4]);
 
 	LED_SetFinalRGBCW(rgbcw);
 }
@@ -337,7 +337,7 @@ void DRV_DGR_processPower(int relayStates, byte relaysCount) {
 	int i;
 	int ch;
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR, "DRV_DGR_processPower: cnt %i, val %i\n", (int)relaysCount, relayStates);
+	ADDLOG_DEBUG(LOG_FEATURE_DGR, "DRV_DGR_processPower: cnt %i, val %i\n", (int)relaysCount, relayStates);
 
 #if ENABLE_LED_BASIC
 	if(PIN_CountPinsWithRoleOrRole(IOR_PWM,IOR_PWM_n) > 0 || LED_IsLedDriverChipRunning()) {
@@ -369,17 +369,17 @@ void DRV_DGR_processPower(int relayStates, byte relaysCount) {
 }
 #if ENABLE_LED_BASIC
 void DRV_DGR_processBrightnessPowerOn(byte brightness) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"DRV_DGR_processBrightnessPowerOn: %i\n",(int)brightness);
+	ADDLOG_DEBUG(LOG_FEATURE_DGR,"DRV_DGR_processBrightnessPowerOn: %i\n",(int)brightness);
 
 	LED_SetDimmer(Val255ToVal100(brightness));
 }
 void DRV_DGR_processLightFixedColor(byte fixedColor) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR, "DRV_DGR_processLightFixedColor: %i\n", (int)fixedColor);
+	ADDLOG_DEBUG(LOG_FEATURE_DGR, "DRV_DGR_processLightFixedColor: %i\n", (int)fixedColor);
 
 	LED_SetColorByIndex(fixedColor);
 }
 void DRV_DGR_processLightBrightness(byte brightness) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"DRV_DGR_processLightBrightness: %i\n",(int)brightness);
+	ADDLOG_DEBUG(LOG_FEATURE_DGR,"DRV_DGR_processLightBrightness: %i\n",(int)brightness);
 
 	LED_SetDimmer(Val255ToVal100(brightness));
 }

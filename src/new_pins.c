@@ -2339,7 +2339,7 @@ void PIN_ticks(void* param)
 	// TODO: not implemented yet - this bit continues polling
 	// for a while after a GPI is fired, so that we can see long press, etc.
 	if (param) {
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_GENERAL, "Pin intr at %d (+%d) (%08lX)", g_time, t_diff, pinvalues[0]);
+		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pin intr at %d (+%d) (%08lX)", g_time, t_diff, pinvalues[0]);
 	}
 #endif
 #endif
@@ -2356,10 +2356,10 @@ void PIN_ticks(void* param)
 #ifdef BEKEN_PIN_GPI_INTERRUPTS
 		PIN_TriggerPoll();
 		if (activepins) {
-			addLogAdv(LOG_DEBUG, LOG_FEATURE_GENERAL, "Pins active at %d (%x)", g_time, pinvalues[0]);
+			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pins active at %d (%x)", g_time, pinvalues[0]);
 		}
 		else {
-			addLogAdv(LOG_DEBUG, LOG_FEATURE_GENERAL, "Pins ->inactive at %d (%x)", g_time, pinvalues[0]);
+			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pins ->inactive at %d (%x)", g_time, pinvalues[0]);
 		}
 #endif
 #endif
@@ -2368,7 +2368,7 @@ void PIN_ticks(void* param)
 	else {
 #ifdef PLATFORM_BEKEN
 #ifdef BEKEN_PIN_GPI_INTERRUPTS
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_GENERAL, "Pins inactive at %d", g_time);
+		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pins inactive at %d", g_time);
 #endif      
 #endif      
 	}
@@ -2781,7 +2781,7 @@ float XJ_MovingAverage_float(float aprevvalue, float aactvalue) {
 	if (movingavg_cnt <= 1) return aactvalue;
 	//if aprevvalue set, calculate simple average value
 	float res = (((movingavg_cnt - 1) * aprevvalue + aactvalue) / movingavg_cnt);
-	//addLogAdv(LOG_DEBUG, LOG_FEATURE_ENERGYMETER, "MovAvg p: %.2f a: %.2f r: %.2f", aprevvalue, aactvalue, res);
+	//ADDLOG_DEBUG(LOG_FEATURE_ENERGYMETER, "MovAvg p: %.2f a: %.2f r: %.2f", aprevvalue, aactvalue, res);
 	return res;
 }
 
@@ -2791,7 +2791,7 @@ int XJ_MovingAverage_int(int aprevvalue, int aactvalue) {
 	if (movingavg_cnt <= 1) return aactvalue;
 	//if aprevvalue set, calculate simple average value
 	int res = (((movingavg_cnt - 1) * aprevvalue + aactvalue) / movingavg_cnt);
-	//addLogAdv(LOG_DEBUG, LOG_FEATURE_ENERGYMETER, "MovAvg p: %i a: %i r: %i", aprevvalue, aactvalue, res);
+	//ADDLOG_DEBUG(LOG_FEATURE_ENERGYMETER, "MovAvg p: %i a: %i r: %i", aprevvalue, aactvalue, res);
 	return res;
 }
 #endif
