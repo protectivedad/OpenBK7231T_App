@@ -22,6 +22,12 @@ void LOG_SetRawSocketCallback(int newFD);
 #define ADDLOG_WARN(x, fmt, ...)  addLogAdv(LOG_WARN, x, fmt, ##__VA_ARGS__)
 #define ADDLOGF_WARN(fmt, ...)  addLogAdv(LOG_WARN, LOG_FEATURE, fmt, ##__VA_ARGS__)
 
+#if OBK_TIMING_LOGGING_ENABLED
+#define ADDLOGF_TIMING(fmt, ...)  addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, fmt, ##__VA_ARGS__)
+#else
+#define ADDLOGF_TIMING(fmt, ...)
+#endif
+
 #if OBK_INFO_LOGGING_ENABLED
 #define ADDLOG_INFO(x, fmt, ...)  addLogAdv(LOG_INFO, x, fmt, ##__VA_ARGS__)
 #define ADDLOGF_INFO(fmt, ...)  addLogAdv(LOG_INFO, LOG_FEATURE, fmt, ##__VA_ARGS__)

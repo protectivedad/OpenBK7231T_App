@@ -7,9 +7,10 @@
 // Default 250ms needs to be in increments of 10ms
 #define OBK_STARTUP_MS_DELAY					250
 
-//#define OBK_INFO_LOGGING_ENABLED				1
-//#define OBK_DEBUG_LOGGING_ENABLED				1
-//#define OBK_EXTRADEBUG_LOGGING_ENABLED			1
+#define OBK_TIMING_LOGGING_ENABLED				1
+#define OBK_INFO_LOGGING_ENABLED				1
+#define OBK_DEBUG_LOGGING_ENABLED				1
+#define OBK_EXTRADEBUG_LOGGING_ENABLED			1
 
 #define OBK_VARIANT_DEFAULT						0
 #define OBK_VARIANT_BERRY						1
