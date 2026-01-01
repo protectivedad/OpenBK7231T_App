@@ -89,7 +89,7 @@ int HAL_UART_Init(int baud, int parity, bool hwflowc, int txOverride, int rxOver
 
 	if(WM_SUCCESS != tls_uart_port_init(used_uart, &uart_opts, 1))
 	{
-		addLogAdv(LOG_ERROR, LOG_FEATURE_DRV, "UART init failed!");
+		ADDLOG_ERROR(LOG_FEATURE_DRV, "UART init failed!");
 		return;
 	}
 	tls_uart_rx_callback_register((u16)used_uart, (s16(*)(u16, void*))obk_uart_rx, NULL);

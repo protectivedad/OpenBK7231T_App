@@ -67,12 +67,12 @@ void RepeatingEvents_AddRepeatingEvent(const char *command, float secondsInterva
 	// create new
 	ev = malloc(sizeof(repeatingEvent_t));
 	if(ev == 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc new event");
+		ADDLOG_ERROR(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc new event");
 		return;
 	}
 	cmd_copy = strdup(command);
 	if(cmd_copy == 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc command text copy");
+		ADDLOG_ERROR(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: failed to malloc command text copy");
 		free(ev);
 		return;
 	}
@@ -133,7 +133,7 @@ void RepeatingEvents_RunUpdate(float deltaTimeSeconds) {
 		c_checked++;
 		// debug only check
 		if(cur == cur->next) {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: single linked list was broken?");
+			ADDLOG_ERROR(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond: single linked list was broken?");
 			cur->next = 0;
 			return;
 		}

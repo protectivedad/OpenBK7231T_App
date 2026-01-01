@@ -323,7 +323,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 //#if SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
 //	esp_deep_sleep_start();
 //#else
-//	addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "%s, doesn't support gpio deep sleep, entering light sleep.", PLATFORM_MCU_NAME);
+//	ADDLOG_ERROR(LOG_FEATURE_GENERAL, "%s, doesn't support gpio deep sleep, entering light sleep.", PLATFORM_MCU_NAME);
 //	delay_ms(10);
 //	esp_sleep_enable_gpio_wakeup();
 //	esp_light_sleep_start();
@@ -430,14 +430,14 @@ void PIN_SetupPins() {
 
 int PIN_GetPinRoleForPinIndex(int index) {
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.roles[index];
 }
 int PIN_GetPinChannelForPinIndex(int index) {
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinChannelForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannelForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.channels[index];
@@ -475,7 +475,7 @@ int PIN_FindPinIndexForRole(int role, int defaultIndexToReturnIfNotFound) {
 }
 int PIN_GetPinChannel2ForPinIndex(int index) {
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.channels2[index];
@@ -505,7 +505,7 @@ int PIN_IOR_NofChan(int test){
 
 void RAW_SetPinValue(int index, int iVal) {
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "RAW_SetPinValue: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "RAW_SetPinValue: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return;
 	}
 	if (g_enable_pins) {
@@ -726,7 +726,7 @@ void Button_OnLongPressHoldStart(int index) {
 bool BTN_ShouldInvert(int index) {
 	int role;
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return false;
 	}
 	role = g_cfg.pins.roles[index];
@@ -942,7 +942,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 	bool bSampleInitialState = false;
 
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return;
 	}
 #if 0
@@ -1351,7 +1351,7 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 	EventHandlers_FireEvent(CMD_EVENT_CHANNEL_ONCHANGE, ch);
 	// more advanced events - change FROM value TO value
 	EventHandlers_ProcessVariableChange_Integer(CMD_EVENT_CHANGE_CHANNEL0 + ch, prevValue, iVal);
-	//addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL,"CHANNEL_OnChanged: Channel index %i startChannelValues %i\n\r",ch,g_cfg.startChannelValues[ch]);
+	//ADDLOG_ERROR(LOG_FEATURE_GENERAL,"CHANNEL_OnChanged: Channel index %i startChannelValues %i\n\r",ch,g_cfg.startChannelValues[ch]);
 
 	Channel_SaveInFlashIfNeeded(ch);
 }
@@ -1560,7 +1560,7 @@ float CHANNEL_GetFinalValue(int channel) {
 }
 float CHANNEL_GetFloat(int ch) {
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return 0;
 	}
 	return g_channelValuesFloats[ch];
@@ -1585,7 +1585,7 @@ int CHANNEL_Get(int ch) {
 		return HAL_FlashVars_GetChannelValue(ch - SPECIAL_CHANNEL_FLASHVARS_FIRST);
 	}
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Get: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return 0;
 	}
 	return g_channelValues[ch];
@@ -1659,7 +1659,7 @@ void CHANNEL_Set_Ex(int ch, int iVal, int iFlags, int ausemovingaverage) {
 	}
 	if (ch < 0 || ch >= CHANNEL_MAX) {
 		//if(bMustBeSilent==0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_Set: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Set: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		//}
 		return;
 	}
@@ -1745,7 +1745,7 @@ void CHANNEL_Add(int ch, int iVal) {
 #if 0
 	int prevValue;
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_Add: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Add: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return;
 	}
 	prevValue = g_channelValues[ch];
@@ -1798,7 +1798,7 @@ void CHANNEL_Toggle(int ch) {
 	}
 #endif
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_Toggle: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Toggle: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return;
 	}
 	prev = g_channelValues[ch];
@@ -1813,7 +1813,7 @@ int CHANNEL_HasChannelPinWithRoleOrRole(int ch, int iorType, int iorType2) {
 	int i;
 
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return 0;
 	}
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
@@ -1830,7 +1830,7 @@ int CHANNEL_HasChannelPinWithRole(int ch, int iorType) {
 	int i;
 
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_HasChannelPinWithRole: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return 0;
 	}
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
@@ -1848,7 +1848,7 @@ bool CHANNEL_Check(int ch) {
 	}
 #endif
 	if (ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "CHANNEL_Check: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Check: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return 0;
 	}
 	if (g_channelValues[ch] > 0)

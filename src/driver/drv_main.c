@@ -1523,12 +1523,12 @@ void DRV_StartDriver(const char* name) {
 #if (ENABLE_DRIVER_DS1820) && (ENABLE_DRIVER_DS1820_FULL)
 			twinrunning=false;
 			if (!stricmp("DS1820", name) && DRV_IsRunning("DS1820_FULL")){
-				addLogAdv(LOG_ERROR, LOG_FEATURE_MAIN, "Drv DS1820_FULL is already loaded - can't start DS1820, too.\n", name);
+				ADDLOG_ERROR(LOG_FEATURE_MAIN, "Drv DS1820_FULL is already loaded - can't start DS1820, too.\n", name);
 				twinrunning=true;
 				break;
 			}
 			if (!stricmp("DS1820_FULL", name) && DRV_IsRunning("DS1820")){
-				addLogAdv(LOG_ERROR, LOG_FEATURE_MAIN, "Drv DS1820 is already loaded - can't start DS1820_FULL, too.\n", name);
+				ADDLOG_ERROR(LOG_FEATURE_MAIN, "Drv DS1820 is already loaded - can't start DS1820_FULL, too.\n", name);
 				twinrunning=true;
 				break;
 			}
