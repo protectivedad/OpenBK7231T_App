@@ -47,7 +47,7 @@ static void console_cb_read(int fd, void* param)
 		{
 			fd_console = fd;
 			buffer[ret] = 0;
-			addLogAdv(LOG_DEBUG, LOG_FEATURE_ENERGYMETER, "BL602 received: %s\n", buffer);
+			ADDLOG_DEBUG(LOG_FEATURE_ENERGYMETER, "BL602 received: %s\n", buffer);
 			for(i = 0; i < ret; i++)
 			{
 				UART_AppendByteToReceiveRingBuffer(buffer[i]);

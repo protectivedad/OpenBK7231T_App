@@ -54,13 +54,13 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 
 	while(MSG_EOF(&msg)==0) {
 		type = MSG_ReadByte(&msg);
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"Next section - %i",type);
+		ADDLOG_DEBUG(LOG_FEATURE_DGR,"Next section - %i",type);
 		if(type == DGR_ITEM_EOL) {
 			bGotEOL = 1;
 		} else if(type < DGR_ITEM_MAX_8BIT) {
 			vals = MSG_ReadByte(&msg);
 			if(type == DGR_ITEM_BRI_POWER_ON) {
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"DGR_ITEM_BRI_POWER_ON: %i",vals);
+				ADDLOG_DEBUG(LOG_FEATURE_DGR,"DGR_ITEM_BRI_POWER_ON: %i",vals);
 				// FORWARD TO PROCESSING BY API
 				if(dev) {
 					if(DGR_IsItemInMask(type, dev->gr.devGroupShare_In)) {
@@ -68,7 +68,7 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 					}
 				}
 			} else if(type == DGR_ITEM_LIGHT_BRI) {
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"DGR_ITEM_LIGHT_BRI: %i",vals);
+				ADDLOG_DEBUG(LOG_FEATURE_DGR,"DGR_ITEM_LIGHT_BRI: %i",vals);
 				// FORWARD TO PROCESSING BY API
 				if(dev) {
 					if(DGR_IsItemInMask(type, dev->gr.devGroupShare_In)) {
@@ -77,7 +77,7 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 				}
 			}
 			else if (type == DGR_ITEM_LIGHT_FIXED_COLOR) {
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR, "DGR_ITEM_LIGHT_FIXED_COLOR: %i", vals);
+				ADDLOG_DEBUG(LOG_FEATURE_DGR, "DGR_ITEM_LIGHT_FIXED_COLOR: %i", vals);
 				// FORWARD TO PROCESSING BY API
 				if (dev) {
 					if (DGR_IsItemInMask(type, dev->gr.devGroupShare_In)) {
@@ -102,15 +102,15 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 					}
 				}
 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"Power event - values %i, numChannels %i, chans=",relayFlags,relaysCnt);
+				ADDLOG_DEBUG(LOG_FEATURE_DGR,"Power event - values %i, numChannels %i, chans=",relayFlags,relaysCnt);
 				for(i = 0; i < relaysCnt; i++) {
 					if(BIT_CHECK(relayFlags,i)) {
-						addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"[ON]");
+						ADDLOG_DEBUG(LOG_FEATURE_DGR,"[ON]");
 					} else {
-						addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"[OFF]");
+						ADDLOG_DEBUG(LOG_FEATURE_DGR,"[OFF]");
 					}
 				}
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"\n");
+				ADDLOG_DEBUG(LOG_FEATURE_DGR,"\n");
 			} else {
 				MSG_SkipBytes(&msg,4);
 			}
@@ -120,7 +120,7 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 			// Gives sLen 4
 			if(type == DGR_ITEM_COMMAND) {
 				const char *cmd = MSG_GetStringPointerAtCurrentPosition(&msg);
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_DGR,"DGR_ITEM_COMMAND: %s",cmd);
+				ADDLOG_DEBUG(LOG_FEATURE_DGR,"DGR_ITEM_COMMAND: %s",cmd);
 			}
 			MSG_SkipBytes(&msg,sLen);
 		} else if(type == DGR_ITEM_LIGHT_CHANNELS) {

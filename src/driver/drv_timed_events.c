@@ -391,7 +391,7 @@ commandResult_t CMD_TIME_AddEvent(const void *context, const char *cmd, const ch
 		dusk2Dawn(&sun_data, sunflags, &hour_b, &minute_b, calc_day_offset(tc.wday, flags));
 		hour = hour_b;
 		minute = minute_b;
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_CMD,"Adding sunflags %2x",sunflags);
+		ADDLOG_DEBUG(LOG_FEATURE_CMD,"Adding sunflags %2x",sunflags);
 	}
 
 	TIME_AddEvent(hour, minute, second, flags, id, sunflags, s);

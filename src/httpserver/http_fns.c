@@ -217,7 +217,7 @@ int http_fn_pmntp(http_request_t* request) {
 	if (http_getArg(request->url, "EPOCH", tmpA, sizeof(tmpA))) {
 		actepoch = (uint32_t)strtoul(tmpA,0,10);
 		TIME_setDeviceTime(actepoch);
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_HTTP,"Set clock to %u! \n",actepoch);	
+		ADDLOG_DEBUG(LOG_FEATURE_HTTP,"Set clock to %u! \n",actepoch);	
 	}
 #if ENABLE_TIME_DST
 	if (! IsDST_initialized()) {
@@ -227,7 +227,7 @@ int http_fn_pmntp(http_request_t* request) {
 		// an offset including the one additional hour of DST  
 		// if we don't handle DST, simply accept this as "offset"
 		TIME_setDeviceTimeOffset(atoi(tmpA));
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_HTTP,"Clock - set g_UTCoffset to %i! \n",
+		ADDLOG_DEBUG(LOG_FEATURE_HTTP,"Clock - set g_UTCoffset to %i! \n",
 			atoi(tmpA));	
 		}
 #if ENABLE_TIME_DST
