@@ -136,7 +136,7 @@ int getLenData(int *len, unsigned char *data, int maxlen){
 		mqtt_rx_buffer_count--;
 	}
 	if (mqtt_rx_buffer_count < 0){
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "MQTT_rx buffer underflow!!!");
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "MQTT_rx buffer underflow!!!");
 		mqtt_rx_buffer_count = 0;
 		mqtt_rx_buffer_tail = mqtt_rx_buffer_head = 0;
 	}
@@ -179,7 +179,7 @@ static void MQTT_Mutex_Free()
 int MQTT_Post_Received(const char *topic, int topiclen, const unsigned char *data, int datalen){
 	MQTT_Mutex_Take(100);
 	if ((MQTT_RX_BUFFER_MAX - 1 - mqtt_rx_buffer_count) < topiclen + datalen + 2 + 2){
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "MQTT_rx buffer overflow for topic %s", topic);
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "MQTT_rx buffer overflow for topic %s", topic);
 	} else {
 		addLenData(topiclen, (unsigned char *)topic);
 		addLenData(datalen, data);
@@ -878,7 +878,7 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 	else {
 		if (MQTT_Mutex_Take(500) == 0)
 		{
-			addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "MQTT_PublishTopicToClient: mutex failed for %s=%s\r\n", sChannel, sVal);
+			ADDLOG_ERROR(LOG_FEATURE_MQTT, "MQTT_PublishTopicToClient: mutex failed for %s=%s\r\n", sChannel, sVal);
 			return OBK_PUBLISH_MUTEX_FAIL;
 		}
 	}
@@ -944,14 +944,14 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 		{
 			if (err == ERR_CONN)
 			{
-				addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Publish err: ERR_CONN aka %d\n", err);
+				ADDLOG_ERROR(LOG_FEATURE_MQTT, "Publish err: ERR_CONN aka %d\n", err);
 			}
 			else if (err == ERR_MEM) {
-				addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Publish err: ERR_MEM aka %d\n", err);
+				ADDLOG_ERROR(LOG_FEATURE_MQTT, "Publish err: ERR_MEM aka %d\n", err);
 				g_memoryErrorsThisSession++;
 			}
 			else {
-				addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Publish err: %d\n", err);
+				ADDLOG_ERROR(LOG_FEATURE_MQTT, "Publish err: %d\n", err);
 			}
 			mqtt_publish_errors++;
 			MQTT_Mutex_Free();
@@ -1107,7 +1107,7 @@ static void mqtt_request_cb(void* arg, err_t err)
 {
 	const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 	if (err != 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "MQTT client \"%s\" request cb: err %d\n", client_info->client_id, (int)err);
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "MQTT client \"%s\" request cb: err %d\n", client_info->client_id, (int)err);
 	}
 }
 
@@ -1172,7 +1172,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 		err = mqtt_publish(client, tmp, "online", strlen("online"), 2, true, mqtt_pub_request_cb, 0);
 		//UNLOCK_TCPIP_CORE();
 		if (err != ERR_OK) {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Publish err: %d\n", err);
+			ADDLOG_ERROR(LOG_FEATURE_MQTT, "Publish err: %d\n", err);
 			if (err == ERR_CONN) {
 				// g_my_reconnect_mqtt_after_time = 5;
 			}
@@ -2419,14 +2419,14 @@ MqttPublishItem_t* find_queue_reusable_item(MqttPublishItem_t* head) {
 void MQTT_QueuePublishWithCommand(const char* topic, const char* channel, const char* value, int flags, PostPublishCommands command) {
 	MqttPublishItem_t* newItem;
 	if (g_MqttPublishItemsQueued >= MQTT_MAX_QUEUE_SIZE) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Unable to queue! %i items already present\r\n", g_MqttPublishItemsQueued);
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "Unable to queue! %i items already present\r\n", g_MqttPublishItemsQueued);
 		return;
 	}
 
 	if ((strlen(topic) > MQTT_PUBLISH_ITEM_TOPIC_LENGTH) ||
 		(strlen(channel) > MQTT_PUBLISH_ITEM_CHANNEL_LENGTH) ||
 		(strlen(value) > MQTT_PUBLISH_ITEM_VALUE_LENGTH)) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "Unable to queue! Topic (%i), channel (%i) or value (%i) exceeds size limit\r\n",
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "Unable to queue! Topic (%i), channel (%i) or value (%i) exceeds size limit\r\n",
 			strlen(topic), strlen(channel), strlen(value));
 		return;
 	}
@@ -2464,7 +2464,7 @@ void MQTT_QueuePublishWithCommand(const char* topic, const char* channel, const 
 void MQTT_InvokeCommandAtEnd(PostPublishCommands command) {
 	MqttPublishItem_t* tail = get_queue_tail(g_MqttPublishQueueHead);
 	if (tail == NULL){
-		addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "InvokeCommandAtEnd invoked but queue is empty");
+		ADDLOG_ERROR(LOG_FEATURE_MQTT, "InvokeCommandAtEnd invoked but queue is empty");
 	}
 	else {
 		tail->command = command;
@@ -2634,7 +2634,7 @@ static void mbedtls_debug_cb(void* ctx, int level, const char* file, int line, c
 		}
 	}
 
-	addLogAdv(LOG_ERROR, LOG_FEATURE_MQTT, "%s:%04d: |%d| %s", basename, line, level, str);
+	ADDLOG_ERROR(LOG_FEATURE_MQTT, "%s:%04d: |%d| %s", basename, line, level, str);
 }
 
 void mbedtls_dump_conf(mbedtls_ssl_config* conf, mbedtls_ssl_context* ssl) {

@@ -487,7 +487,7 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 }
 int TuyaMCU_AppendStateInternal(byte *buffer, int bufferMax, int currentLen, uint8_t id, int8_t type, void* value, int dataLen) {
 	if (currentLen + 4 + dataLen >= bufferMax) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_TUYAMCU, "Tuya buff overflow");
+		ADDLOG_ERROR(LOG_FEATURE_TUYAMCU, "Tuya buff overflow");
 		return 0;
 	}
 	buffer[currentLen + 0] = id;
@@ -990,7 +990,7 @@ void TuyaMCU_SendStateRawFromString(int dpId, const char *args) {
 
 	while (*args) {
 		if (cur >= sizeof(buffer)) {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_TUYAMCU, "Tuya raw buff overflow");
+			ADDLOG_ERROR(LOG_FEATURE_TUYAMCU, "Tuya raw buff overflow");
 			return;
 		}
 		buffer[cur] = CMD_ParseOrExpandHexByte(&args);

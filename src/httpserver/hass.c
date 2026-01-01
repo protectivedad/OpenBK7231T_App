@@ -247,7 +247,7 @@ cJSON* hass_build_device_node(cJSON* ids) {
 //HassDeviceInfo* hass_createFanWithModes(const char *label, const char *stateTopic, const char *command, const char **options, int numOptions) {
 //	HassDeviceInfo* info = hass_init_device_info(HASS_FAN, 0, NULL, NULL, 0);
 //	if (info == NULL) {
-//		addLogAdv(LOG_ERROR, LOG_FEATURE_HASS, "Failed to initialize HassDeviceInfo for fan");
+//		ADDLOG_ERROR(LOG_FEATURE_HASS, "Failed to initialize HassDeviceInfo for fan");
 //		return NULL;
 //	}
 //
@@ -686,7 +686,7 @@ HassDeviceInfo* hass_init_textField_info(int index) {
 HassDeviceInfo* hass_createToggle(const char *label, const char *stateTopic, const char *command) {
 	HassDeviceInfo* info = hass_init_device_info(RELAY, 0, "1", "0", 0, label);
 	if (info == NULL) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HASS, "Failed to initialize HassDeviceInfo for toggle");
+		ADDLOG_ERROR(LOG_FEATURE_HASS, "Failed to initialize HassDeviceInfo for toggle");
 		return NULL;
 	}
 
@@ -768,7 +768,7 @@ HassDeviceInfo* hass_init_light_device_info(ENTITY_TYPE type) {
 		break;
 
 	default:
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HASS, "Unsupported light type %s", type);
+		ADDLOG_ERROR(LOG_FEATURE_HASS, "Unsupported light type %s", type);
 	}
 
 	if ((type == LIGHT_PWMCW) || (type == LIGHT_RGBCW)) {
@@ -1149,12 +1149,12 @@ HassDeviceInfo* hass_init_sensor_device_info(ENTITY_TYPE type, int channel, int 
 /// @return 
 const char* hass_build_discovery_json(HassDeviceInfo* info) {
 	if (info == NULL) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HASS, "ERROR: someone passed NULL pointer to hass_build_discovery_json\r\n");
+		ADDLOG_ERROR(LOG_FEATURE_HASS, "ERROR: someone passed NULL pointer to hass_build_discovery_json\r\n");
 		return "";
 	}
 	int bOk = cJSON_PrintPreallocated(info->root, info->json, HASS_JSON_SIZE, 0);
 	if (bOk == false) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HASS, "ERROR: too long JSON in hass_build_discovery_json\r\n");
+		ADDLOG_ERROR(LOG_FEATURE_HASS, "ERROR: too long JSON in hass_build_discovery_json\r\n");
 		return "";
 	}
 	return info->json;

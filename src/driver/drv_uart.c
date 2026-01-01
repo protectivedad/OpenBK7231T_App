@@ -125,7 +125,7 @@ void UART_AppendByteToReceiveRingBufferEx(int auartindex, int rc) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   if (fuartbuf->g_recvBufSize <= 0) {
       //if someone (uartFakeHex) send data without init, and if flag 26 changes(UART)
-      addLogAdv(LOG_ERROR, LOG_FEATURE_DRV, "UART %i not initialized\n",auartindex);
+      ADDLOG_ERROR(LOG_FEATURE_DRV, "UART %i not initialized\n",auartindex);
       //return;
       UART_InitReceiveRingBufferEx(auartindex,UART_DEFAULT_BUFIZE);
     }
