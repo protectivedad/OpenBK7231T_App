@@ -46,7 +46,7 @@ static void uart_event_task(void* pvParameters)
 				break;
 			case UART_BUFFER_FULL:
 			case UART_FIFO_OVF:
-				addLogAdv(LOG_WARN, LOG_FEATURE_CMD, "%s", event.type == UART_BUFFER_FULL ? "UART_BUFFER_FULL" : "UART_FIFO_OVF");
+				ADDLOG_WARN(LOG_FEATURE_CMD, "%s", event.type == UART_BUFFER_FULL ? "UART_BUFFER_FULL" : "UART_FIFO_OVF");
 				uart_flush_input(uartnum);
 				xQueueReset(uart_queue);
 				break;

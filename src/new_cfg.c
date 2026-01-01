@@ -848,7 +848,7 @@ void CFG_InitAndLoad() {
 	chkSum = CFG_CalcChecksum(&g_cfg);
 	if(g_cfg.ident0 != CFG_IDENT_0 || g_cfg.ident1 != CFG_IDENT_1 || g_cfg.ident2 != CFG_IDENT_2
 		|| chkSum != g_cfg.crc) {
-			addLogAdv(LOG_WARN, LOG_FEATURE_CFG, "CFG_InitAndLoad: Config crc or ident mismatch. Default config will be loaded.");
+			ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Config crc or ident mismatch. Default config will be loaded.");
 		CFG_SetDefaultConfig();
 		// mark as changed
 		g_cfg_pendingChanges ++;
@@ -859,12 +859,12 @@ void CFG_InitAndLoad() {
 		}
 		WiFI_SetMacAddress((char*)g_cfg.mac);
 #endif
-		addLogAdv(LOG_WARN, LOG_FEATURE_CFG, "CFG_InitAndLoad: Correct config has been loaded with %i changes count.",g_cfg.changeCounter);
+		ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Correct config has been loaded with %i changes count.",g_cfg.changeCounter);
 	}
 
 	// copy shortDeviceName to MQTT Client ID, set version=3
 	if (g_cfg.version<3) {
-		addLogAdv(LOG_WARN, LOG_FEATURE_CFG, "CFG_InitAndLoad: Old config version found, updating to v3.");
+		ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Old config version found, updating to v3.");
 		strcpy_safe(g_cfg.mqtt_clientId, g_cfg.shortDeviceName, sizeof(g_cfg.mqtt_clientId));
 		g_cfg_pendingChanges++;
 	}

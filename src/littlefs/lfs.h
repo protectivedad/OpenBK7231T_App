@@ -14,7 +14,7 @@
 
 
 #define LFS_ERROR(y, ...) ADDLOG_ERROR(LOG_FEATURE_LFS, y, ##__VA_ARGS__)
-#define LFS_WARN(y, ...)  addLogAdv(LOG_WARN, LOG_FEATURE_LFS, y, ##__VA_ARGS__)
+#define LFS_WARN(y, ...)  ADDLOG_WARN(LOG_FEATURE_LFS, y, ##__VA_ARGS__)
 #define LFS_TRACE(y, ...)  ADDLOG_DEBUG(LOG_FEATURE_LFS, y, ##__VA_ARGS__)
 #define LFS_DEBUG(y, ...) ADDLOG_DEBUG(LOG_FEATURE_LFS, y, ##__VA_ARGS__)
 
