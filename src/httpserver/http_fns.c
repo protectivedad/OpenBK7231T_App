@@ -1794,7 +1794,7 @@ int http_fn_cmd_tool(http_request_t* request) {
 	poststr(request, "Remember that some commands are added after a restart when a driver is activated. <br>");
 
 	commandLen = http_getArg(request->url, "cmd", tmpA, sizeof(tmpA));
-	addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "http_fn_cmd_tool: len %i",commandLen);
+	ADDLOG_ERROR(LOG_FEATURE_HTTP, "http_fn_cmd_tool: len %i",commandLen);
 	if (commandLen) {
 		poststr(request, "<br>");
 		// all log printfs made by command will be sent also to request
@@ -2047,7 +2047,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	}
 	else if (pwmCount > 0) {
 		if (pwmCount == 4) {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "4 PWM device not yet handled\r\n");
+			ADDLOG_ERROR(LOG_FEATURE_HTTP, "4 PWM device not yet handled\r\n");
 		}
 		else if (pwmCount == 3) {
 			// Enable + RGB control
@@ -2493,7 +2493,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 			poststr(request, NULL);
 		}
 		else {
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "HA discovery: %s\r\n", msg);
+			ADDLOG_ERROR(LOG_FEATURE_HTTP, "HA discovery: %s\r\n", msg);
 		}
 	}
 }
@@ -3387,7 +3387,7 @@ void OTA_RequestDownloadFromHTTP(const char* s) {
 
 	if(ota_get_image(OTA_PROTOCOL_HTTP, s) != OTA_STATUS_OK)
 	{
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "OTA http get image failed");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP, "OTA http get image failed");
 		return;
 	}
 
@@ -3404,7 +3404,7 @@ void OTA_RequestDownloadFromHTTP(const char* s) {
 
 	if(ota_verify_image(verify_type, verify_value) != OTA_STATUS_OK)
 	{
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "OTA http verify image failed");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP, "OTA http verify image failed");
 		return;
 	}
 
@@ -3421,7 +3421,7 @@ void OTA_RequestDownloadFromHTTP(const char* s) {
 	int ret = ota_update_init(ctx, &url, port, &resource, OTA_HTTP);
 	if(ret != 0)
 	{
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "ota_update_init failed");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP, "ota_update_init failed");
 		goto exit;
 	}
 	ret = ota_update_start(ctx);
@@ -3434,7 +3434,7 @@ void OTA_RequestDownloadFromHTTP(const char* s) {
 	}
 exit:
 	ota_update_deinit(ctx);
-	addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "OTA failed");
+	ADDLOG_ERROR(LOG_FEATURE_HTTP, "OTA failed");
 	if(ctx) free(ctx);
 #endif
 }

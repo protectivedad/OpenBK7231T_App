@@ -660,7 +660,7 @@ bool CFG_HasFlag(int flag) {
 
 void CFG_SetChannelStartupValue(int channelIndex,short newValue) {
 	if(channelIndex < 0 || channelIndex >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
 		return;
 	}
 	if(g_cfg.startChannelValues[channelIndex] != newValue) {
@@ -670,18 +670,18 @@ void CFG_SetChannelStartupValue(int channelIndex,short newValue) {
 }
 short CFG_GetChannelStartupValue(int channelIndex) {
 	if(channelIndex < 0 || channelIndex >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "CFG_SetChannelStartupValue: Channel index %i out of range <0,%i).",channelIndex,CHANNEL_MAX);
 		return 0;
 	}
 	return g_cfg.startChannelValues[channelIndex];
 }
 void PIN_SetPinChannelForPinIndex(int index, int ch) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return;
 	}
 	if(ch < 0 || ch >= CHANNEL_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Channel index %i out of range <0,%i).",ch,CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinChannelForPinIndex: Channel index %i out of range <0,%i).",ch,CHANNEL_MAX);
 		return;
 	}
 	if(g_cfg.pins.channels[index] != ch) {
@@ -691,7 +691,7 @@ void PIN_SetPinChannelForPinIndex(int index, int ch) {
 }
 void PIN_SetPinChannel2ForPinIndex(int index, int ch) {
 	if(index < 0 || index >= PLATFORM_GPIO_MAX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).",index,PLATFORM_GPIO_MAX);
 		return;
 	}
 	if(g_cfg.pins.channels2[index] != ch) {
