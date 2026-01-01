@@ -10,7 +10,7 @@ void HAL_UART_SendByte(byte b)
 #if 1
 	printf("%02X", b);
 #endif
-	//addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU,"%02X", b);
+	//ADDLOG_INFO(LOG_FEATURE_TUYAMCU,"%02X", b);
 }
 
 int HAL_UART_Init(int baud, int parity, bool hwflowc, int txOverride, int rxOverride)

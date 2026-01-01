@@ -107,7 +107,7 @@ static void ScaleAndUpdate(bl0942_data_t * data) {
 #else
     BL_ProcessUpdate(voltage, current, power, frequency, energyWh);
 #endif
-    //addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Sensors ix %i v=%.f c=%.f p=%.f e=%.f",
+    //ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Sensors ix %i v=%.f c=%.f p=%.f e=%.f",
     //    adeviceindex, voltage, current, power, frequency, energyWh);
 }
 
@@ -472,7 +472,7 @@ static commandResult_t CMD_BL0942opts(const void* context, const char* cmd, cons
       snprintf(buffer, sizeof(buffer), "UART2");
     }
   }
-  addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "BL0942opts = %i = mode %s", bl0942_opts, buffer);
+  ADDLOG_INFO(LOG_FEATURE_GENERAL, "BL0942opts = %i = mode %s", bl0942_opts, buffer);
   BL_ResetRecivedDataBool();
   return CMD_RES_OK;
 }

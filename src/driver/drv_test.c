@@ -97,25 +97,25 @@ void Test_RunQuickTick(void) {
 	if (g_testCommand != -1) {
 		const char *cmd = g_testCommands[g_testCommand];
 		if (g_testStage == 0) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "[%i/%i] Going to test %s!", g_testCommand, g_numTestCommands, cmd);
+			ADDLOG_INFO(LOG_FEATURE_CMD, "[%i/%i] Going to test %s!", g_testCommand, g_numTestCommands, cmd);
 			g_testStage = 1;
 		}
 		else if(g_testStage == 1) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "[%i/%i] Executing %s...", g_testCommand, g_numTestCommands, cmd);
+			ADDLOG_INFO(LOG_FEATURE_CMD, "[%i/%i] Executing %s...", g_testCommand, g_numTestCommands, cmd);
 			commandResult_t res = CMD_ExecuteCommand(cmd, 0);
 			if (res == CMD_RES_OK)
 			{
-				addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "[%i/%i] Result OK!", g_testCommand, g_numTestCommands);
+				ADDLOG_INFO(LOG_FEATURE_CMD, "[%i/%i] Result OK!", g_testCommand, g_numTestCommands);
 				g_test_ok++;
 			}
 			else {
-				addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "[%i/%i] Result Error %i!", g_testCommand, g_numTestCommands, res);
+				ADDLOG_INFO(LOG_FEATURE_CMD, "[%i/%i] Result Error %i!", g_testCommand, g_numTestCommands, res);
 				g_test_errors++;
 			}
 			g_testStage = 2;
 		}
 		else {
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "[%i/%i] Finished test of %s!", g_testCommand, g_numTestCommands, cmd);
+			ADDLOG_INFO(LOG_FEATURE_CMD, "[%i/%i] Finished test of %s!", g_testCommand, g_numTestCommands, cmd);
 			g_testStage = 0;
 			g_testCommand++;
 			if (g_testCommand >= g_numTestCommands) {

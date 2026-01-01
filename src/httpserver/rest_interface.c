@@ -1420,7 +1420,7 @@ static int http_rest_post_cmd(http_request_t* request) {
 	res = CMD_ExecuteCommand(cmd, COMMAND_FLAG_SOURCE_CONSOLE);
 	reply = CMD_GetResultString(res);
 	if (1) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "[WebApp Cmd '%s' Result] %s", cmd, reply);
+		ADDLOG_INFO(LOG_FEATURE_CMD, "[WebApp Cmd '%s' Result] %s", cmd, reply);
 	}
 	if (res != CMD_RES_OK) {
 		type = "error";

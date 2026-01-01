@@ -75,7 +75,7 @@ void FV_UpdateStartupSSIDIfChanged_StoredValue(int assidindex) {
 	if ((assidindex < 0) && (assidindex > 1)) return;	//only SSID1 (0) and SSID2 (1) allowed
 	int fval = HAL_FlashVars_GetChannelValue(g_StartupSSIDRetainChannel);
 	if (fval == assidindex) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "WiFi unchanged (SSID%i), HAL_FlashVars_SaveChannel skipped", assidindex+1);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "WiFi unchanged (SSID%i), HAL_FlashVars_SaveChannel skipped", assidindex+1);
 		return;	//same value, no update
 	}
 	HAL_FlashVars_SaveChannel(g_StartupSSIDRetainChannel,assidindex);
@@ -180,7 +180,7 @@ void SetWUPIO(int index, int pull, int edge)
 		HAL_PRCM_SetWakeupIOxDebounce(g_pins[index].wakeup, 1);
 #endif
 		HAL_Wakeup_SetIO(g_pins[index].wakeup, !edge, pull);
-		//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Waking up from PA%i, pull: %i, edge: %i", g_pins[index].pin, pull, !edge);
+		//ADDLOG_INFO(LOG_FEATURE_GENERAL, "Waking up from PA%i, pull: %i, edge: %i", g_pins[index].pin, pull, !edge);
 	}
 }
 #endif
@@ -272,7 +272,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 #endif
 		}
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map[0], g_gpio_edge_map[0]);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map[0], g_gpio_edge_map[0]);
 #ifdef PLATFORM_BEKEN_NEW
 	PS_DEEP_CTRL_PARAM params;
 	params.gpio_index_map = g_gpio_index_map[0];
@@ -425,7 +425,7 @@ void PIN_SetupPins() {
 #if ENABLE_LED_BASIC
 	LED_SetStripStateOutputs();
 #endif
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "PIN_SetupPins pins have been set up.\r\n");
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "PIN_SetupPins pins have been set up.\r\n");
 }
 
 int PIN_GetPinRoleForPinIndex(int index) {
@@ -514,7 +514,7 @@ void RAW_SetPinValue(int index, int iVal) {
 }
 void Button_OnPressRelease(int index) {
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was released
@@ -522,10 +522,10 @@ void Button_OnPressRelease(int index) {
 }
 void Button_OnInitialPressDown(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i Button_OnInitialPressDown\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnInitialPressDown\r\n", index);
 
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 
@@ -575,9 +575,9 @@ void Button_OnInitialPressDown(int index)
 }
 void Button_OnShortClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i key_short_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_short_press\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was clicked
@@ -624,9 +624,9 @@ void Button_OnShortClick(int index)
 }
 void Button_OnDoubleClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i key_double_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_double_press\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	if (g_cfg.pins.roles[index] == IOR_Button_ToggleAll || g_cfg.pins.roles[index] == IOR_Button_ToggleAll_n)
@@ -655,9 +655,9 @@ void Button_OnDoubleClick(int index)
 }
 void Button_OnTripleClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i key_triple_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_triple_press\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was 3clicked
@@ -672,9 +672,9 @@ void Button_OnTripleClick(int index)
 }
 void Button_OnQuadrupleClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i key_quadruple_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_quadruple_press\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was 4clicked
@@ -682,18 +682,18 @@ void Button_OnQuadrupleClick(int index)
 }
 void Button_On5xClick(int index)
 {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i key_5x_press\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_5x_press\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was 4clicked
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ON5CLICK, index);
 }
 void Button_OnLongPressHold(int index) {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i Button_OnLongPressHold\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHold\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was held
@@ -714,9 +714,9 @@ void Button_OnLongPressHold(int index) {
 #endif
 }
 void Button_OnLongPressHoldStart(int index) {
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "%i Button_OnLongPressHoldStart\r\n", index);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHoldStart\r\n", index);
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 		return;
 	}
 	// fire event - button on pin <index> was held
@@ -1293,11 +1293,11 @@ void PIN_SetGenericDoubleClickCallback(void (*cb)(int pinIndex)) {
 void Channel_SaveInFlashIfNeeded(int ch) {
 	// save, if marked as save value in flash (-1)
 	if (g_cfg.startChannelValues[ch] == -1) {
-		//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is being saved to flash, state %i", ch, g_channelValues[ch]);
+		//ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is being saved to flash, state %i", ch, g_channelValues[ch]);
 		HAL_FlashVars_SaveChannel(ch, g_channelValues[ch]);
 	}
 	else {
-		//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is not saved to flash, state %i", ch, g_channelValues[ch]);
+		//ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is not saved to flash, state %i", ch, g_channelValues[ch]);
 	}
 }
 static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
@@ -1361,11 +1361,11 @@ void CFG_ApplyChannelStartValues() {
 		iValue = g_cfg.startChannelValues[i];
 		if (iValue == -1) {
 			g_channelValuesFloats[i] = g_channelValues[i] = HAL_FlashVars_GetChannelValue(i);
-			//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Channel %i is being set to REMEMBERED state %i", i, g_channelValues[i]);
+			//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Channel %i is being set to REMEMBERED state %i", i, g_channelValues[i]);
 		}
 		else {
 			g_channelValuesFloats[i] = g_channelValues[i] = iValue;
-			//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Channel %i is being set to constant state %i", i, g_channelValues[i]);
+			//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Channel %i is being set to constant state %i", i, g_channelValues[i]);
 		}
 	}
 	// preload pin values from channels for pin types that look at g_lastValidState
@@ -1383,7 +1383,7 @@ void CFG_ApplyChannelStartValues() {
 #endif
 			iValue = g_cfg.pins.channels[i];
 			g_lastValidState[i] = g_channelValues[iValue];
-			//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Pin %i is being set channel state %i", i, g_channelValues[iValue]);
+			//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Pin %i is being set channel state %i", i, g_channelValues[iValue]);
 		}
 	}
 }
@@ -1667,16 +1667,16 @@ void CHANNEL_Set_Ex(int ch, int iVal, int iFlags, int ausemovingaverage) {
 	if (bForce == 0) {
 		if (prevValue == iVal) {
 			if (bSilent == 0) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "No change in channel %i (still set to %i) - ignoring\n\r", ch, prevValue);
+				ADDLOG_INFO(LOG_FEATURE_GENERAL, "No change in channel %i (still set to %i) - ignoring\n\r", ch, prevValue);
 			}
 			return;
 		}
 	}
 	if (bSilent == 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CHANNEL_Set channel %i has changed to %i (flags %i)\n\r", ch, iVal, iFlags);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "CHANNEL_Set channel %i has changed to %i (flags %i)\n\r", ch, iVal, iFlags);
 	}
 	#ifdef ENABLE_BL_MOVINGAVG
-	//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CHANNEL_Set debug channel %i has changed to %i (flags %i)\n\r", ch, iVal, iFlags);
+	//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CHANNEL_Set debug channel %i has changed to %i (flags %i)\n\r", ch, iVal, iFlags);
 	if (ausemovingaverage) {
 		iVal=XJ_MovingAverage_int(prevValue, iVal);
 	}
@@ -1736,7 +1736,7 @@ void CHANNEL_AddClamped(int ch, int iDelta, int min, int max, int bWrapInsteadOf
 			newVal = min;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, 
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, 
 		"CHANNEL_AddClamped channel %i has changed to %i\n\r", ch, newVal);
 
 	CHANNEL_Set(ch, newVal, 0);
@@ -1751,14 +1751,14 @@ void CHANNEL_Add(int ch, int iVal) {
 	prevValue = g_channelValues[ch];
 	g_channelValues[ch] = g_channelValues[ch] + iVal;
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CHANNEL_Add channel %i has changed to %i\n\r", ch, g_channelValues[ch]);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "CHANNEL_Add channel %i has changed to %i\n\r", ch, g_channelValues[ch]);
 
 	Channel_OnChanged(ch, prevValue, 0);
 #else
 	// we want to support special channel indexes, so it's better to use GET/SET interface
 	// Special channel indexes are used to access things like dimmer, led colors, etc
 	iVal = iVal + CHANNEL_Get(ch);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CHANNEL_Add channel %i has changed to %i\n\r", ch, iVal);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "CHANNEL_Add channel %i has changed to %i\n\r", ch, iVal);
 	CHANNEL_Set(ch, iVal, 0);
 #endif
 }
@@ -2247,7 +2247,7 @@ void PIN_ticks(void* param)
 				|| g_cfg.pins.roles[i] == IOR_Button_NextTemperature || g_cfg.pins.roles[i] == IOR_Button_NextTemperature_n
 				|| g_cfg.pins.roles[i] == IOR_Button_ScriptOnly || g_cfg.pins.roles[i] == IOR_Button_ScriptOnly_n
 				|| g_cfg.pins.roles[i] == IOR_SmartButtonForLEDs || g_cfg.pins.roles[i] == IOR_SmartButtonForLEDs_n) {
-				//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
+				//ADDLOG_INFO(LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
 				PIN_Input_Handler(i, t_diff);
 			}
 			else if (
@@ -2307,7 +2307,7 @@ void PIN_ticks(void* param)
 								CHANNEL_Toggle(g_cfg.pins.channels[i]);
 								EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, i);
 							} else {
-								addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+								ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 							}
 						}
 					} else {
@@ -2323,7 +2323,7 @@ void PIN_ticks(void* param)
 								CHANNEL_Toggle(g_cfg.pins.channels[i]);
 								EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, i);
 							} else {
-								addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Child lock!");
+								ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 							}
 						}
 					} else {
@@ -2473,7 +2473,7 @@ static commandResult_t CMD_setButtonHoldRepeat(const void* context, const char* 
 	Tokenizer_TokenizeString(args, 0);
 
 	if (Tokenizer_GetArgsCount() < 1) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "This command requires 1 argument - timeRepeat - current %i",
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "This command requires 1 argument - timeRepeat - current %i",
 			g_cfg.buttonHoldRepeat);
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
@@ -2483,10 +2483,10 @@ static commandResult_t CMD_setButtonHoldRepeat(const void* context, const char* 
 
 	CFG_Save_IfThereArePendingChanges();
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Times set, %i. Config autosaved to flash.",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Times set, %i. Config autosaved to flash.",
 		g_cfg.buttonHoldRepeat
 	);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "If something is wrong, you can restore default %i",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "If something is wrong, you can restore default %i",
 		CFG_DEFAULT_BTN_REPEAT);
 	return CMD_RES_OK;
 }
@@ -2498,7 +2498,7 @@ static commandResult_t CMD_SetButtonTimes(const void* context, const char* cmd, 
 	Tokenizer_TokenizeString(args, 0);
 
 	if (Tokenizer_GetArgsCount() < 3) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "This command requires 3 arguments - timeLong, timeShort, timeRepeat - current %i %i %i",
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "This command requires 3 arguments - timeLong, timeShort, timeRepeat - current %i %i %i",
 			g_cfg.buttonLongPress, g_cfg.buttonShortPress, g_cfg.buttonHoldRepeat);
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
@@ -2511,10 +2511,10 @@ static commandResult_t CMD_SetButtonTimes(const void* context, const char* cmd, 
 
 	CFG_Save_IfThereArePendingChanges();
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Times set, %i %i %i. Config autosaved to flash.",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Times set, %i %i %i. Config autosaved to flash.",
 		g_cfg.buttonLongPress, g_cfg.buttonShortPress, g_cfg.buttonHoldRepeat
 	);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "If something is wrong, you can restore defaults - %i %i %i",
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "If something is wrong, you can restore defaults - %i %i %i",
 		CFG_DEFAULT_BTN_LONG, CFG_DEFAULT_BTN_SHORT, CFG_DEFAULT_BTN_REPEAT);
 	return 0;
 }
@@ -2523,7 +2523,7 @@ static commandResult_t CMD_ShowChannelValues(const void* context, const char* cm
 
 	for (i = 0; i < CHANNEL_MAX; i++) {
 		if (g_channelValues[i] > 0) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Channel %i value is %i", i, g_channelValues[i]);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel %i value is %i", i, g_channelValues[i]);
 		}
 	}
 
@@ -2537,7 +2537,7 @@ static commandResult_t CMD_SetChannelType(const void* context, const char* cmd, 
 	Tokenizer_TokenizeString(args, 0);
 
 	if (Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "This command requires 2 arguments");
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "This command requires 2 arguments");
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	channel = Tokenizer_GetArgInteger(0);
@@ -2546,13 +2546,13 @@ static commandResult_t CMD_SetChannelType(const void* context, const char* cmd, 
 	typeCode = CHANNEL_ParseChannelType(type);
 	if (typeCode == ChType_Error) {
 
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Channel %i type not set because %s is not a known type", channel, type);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel %i type not set because %s is not a known type", channel, type);
 		return CMD_RES_BAD_ARGUMENT;
 	}
 
 	CHANNEL_SetType(channel, typeCode);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Channel %i type changed to %s", channel, type);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel %i type changed to %s", channel, type);
 	return CMD_RES_OK;
 }
 #if ALLOW_SSID2
@@ -2564,14 +2564,14 @@ static commandResult_t CMD_setStartupSSIDChannel(const void* context, const char
 	if (Tokenizer_GetArgsCount() >= 1) {
 		int fval = Tokenizer_GetArgInteger(0);
 		if ((fval < -1) || (fval >= MAX_RETAIN_CHANNELS - 1)) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSIDChannel value error: %i Allowed values (-1, 0..%i)", fval, MAX_RETAIN_CHANNELS - 1);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSIDChannel value error: %i Allowed values (-1, 0..%i)", fval, MAX_RETAIN_CHANNELS - 1);
 			return CMD_RES_BAD_ARGUMENT;
 		}
 		g_StartupSSIDRetainChannel = fval;
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSIDChannel changed to %i", g_StartupSSIDRetainChannel);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSIDChannel changed to %i", g_StartupSSIDRetainChannel);
 	}
 	else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSIDChannel is %i", g_StartupSSIDRetainChannel);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSIDChannel is %i", g_StartupSSIDRetainChannel);
 	}
 	return CMD_RES_OK;
 }
@@ -2586,21 +2586,21 @@ static commandResult_t CMD_setStartupSSID(const void* context, const char* cmd, 
 	if (Tokenizer_GetArgsCount() >= 1) {
 		int fval = Tokenizer_GetArgInteger(0);
 		if ((fval < 0) || (fval >1)) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSID value error: %i Allowed values (0, 1)", fval);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSID value error: %i Allowed values (0, 1)", fval);
 			return CMD_RES_BAD_ARGUMENT;
 		}
 		if (g_StartupSSIDRetainChannel<0) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "Cannot set StartupSSID, StartupSSIDChannel is not set.");
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "Cannot set StartupSSID, StartupSSIDChannel is not set.");
 			return CMD_RES_BAD_ARGUMENT;
 		}
 		if (!(fval==fold)) {
 			FV_UpdateStartupSSIDIfChanged_StoredValue(fval);//update flash only when changed
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSID changed to %i", fval);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSID changed to %i", fval);
 		} else {
-			addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSID unchanged %i", fval);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSID unchanged %i", fval);
 		}
 	} else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "StartupSSID is %i", fold);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "StartupSSID is %i", fold);
 	}
 	return CMD_RES_OK;
 }
@@ -2751,7 +2751,7 @@ static commandResult_t showgpi(const void* context, const char* cmd, const char*
 		else
 			value[0] |= ((val & 1) << i);
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "GPIs are 0x%08lX%08lX", value[1], value[0]);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "GPIs are 0x%08lX%08lX", value[1], value[0]);
 	return CMD_RES_OK;
 }
 
@@ -2770,7 +2770,7 @@ static commandResult_t CMD_setMovingAvg(const void* context, const char* cmd,
 			CMD_GetResultString(CMD_RES_BAD_ARGUMENT));
 		return CMD_RES_BAD_ARGUMENT;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "MovingAvg=%i", fval);	
+	ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "MovingAvg=%i", fval);	
 	movingavg_cnt = fval;
 	return CMD_RES_OK;
 }

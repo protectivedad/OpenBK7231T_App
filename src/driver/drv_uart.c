@@ -170,7 +170,7 @@ void UART_SendByte(byte b) {
 
 commandResult_t CMD_UART_Send_Hex(const void *context, const char *cmd, const char *args, int cmdFlags) {
     if (!(*args)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU, "CMD_UART_Send_Hex: requires 1 argument (hex string, like FFAABB00CCDD\n");
+		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "CMD_UART_Send_Hex: requires 1 argument (hex string, like FFAABB00CCDD\n");
         return CMD_RES_NOT_ENOUGH_ARGUMENTS;
     }
     while (*args) {
@@ -200,7 +200,7 @@ commandResult_t CMD_UART_FakeHex(const void *context, const char *cmd, const cha
 
 	//curCnt = 0;
     if (!(*args)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU, "CMD_UART_FakeHex: requires 1 argument (hex string, like FFAABB00CCDD\n");
+		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "CMD_UART_FakeHex: requires 1 argument (hex string, like FFAABB00CCDD\n");
         return CMD_RES_NOT_ENOUGH_ARGUMENTS;
     }
     while (*args) {
@@ -214,7 +214,7 @@ commandResult_t CMD_UART_FakeHex(const void *context, const char *cmd, const cha
 		//rawData[curCnt] = b;
 		//curCnt++;
 		//if(curCnt>=sizeof(rawData)) {
-		//  addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU,"CMD_UART_FakeHex: sorry, given string is too long\n");
+		//  ADDLOG_INFO(LOG_FEATURE_TUYAMCU,"CMD_UART_FakeHex: sorry, given string is too long\n");
 		//  return -1;
 		//}
 
@@ -229,7 +229,7 @@ commandResult_t CMD_UART_FakeHex(const void *context, const char *cmd, const cha
 commandResult_t CMD_UART_Send_ASCII(const void *context, const char *cmd, const char *args, int cmdFlags) {
 	//const char *args = CMD_GetArg(1);
     if (!(*args)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU, "CMD_UART_Send_ASCII: requires 1 argument (hex string, like hellp world\n");
+		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "CMD_UART_Send_ASCII: requires 1 argument (hex string, like hellp world\n");
         return CMD_RES_NOT_ENOUGH_ARGUMENTS;
     }
     while (*args) {
@@ -292,7 +292,7 @@ void UART_DebugTool_Run(int auartindex) {
 
 	*p = 0;
 	if (bytes) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD,
+		ADDLOG_INFO(LOG_FEATURE_CMD,
 			"UART %i received %i bytes: %s\n", auartindex, bytes, tmp);
 	}
 }

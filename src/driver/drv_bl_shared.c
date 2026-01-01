@@ -303,7 +303,7 @@ commandResult_t BL09XX_ResetEnergyCounterEx(int asensdatasetix, float* pvalue)
     int i;
 
     if (!pvalue) {
-    //addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "ResEC %i", asensdatasetix);
+    //ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "ResEC %i", asensdatasetix);
       lastSavedEnergyCounterValue[asensdatasetix] = 0.0; //20250203 reset lastSavedEnergyCounterValue, otherwise the values will not be saved until restart BL
       sensdataset->sensors[OBK_CONSUMPTION_TOTAL].lastReading = 0.0;
       energyCounterStamp[asensdatasetix] = xTaskGetTickCount();
@@ -324,7 +324,7 @@ commandResult_t BL09XX_ResetEnergyCounterEx(int asensdatasetix, float* pvalue)
           sensdataset->sensors[i].lastReading = 0.0;
         }
     } else {
-      //addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "ResEC %i t=%f", asensdatasetix,avalue);
+      //ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "ResEC %i t=%f", asensdatasetix,avalue);
       sensdataset->sensors[OBK_CONSUMPTION_TOTAL].lastReading = *pvalue;
       energyCounterStamp[asensdatasetix] = xTaskGetTickCount();
     }
@@ -395,7 +395,7 @@ commandResult_t BL09XX_SetupEnergyStatistic(const void *context, const char *cmd
     /* process changes */
     if (enable != 0)
     {
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Consumption History enabled");
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Consumption History enabled");
         /* Enable function */
         energyCounterStatsEnable = true;
         if (energyCounterSampleCount != sample_count)
@@ -406,7 +406,7 @@ commandResult_t BL09XX_SetupEnergyStatistic(const void *context, const char *cmd
             energyCounterMinutes = NULL;
             energyCounterSampleCount = sample_count;
         }
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Sample Count:    %d", energyCounterSampleCount);
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Sample Count:    %d", energyCounterSampleCount);
         if (energyCounterSampleInterval != sample_time)
         {
             /* change sample time */            
@@ -424,13 +424,13 @@ commandResult_t BL09XX_SetupEnergyStatistic(const void *context, const char *cmd
                 memset(energyCounterMinutes, 0, energyCounterSampleCount*sizeof(float));
             }
         }
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Sample Interval: %d", energyCounterSampleInterval);
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Sample Interval: %d", energyCounterSampleInterval);
 
         energyCounterMinutesStamp = xTaskGetTickCount();
         energyCounterMinutesIndex = 0;
     } else {
         /* Disable Consimption Nistory */
-        addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Consumption History disabled");
+        ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Consumption History disabled");
         energyCounterStatsEnable = false;
         if (energyCounterMinutes != NULL)
         {
@@ -577,7 +577,7 @@ commandResult_t BL09XX_SetupConsumptionThreshold(const void *context, const char
     if (threshold>5000.0f)
         threshold = 5000.0f;
     changeSavedThresholdEnergy = threshold;
-    addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "ConsumptionThreshold: %1.1f", changeSavedThresholdEnergy);
+    ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "ConsumptionThreshold: %1.1f", changeSavedThresholdEnergy);
 
     return CMD_RES_OK;
 }
@@ -817,7 +817,7 @@ void BL_ProcessUpdate(float voltage, float current, float power,
           msg = cJSON_PrintUnformatted(root);
           cJSON_Delete(root);
 
-          // addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "JSON Printed: %d bytes", strlen(msg));
+          // ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "JSON Printed: %d bytes", strlen(msg));
 
           MQTT_PublishMain_StringString("consumption_stats", msg, 0);
           stat_updatesSent[asensdatasetix]++;
@@ -998,7 +998,7 @@ void BL_Shared_Init(void) {
         energyCounterMinutesIndex = 0;
       }
 
-      addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "Read ENERGYMETER values sz=%d\n", sizeof(ENERGY_METERING_DATA));
+      ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "Read ENERGYMETER values sz=%d\n", sizeof(ENERGY_METERING_DATA));
 
       HAL_GetEnergyMeterStatus(&data);
       sensdataset->sensors[OBK_CONSUMPTION_TOTAL].lastReading = data.TotalConsumption;

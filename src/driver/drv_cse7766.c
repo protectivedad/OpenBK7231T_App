@@ -47,7 +47,7 @@ int CSE7766_TryToGetNextCSE7766Packet() {
 		}
 	}
 	if(c_garbage_consumed > 0){
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"Consumed %i unwanted non-header byte in CSE7766 buffer\n", c_garbage_consumed);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"Consumed %i unwanted non-header byte in CSE7766 buffer\n", c_garbage_consumed);
 	}
 	if(cs < CSE7766_PACKET_LEN) {
 		return 0;
@@ -71,7 +71,7 @@ int CSE7766_TryToGetNextCSE7766Packet() {
             snprintf(buffer2, sizeof(buffer2), "%02X ", UART_GetByte(i));
             strcat_safe(buffer_for_log,buffer2,sizeof(buffer_for_log));
 		}
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"CSE7766 received: %s\n", buffer_for_log);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"CSE7766 received: %s\n", buffer_for_log);
 	}
 #endif
 	if(checksum != UART_GetByte(CSE7766_PACKET_LEN-1)) {
@@ -81,7 +81,7 @@ int CSE7766_TryToGetNextCSE7766Packet() {
         UART_ConsumeBytes(CSE7766_PACKET_LEN);
 		return 1;
 	}
-	//addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"CSE checksum ok");
+	//ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"CSE checksum ok");
 
 	{
 		unsigned char adjustement;
@@ -197,7 +197,7 @@ int CSE7766_TryToGetNextCSE7766Packet() {
 		char res[128];
 		// V=245.107925,I=109.921143,P=0.035618
 		snprintf(res, sizeof(res), "V=%f,I=%f,P=%f\n",lastReadings[OBK_VOLTAGE],lastReadings[OBK_CURRENT],lastReadings[OBK_POWER]);
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,res );
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,res );
 	}
 #endif
 
@@ -217,7 +217,7 @@ void CSE7766_Init(void) {
 }
 
 void CSE7766_RunEverySecond(void) {
-    //addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"UART buffer size %i\n", UART_GetDataSize());
+    //ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"UART buffer size %i\n", UART_GetDataSize());
 
 	CSE7766_TryToGetNextCSE7766Packet();
 }
