@@ -18,16 +18,33 @@ void addLogAdv(int level, int feature, const char *fmt, ...);
 void LOG_SetRawSocketCallback(int newFD);
 
 #define ADDLOG_ERROR(x, fmt, ...) addLogAdv(LOG_ERROR, x, fmt, ##__VA_ARGS__)
-#define ADDLOG_WARN(x, fmt, ...)  addLogAdv(LOG_WARN, x, fmt, ##__VA_ARGS__)
-#define ADDLOG_INFO(x, fmt, ...)  addLogAdv(LOG_INFO, x, fmt, ##__VA_ARGS__)
-#define ADDLOG_DEBUG(x, fmt, ...) addLogAdv(LOG_DEBUG, x, fmt, ##__VA_ARGS__)
-#define ADDLOG_EXTRADEBUG(x, fmt, ...) addLogAdv(LOG_EXTRADEBUG, x, fmt, ##__VA_ARGS__)
-
 #define ADDLOGF_ERROR(fmt, ...) addLogAdv(LOG_ERROR, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#define ADDLOG_WARN(x, fmt, ...)  addLogAdv(LOG_WARN, x, fmt, ##__VA_ARGS__)
 #define ADDLOGF_WARN(fmt, ...)  addLogAdv(LOG_WARN, LOG_FEATURE, fmt, ##__VA_ARGS__)
+
+#if OBK_INFO_LOGGING_ENABLED
+#define ADDLOG_INFO(x, fmt, ...)  addLogAdv(LOG_INFO, x, fmt, ##__VA_ARGS__)
 #define ADDLOGF_INFO(fmt, ...)  addLogAdv(LOG_INFO, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#else
+#define ADDLOG_INFO(x, fmt, ...)
+#define ADDLOGF_INFO(fmt, ...)
+#endif
+
+#if OBK_DEBUG_LOGGING_ENABLED
+#define ADDLOG_DEBUG(x, fmt, ...) addLogAdv(LOG_DEBUG, x, fmt, ##__VA_ARGS__)
 #define ADDLOGF_DEBUG(fmt, ...) addLogAdv(LOG_DEBUG, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#else
+#define ADDLOG_DEBUG(x, fmt, ...)
+#define ADDLOGF_DEBUG(fmt, ...)
+#endif
+
+#if OBK_EXTRADEBUG_LOGGING_ENABLED
+#define ADDLOG_EXTRADEBUG(x, fmt, ...) addLogAdv(LOG_EXTRADEBUG, x, fmt, ##__VA_ARGS__)
 #define ADDLOGF_EXTRADEBUG(fmt, ...) addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE, fmt, ##__VA_ARGS__)
+#else
+#define ADDLOG_EXTRADEBUG(x, fmt, ...)
+#define ADDLOGF_EXTRADEBUG(fmt, ...)
+#endif
 
 
 extern int g_loglevel;
