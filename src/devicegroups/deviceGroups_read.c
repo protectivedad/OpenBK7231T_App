@@ -32,7 +32,7 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 	if(dev != 0) {
 		// right now, only single group support
 		if(strcmp(dev->gr.groupName,groupName)) {
-			addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR,"DGR ignoring message from group %s - device is in %s",groupName,dev->gr.groupName);
+			ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR,"DGR ignoring message from group %s - device is in %s",groupName,dev->gr.groupName);
 			return -1;
 		}
 	}
@@ -45,7 +45,7 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 	}
 
 	if(dev->cbs.checkSequence(sequence)) {
-		addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR,"DGR ignoring message from duplicate or older sequence %i",sequence);
+		ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR,"DGR ignoring message from duplicate or older sequence %i",sequence);
 		return 1;
 	}
 

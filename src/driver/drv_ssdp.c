@@ -73,7 +73,7 @@ static void obkDeviceTick(uint32_t ip){
     for (i = 0; i < MAX_OBK_DEVICES; i++){
         if (obkDevices[i].ip == ip){
             obkDevices[i].timeout = OBK_DEVICE_TIMEOUT;
-            addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"SSDP obk device still present 0x%08x",ip);
+            ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"SSDP obk device still present 0x%08x",ip);
             break;
         }
     }
@@ -83,7 +83,7 @@ static void obkDeviceTick(uint32_t ip){
             if (obkDevices[i].ip == 0){
                 obkDevices[i].ip = ip;
                 obkDevices[i].timeout = OBK_DEVICE_TIMEOUT;
-                addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"SSDP new obk device 0x%08x",ip);
+                ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"SSDP new obk device 0x%08x",ip);
                 break;
             }
         }
@@ -320,8 +320,8 @@ static void DRV_SSDP_Send_Notify() {
 
     int len = strlen(notify_message);
 
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: space: %d msg:%d", strlen(notify_template) +  100, len);
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: \r\n%s\r\n", notify_message);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: space: %d msg:%d", strlen(notify_template) +  100, len);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: \r\n%s\r\n", notify_message);
 
     // set up destination address
     //
@@ -337,7 +337,7 @@ static void DRV_SSDP_Send_Notify() {
     if (nbytes <= 0){
 	    ADDLOG_INFO(LOG_FEATURE_HTTP,"#### ERROR ##### DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
     } else {
-	    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
+	    ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
     }
 }
 
@@ -505,9 +505,9 @@ void DRV_SSDP_RunQuickTick() {
     if (nbytes >= UDP_MSGBUF_LEN){
         nbytes = UDP_MSGBUF_LEN-1;
     }
-    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"Received %i bytes from %s",nbytes,inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
+    ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"Received %i bytes from %s",nbytes,inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
     udp_msgbuf[nbytes] = 0;
-    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"data: %s",udp_msgbuf);
+    ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"data: %s",udp_msgbuf);
     udp_msgbuf[nbytes] = '\0';
 
     /* we may get:
@@ -522,7 +522,7 @@ void DRV_SSDP_RunQuickTick() {
     // we SHOULD be a little more specific!!!
     if (!strncmp(udp_msgbuf, "M-SEARCH", 8)){
         // reply with our advert to the sender
-        addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"Is MSEARCH - responding");
+        ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"Is MSEARCH - responding");
 #if ENABLE_DRIVER_WEMO
 		if (DRV_IsRunning("WEMO")) {
 			if (strcasestr(udp_msgbuf, "urn:belkin:device:**")) {
@@ -564,7 +564,7 @@ void DRV_SSDP_RunQuickTick() {
         if (*p == '\n'){
             p++;
             if (!strncmp(p, "SERVER: OpenBk", 14)){
-                addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"NOTIFY from a peer device");
+                ADDLOG_EXTRADEBUG(LOG_FEATURE_HTTP,"NOTIFY from a peer device");
                 // add the device to the device list, or set timeout to 0
                 obkDeviceTick(*(uint32_t *)(&((struct sockaddr_in *)&addr)->sin_addr));
             }
