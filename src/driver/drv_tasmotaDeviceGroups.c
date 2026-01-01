@@ -175,7 +175,7 @@ void DRV_DGR_Send_Generic(byte *message, int len) {
 	// This is here only because sending UDP from MQTT callback crashes BK for me
 	// So instead, we are making a queue which is sent in quick tick
 	DGR_AddToSendQueue(message, len);
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "DGR adds to queue %i",len);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "DGR adds to queue %i",len);
 }
 
 void DRV_DGR_Dump(byte *message, int len){
@@ -419,27 +419,27 @@ int DGR_CheckSequence(uint16_t seq) {
 	m = findMember();
 	
 	if (m == 0) {
-		addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "DGR_CheckSequence: no member found");
+		ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "DGR_CheckSequence: no member found");
 		return 1;
 	}
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "DGR_CheckSequence: argument %i, last %i",(int)seq, (int)m->lastSeq);
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "DGR_CheckSequence: argument %i, last %i",(int)seq, (int)m->lastSeq);
 	
 	// make it work past wrap at
 	if((seq > m->lastSeq) || (seq+10 > m->lastSeq+10)) {
 		if(seq != (m->lastSeq+1)){
 			//ADDLOG_INFO(LOG_FEATURE_DGR,"Seq for %s skip %i->%i\n",inet_ntoa(m->ip), m->lastSeq, seq);
 		}
-		addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "Seq ok");
+		ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "Seq ok");
 		m->lastSeq = seq;
 		return 0;
 	}
 	if(seq + 16 < m->lastSeq) {
-		addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "Seq Hard reset");
+		ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "Seq Hard reset");
 		// hard reset
 		m->lastSeq = seq;
 		return 0;
 	}
-	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "Seq failed");
+	ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "Seq failed");
 	return 1;
 }
 
@@ -533,7 +533,7 @@ void DRV_DGR_RunQuickTick() {
 
 		// IMPORTANT: do not call inet_ntoa if log level is not extradebug...
 		if (g_loglevel >= LOG_EXTRADEBUG) {
-			addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "Received %i bytes from %s\n", nbytes, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
+			ADDLOG_EXTRADEBUG(LOG_FEATURE_DGR, "Received %i bytes from %s\n", nbytes, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr));
 		}
 
 		DGR_ProcessIncomingPacket(msgbuf, nbytes);
