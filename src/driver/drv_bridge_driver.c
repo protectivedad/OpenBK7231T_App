@@ -65,7 +65,7 @@ void Bridge_driver_Init()
     ch_count = PIN_CountPinsWithRole(IOR_BridgeForward);
     if (ch_count != PIN_CountPinsWithRole(IOR_BridgeReverse))
     {
-        addLogAdv(LOG_WARN, LOG_FEATURE_DRV, "Bridge Driver Pins mismatched \n");
+        ADDLOG_WARN(LOG_FEATURE_DRV, "Bridge Driver Pins mismatched \n");
     }
 
     if (ch_count>0)
