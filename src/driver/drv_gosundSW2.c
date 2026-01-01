@@ -42,7 +42,7 @@ void DRV_GosundSW2_Write(float* finalRGBCW) {
 		dimmerVal |= 0x80;  /* Bit 7 seems to control the relay */
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "Writing dimmer value %02X", dimmerVal);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "Writing dimmer value %02X", dimmerVal);
 	UART_SendByte(dimmerVal);
 }
 // startDriver GosundSW2

@@ -1632,7 +1632,7 @@ int http_fn_cfg_wifi_set(http_request_t* request) {
 	char tmpA[128];
 	int bChanged;
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_wifi_set \r\n");
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_wifi_set \r\n");
 	bChanged = 0;
 
 	http_setup(request, httpMimeTypeHTML);
@@ -1690,7 +1690,7 @@ int http_fn_cfg_wifi_set(http_request_t* request) {
 
 int http_fn_cfg_loglevel_set(http_request_t* request) {
 	char tmpA[128];
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_loglevel_set \r\n");
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HTTP_ProcessPacket: generating cfg_loglevel_set \r\n");
 
 	http_setup(request, httpMimeTypeHTML);
 	http_html_start(request, "Set log level");
@@ -1954,7 +1954,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	measuringBattery = DRV_IsMeasuringBattery();
 
 	PIN_get_Relay_PWM_Count(&relayCount, &pwmCount, &dInputCount);
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", relayCount, pwmCount, dInputCount, excludedCount);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", relayCount, pwmCount, dInputCount, excludedCount);
 
 #if ENABLE_LED_BASIC
 	ledDriverChipRunning = LED_IsLedDriverChipRunning();
@@ -3427,7 +3427,7 @@ void OTA_RequestDownloadFromHTTP(const char* s) {
 	ret = ota_update_start(ctx);
 	if(!ret)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "OTA finished");
+		ADDLOG_INFO(LOG_FEATURE_HTTP, "OTA finished");
 		sys_clear_ota_signature();
 		delay_ms(50);
 		sys_reset();
@@ -3446,7 +3446,7 @@ int http_fn_ota_exec(http_request_t* request) {
 	http_html_start(request, "OTA request");
 	if (http_getArg(request->url, "host", tmpA, sizeof(tmpA))) {
 		hprintf255(request, "<h3>OTA requested for %s!</h3>", tmpA);
-		addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "http_fn_ota_exec: will try to do OTA for %s \r\n", tmpA);
+		ADDLOG_INFO(LOG_FEATURE_HTTP, "http_fn_ota_exec: will try to do OTA for %s \r\n", tmpA);
 		OTA_RequestDownloadFromHTTP(tmpA);
 	}
 	poststr(request, htmlFooterReturnToCfgOrMainPage);

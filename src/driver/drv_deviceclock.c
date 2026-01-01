@@ -78,15 +78,11 @@ commandResult_t SetTimeZoneOfs(const void *context, const char *cmd, const char 
 #if ENABLE_TIME_DST
     	setDST();	// check if local time is DST or not and set offset
 #endif
-	addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"Time offset set to %i seconds"
 #if ENABLE_TIME_DST
-	" (DST offset %i seconds)"
+	ADDLOG_INFO(LOG_FEATURE_NTP,"Time offset set to %i seconds (DST offset %i seconds)", g_UTCoffset, getDST_offset());
+#else
+	ADDLOG_INFO(LOG_FEATURE_NTP,"Time offset set to %i seconds", g_UTCoffset);
 #endif	
-	,g_UTCoffset
-#if ENABLE_TIME_DST
-	,getDST_offset()
-#endif	
-	);
 	return CMD_RES_OK;
 }
 
@@ -181,11 +177,11 @@ commandResult_t TIME_SetLatlong(const void *context, const char *cmd, const char
 	}
     newValue = Tokenizer_GetArg(0);
     TIME_setLatitude(atof(newValue));
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "TIME latitude set to %s", newValue);
+    ADDLOG_INFO(LOG_FEATURE_NTP, "TIME latitude set to %s", newValue);
 
     newValue = Tokenizer_GetArg(1);
     TIME_setLongitude(atof(newValue));
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "TIME longitude set to %s", newValue);
+    ADDLOG_INFO(LOG_FEATURE_NTP, "TIME longitude set to %s", newValue);
     return CMD_RES_OK;
 }
 
@@ -212,7 +208,7 @@ int TIME_GetSunrise()
 	int sunriseInSecondsFromMidnight;
 
 	TIME_CalculateSunrise(&hour, &minute);
-	addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "TIME sunrise is at %02i:%02i", hour, minute);
+	ADDLOG_INFO(LOG_FEATURE_NTP, "TIME sunrise is at %02i:%02i", hour, minute);
 	sunriseInSecondsFromMidnight = ((int)hour * 3600) + ((int)minute * 60);
 	return sunriseInSecondsFromMidnight;
 }
@@ -223,7 +219,7 @@ int TIME_GetSunset()
 	int sunsetInSecondsFromMidnight;
 
 	TIME_CalculateSunset(&hour, &minute);
-	addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "TIME sunset is at %02i:%02i", hour, minute);
+	ADDLOG_INFO(LOG_FEATURE_NTP, "TIME sunset is at %02i:%02i", hour, minute);
 	sunsetInSecondsFromMidnight =  ((int)hour * 3600) + ((int)minute * 60);
 	return sunsetInSecondsFromMidnight;
 }
@@ -402,7 +398,7 @@ commandResult_t TIME_SetDST(const int *args) {
     
     dst_config.DSTinitialized = 1;
     
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "DST config set: offset=%d seconds", 
+    ADDLOG_INFO(LOG_FEATURE_NTP, "DST config set: offset=%d seconds", 
              dst_config.DSToffset);
     return CMD_RES_OK;
 }
@@ -510,7 +506,7 @@ void TIME_Init() {
 	//cmddetail:"fn":"SetDeviceTime","file":"driver/drv_deviceclock.c","requires":"",
 	//cmddetail:"examples":""}
     CMD_RegisterCommand("time_setTime",SetDeviceTime, NULL);
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "CLOCK driver initialized.");
+    ADDLOG_INFO(LOG_FEATURE_NTP, "CLOCK driver initialized.");
 }
 
 void TIME_OnEverySecond()
@@ -523,7 +519,7 @@ void TIME_OnEverySecond()
     if (useDST &&  TIME_IsTimeSynced() && (TIME_GetCurrentTimeWithoutOffset() >= next_DST_switch_epoch)){
     	int old_DST=getDST_offset();
 	setDST();
-    	addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"Passed DST switch time - recalculated DST offset. Was:%i - now:%i",old_DST,getDST_offset());
+    	ADDLOG_INFO(LOG_FEATURE_NTP,"Passed DST switch time - recalculated DST offset. Was:%i - now:%i",old_DST,getDST_offset());
     }
 #endif
 
@@ -540,7 +536,7 @@ uint32_t temp=0;
 		temp +=  getDST_offset();
 #endif 
 	}	// no "else" needed, will return 0 anyway if we don't return here
-//    	addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"TIME_GetCurrentTime - returning :%lu (g_epochOnStartup=%lu g_secondsElapsed=%lu g_UTCoffset=%i DST=%i)",temp,g_epochOnStartup, g_secondsElapsed, g_UTCoffset,getDST_offset());
+//    	ADDLOG_INFO(LOG_FEATURE_NTP,"TIME_GetCurrentTime - returning :%lu (g_epochOnStartup=%lu g_secondsElapsed=%lu g_UTCoffset=%i DST=%i)",temp,g_epochOnStartup, g_secondsElapsed, g_UTCoffset,getDST_offset());
 	return temp;					// we will report 1970-01-01 if no time present - avoids "hack" e.g. in json status ...
 
 };

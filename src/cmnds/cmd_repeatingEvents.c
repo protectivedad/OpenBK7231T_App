@@ -41,7 +41,7 @@ void RepeatingEvents_CancelRepeatingEvents(int userID)
 		if(ev->userID == userID) {
 			// mark as finished
 			ev->times = EVENT_CANCELED_TIMES;
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"Event with id %i and cmd %s has been canceled",ev->userID,ev->command);
+			ADDLOG_INFO(LOG_FEATURE_CMD,"Event with id %i and cmd %s has been canceled",ev->userID,ev->command);
 		}
 	}
 
@@ -157,7 +157,7 @@ void RepeatingEvents_RunUpdate(float deltaTimeSeconds) {
 		cur = cur->next;
 	}
 
-	//addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond checked %i events, ran %i\n",c_checked,c_ran);
+	//ADDLOG_INFO(LOG_FEATURE_CMD,"RepeatingEvents_OnEverySecond checked %i events, ran %i\n",c_checked,c_ran);
 }
 // addRepeatingEventID 1234 5 -1 DGR_SendPower "testgr" 1 1 
 // cancelRepeatingEvent 1234
@@ -188,13 +188,13 @@ commandResult_t RepeatingEvents_Cmd_AddRepeatingEvent(const void *context, const
 	}
 	if (interval <= MIN_REPEATING_INTERVAL) {
 		interval = MIN_REPEATING_INTERVAL;
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "Interval was too small!");
+		ADDLOG_INFO(LOG_FEATURE_CMD, "Interval was too small!");
 	}
 	if (bUID) {
 		RepeatingEvents_CancelRepeatingEvents(userID);
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"addRepeatingEvent: interval %f, repeats %i, command [%s]",interval,times,cmdToRepeat);
+	ADDLOG_INFO(LOG_FEATURE_CMD,"addRepeatingEvent: interval %f, repeats %i, command [%s]",interval,times,cmdToRepeat);
 
 	RepeatingEvents_AddRepeatingEvent(cmdToRepeat,interval, times, userID);
 
@@ -213,7 +213,7 @@ commandResult_t RepeatingEvents_Cmd_ClearRepeatingEvents(const void *context, co
 		free(rem);
 		c++;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "Fried %i rep. events", c);
+	ADDLOG_INFO(LOG_FEATURE_CMD, "Fried %i rep. events", c);
 	g_repeatingEvents = 0;
 	return CMD_RES_OK;
 }
@@ -230,7 +230,7 @@ commandResult_t RepeatingEvents_Cmd_CancelRepeatingEvent(const void *context, co
 	}
 	userID = Tokenizer_GetArgInteger(0);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"cancelRepeatingEvent: will cancel events with id %i",userID);
+	ADDLOG_INFO(LOG_FEATURE_CMD,"cancelRepeatingEvent: will cancel events with id %i",userID);
 
 	RepeatingEvents_CancelRepeatingEvents(userID);
 

@@ -14,8 +14,8 @@ static int sclk = 26;
 static int miso = 6;
 static int targetChannel = -1;
 
-#define MAX31855_THERMOCOUPLE_RESOLUTION    0.25   //in °C per dac step
-#define MAX31855_COLD_JUNCTION_RESOLUTION   0.0625 //in °C per dac step
+#define MAX31855_THERMOCOUPLE_RESOLUTION    0.25   //in ï¿½C per dac step
+#define MAX31855_COLD_JUNCTION_RESOLUTION   0.0625 //in ï¿½C per dac step
 
 static int stage = 0;
 int MAX31855_ReadRaw(void) {
@@ -57,10 +57,10 @@ void MAX31855_ReadTemperature() {
 	raw = MAX31855_ReadRaw();
 
 	// print it like 0xFFAABBCC
-	//addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "0x%08X", raw);
+	//ADDLOG_INFO(LOG_FEATURE_MAIN, "0x%08X", raw);
 
 	if (raw == 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "MAX31855 read fail");
+		ADDLOG_INFO(LOG_FEATURE_MAIN, "MAX31855 read fail");
 		return;
 	}
 
@@ -68,7 +68,7 @@ void MAX31855_ReadTemperature() {
 
 	}
 	else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "MAX31855 bad ID");
+		ADDLOG_INFO(LOG_FEATURE_MAIN, "MAX31855 bad ID");
 		return;
 	}
 
@@ -76,7 +76,7 @@ void MAX31855_ReadTemperature() {
 	float temp = (float)(raw >> 18) * MAX31855_THERMOCOUPLE_RESOLUTION;
 	float cjTemp = (float)((raw & 0x0000FFFF) >> 4) * MAX31855_COLD_JUNCTION_RESOLUTION;
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "T %f, cjT %f", temp, cjTemp);
+	ADDLOG_INFO(LOG_FEATURE_MAIN, "T %f, cjT %f", temp, cjTemp);
 }
 void MAX31855_RunEverySecond() {
 	MAX31855_ReadTemperature();

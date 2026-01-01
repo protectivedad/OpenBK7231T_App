@@ -51,7 +51,7 @@ static void uart_event_task(void* pvParameters)
 				xQueueReset(uart_queue);
 				break;
 			default:
-				addLogAdv(LOG_INFO, LOG_FEATURE_TUYAMCU, "uart event type: %d", event.type);
+				ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "uart event type: %d", event.type);
 				break;
 			}
 		}

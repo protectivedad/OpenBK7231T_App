@@ -98,13 +98,13 @@ commandResult_t NTP_SetServer(const void *context, const char *cmd, const char *
 	}
     newValue = Tokenizer_GetArg(0);
     CFG_SetNTPServer(newValue);
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "NTP server set to %s", newValue);
+    ADDLOG_INFO(LOG_FEATURE_NTP, "NTP server set to %s", newValue);
     return CMD_RES_OK;
 }
 
 //Display settings used by the NTP driver
 commandResult_t NTP_Info(const void *context, const char *cmd, const char *args, int cmdFlags) {
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "Server=%s, Time offset=%d", CFG_GetNTPServer(), TIME_GetTimesZoneOfsSeconds());
+    ADDLOG_INFO(LOG_FEATURE_NTP, "Server=%s, Time offset=%d", CFG_GetNTPServer(), TIME_GetTimesZoneOfsSeconds());
     return CMD_RES_OK;
 }
 
@@ -147,13 +147,13 @@ void NTP_Init() {
     
     g_ntp_syncinterval = Tokenizer_GetArgIntegerDefault(1, 60);
 
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "NTP driver initialized with server=%s, offset=%d, syncing every %i seconds", CFG_GetNTPServer(), g_timeOffsetSeconds, g_ntp_syncinterval);
+    ADDLOG_INFO(LOG_FEATURE_NTP, "NTP driver initialized with server=%s, offset=%d, syncing every %i seconds", CFG_GetNTPServer(), g_timeOffsetSeconds, g_ntp_syncinterval);
     g_synced = false;
 }
 
 // if driver is stopped, we need to make sure, we don't keep NTP in state "synched"
 void NTP_Stop() {
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "NTP driver stopped");
+    ADDLOG_INFO(LOG_FEATURE_NTP, "NTP driver stopped");
     g_synced = false;
 }
 
@@ -206,7 +206,7 @@ void NTP_SendRequest(bool bBlocking) {
     if ((g_ntp_socket=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP )) == -1)
     {
         g_ntp_socket = 0;
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"NTP_SendRequest: failed to create socket");
+        ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_SendRequest: failed to create socket");
         return;
     }
 
@@ -214,7 +214,7 @@ void NTP_SendRequest(bool bBlocking) {
 
 	adrString = CFG_GetNTPServer();
 	if (adrString == 0 || adrString[0] == 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "NTP_SendRequest: somehow ntp server in config was empty, setting non-empty");
+		ADDLOG_INFO(LOG_FEATURE_NTP, "NTP_SendRequest: somehow ntp server in config was empty, setting non-empty");
 		CFG_SetNTPServer(DEFAULT_NTP_SERVER);
 		adrString = CFG_GetNTPServer();
 	}
@@ -227,7 +227,7 @@ void NTP_SendRequest(bool bBlocking) {
     // Send the message to server:
     if(sendto(g_ntp_socket, &packet, sizeof(packet), 0,
          (struct sockaddr*)&g_address, adrLen) < 0) {
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"NTP_SendRequest: Unable to send message");
+        ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_SendRequest: Unable to send message");
         NTP_Shutdown();
 		// quick next frame attempt
 		if (g_secondsElapsed < 60) {
@@ -242,7 +242,7 @@ void NTP_SendRequest(bool bBlocking) {
 #if WINDOWS
 #else
         if(fcntl(g_ntp_socket, F_SETFL, O_NONBLOCK)) {
-            addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"NTP_SendRequest: failed to make socket non-blocking!");
+            ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_SendRequest: failed to make socket non-blocking!");
         }
 #endif
     }
@@ -271,7 +271,7 @@ void NTP_CheckForReceive() {
 #endif
 
     if(recv_len < 0){
-			addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"NTP_CheckForReceive: Error while receiving server's msg");
+			ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_CheckForReceive: Error while receiving server's msg");
         return;
     }
     highWord = MAKE_WORD(ptr[40], ptr[41]);
@@ -279,7 +279,7 @@ void NTP_CheckForReceive() {
     // combine the four bytes (two words) into a long integer
     // this is NTP time (seconds since Jan 1 1900):
     secsSince1900 = highWord << 16 | lowWord;
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"Seconds since Jan 1 1900 = %u",secsSince1900);
+    ADDLOG_INFO(LOG_FEATURE_NTP,"Seconds since Jan 1 1900 = %u",secsSince1900);
 
 /*
     g_ntpTime = secsSince1900 - NTP_OFFSET;
@@ -287,9 +287,9 @@ void NTP_CheckForReceive() {
 */
    TIME_setDeviceTime((uint32_t) (secsSince1900 - NTP_OFFSET) );
 //    g_ntpTime=(time_t)TIME_GetCurrentTime();
-    addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
+    ADDLOG_INFO(LOG_FEATURE_NTP,"Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
 //    ltm = gmtime(&g_ntpTime);
-//    addLogAdv(LOG_INFO, LOG_FEATURE_NTP, LTSTR, LTM2TIME(ltm));
+//    ADDLOG_INFO(LOG_FEATURE_NTP, LTSTR, LTM2TIME(ltm));
 
 	if (g_synced == false) {
 		EventHandlers_FireEvent(CMD_EVENT_NTP_STATE, 1);
@@ -302,12 +302,12 @@ void NTP_CheckForReceive() {
     //ptm = gmtime (&g_ntpTime);
     ptm = gmtime(&g_ntpTime);
     if(ptm == 0) {
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"gmtime somehow returned 0\n");
+        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime somehow returned 0\n");
     } else {
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"gmtime => tm_year: %i\n",ptm->tm_year);
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"gmtime => tm_mon: %i\n",ptm->tm_mon);
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"gmtime => tm_mday: %i\n",ptm->tm_mday);
-        addLogAdv(LOG_INFO, LOG_FEATURE_NTP,"gmtime => tm_hour: %i\n",ptm->tm_hour  );
+        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_year: %i\n",ptm->tm_year);
+        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_mon: %i\n",ptm->tm_mon);
+        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_mday: %i\n",ptm->tm_mday);
+        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_hour: %i\n",ptm->tm_hour  );
     }
 #endif
     NTP_Shutdown();

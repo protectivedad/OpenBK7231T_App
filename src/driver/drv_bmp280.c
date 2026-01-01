@@ -56,9 +56,9 @@ void BMP280_Init() {
 
 	usleep(100);
 	if (BMP280_begin(MODE_NORMAL, SAMPLING_X1, SAMPLING_X1, SAMPLING_X1, FILTER_OFF, STANDBY_0_5) == 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "%s failed!", chip_name);
+		ADDLOG_INFO(LOG_FEATURE_SENSOR, "%s failed!", chip_name);
 	} else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "%s ready!", chip_name);
+		ADDLOG_INFO(LOG_FEATURE_SENSOR, "%s ready!", chip_name);
 	}
 }
 
@@ -72,7 +72,7 @@ void BMP280_OnEverySecond() {
 	if(isHumidityAvail)
 	{
 		BME280_readHumidity(&g_humidity);
-		addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "T %i, P %i, H%i!", g_temperature, g_pressure, g_humidity);
+		ADDLOG_INFO(LOG_FEATURE_SENSOR, "T %i, P %i, H%i!", g_temperature, g_pressure, g_humidity);
 		if(g_targetChannelHumidity != -1)
 		{
 			CHANNEL_Set(g_targetChannelHumidity, g_humidity, CHANNEL_SET_FLAG_SILENT);
@@ -80,7 +80,7 @@ void BMP280_OnEverySecond() {
 	}
 	else
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "T %i, P %i!", g_temperature, g_pressure);
+		ADDLOG_INFO(LOG_FEATURE_SENSOR, "T %i, P %i!", g_temperature, g_pressure);
 	}
 
 	if (g_targetChannelTemperature != -1) {

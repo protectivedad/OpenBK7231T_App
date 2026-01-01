@@ -93,7 +93,7 @@ static void obkDeviceTick(uint32_t ip){
 static void obkDeviceList(){
     for (int i = 0; i < MAX_OBK_DEVICES; i++){
         if (obkDevices[i].ip != 0){
-            addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"obk device 0x%08x", obkDevices[i].ip);
+            ADDLOG_INFO(LOG_FEATURE_HTTP,"obk device 0x%08x", obkDevices[i].ip);
         }
     }
 }
@@ -211,7 +211,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 
 	lwip_fcntl(g_ssdp_socket_receive, F_SETFL,O_NONBLOCK);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: Socket created, waiting for packets\n");
+	ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: Socket created, waiting for packets\n");
 }
 
 
@@ -335,7 +335,7 @@ static void DRV_SSDP_Send_Notify() {
     );
 	
     if (nbytes <= 0){
-	    addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"#### ERROR ##### DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
+	    ADDLOG_INFO(LOG_FEATURE_HTTP,"#### ERROR ##### DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
     } else {
 	    addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: sent message %d bytes", nbytes);
     }
@@ -419,14 +419,14 @@ static commandResult_t Cmd_obkDeviceList(const void *context, const char *cmd, c
 void DRV_SSDP_Init()
 {
     if (!Main_IsConnectedToWiFi()){
-        addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_Init - no wifi, so await connection");
+        ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Init - no wifi, so await connection");
         DRV_SSDP_Active = 1;
         return;
     }
 
     memset(obkDevices, 0, sizeof(obkDevices));
 
-    addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_Init");
+    ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Init");
     // like "e427ce1a-3e80-43d0-ad6f-89ec42e46363";
     snprintf(g_ssdp_uuid, sizeof(g_ssdp_uuid), "%08x-%04x-%04x-%04x-%04x%08x",
         (unsigned int)rand(), 
@@ -498,7 +498,7 @@ void DRV_SSDP_RunQuickTick() {
     );
     udp_msgbuf[UDP_MSGBUF_LEN] = 0;
     if (nbytes <= 0) {
-        //addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"nothing\n");
+        //ADDLOG_INFO(LOG_FEATURE_HTTP,"nothing\n");
         return ;
     }
     // just so we can terminate for print
@@ -575,7 +575,7 @@ void DRV_SSDP_RunQuickTick() {
 
 
 void DRV_SSDP_Shutdown(){
-    addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"DRV_SSDP_Shutdown");
+    ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Shutdown");
     DRV_SSDP_Active = 0;
 
 	if(g_ssdp_socket_receive>=0) {

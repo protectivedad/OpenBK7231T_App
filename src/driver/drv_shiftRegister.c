@@ -103,7 +103,7 @@ void Shift_OnChannelChanged(int ch, int value) {
 	else {
 		BIT_CLEAR(g_currentValue, ch);
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Will send value %i", g_currentValue);
+	ADDLOG_INFO(LOG_FEATURE_MAIN, "Will send value %i", g_currentValue);
 	PORT_shiftOutLatch(g_data, g_clk, g_latch, g_order, g_currentValue, g_totalRegisters);
 }
 
