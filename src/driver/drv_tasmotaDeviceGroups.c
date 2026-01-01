@@ -59,7 +59,7 @@ void DGR_AddToSendQueue(byte *data, int len) {
 	dgrPacket_t *p;
 	bool taken;
 	if(len > MAX_DGR_PACKET) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR, "DGR_AddToSendQueue: DGR packet too long - %i\n",len);
+		ADDLOG_INFO(LOG_FEATURE_DGR, "DGR_AddToSendQueue: DGR packet too long - %i\n",len);
 		return;
 	}	
 	if (g_mutex == 0)
@@ -80,7 +80,7 @@ void DGR_AddToSendQueue(byte *data, int len) {
 	}
 	if(p == 0) {
 		if (dgr_total_alloced_queue_size >= MAX_DGR_QUEUE_SIZE) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_DGR, "DGR_AddToSendQueue: DGR queue grew to big, will drop packet\n");
+			ADDLOG_INFO(LOG_FEATURE_DGR, "DGR_AddToSendQueue: DGR queue grew to big, will drop packet\n");
 			return;
 		}
 		dgr_total_alloced_queue_size++;
@@ -158,10 +158,10 @@ void DRV_DGR_CreateSocket_Send() {
     // create what looks like an ordinary UDP socket
     g_dgr_socket_send = socket(AF_INET, SOCK_DGRAM, 0);
     if (g_dgr_socket_send < 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Send: failed to do socket\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Send: failed to do socket\n");
         return;
     }
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Send: socket created\n");
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Send: socket created\n");
 }
 void DRV_DGR_Send_Generic(byte *message, int len) {
 	// if this send is as a result of use RXing something, 
@@ -186,7 +186,7 @@ void DRV_DGR_Dump(byte *message, int len){
 		p+=2;
 	}
 	*p = 0;
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_Send_Generic: %s",tmp);
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_Send_Generic: %s",tmp);
 }
 
 void DRV_DGR_Send_Power(const char *groupName, int channelValues, int numChannels){
@@ -253,7 +253,7 @@ void DRV_DGR_CreateSocket_Receive() {
     g_dgr_socket_receive = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (g_dgr_socket_receive < 0) {
 		g_dgr_socket_receive = -1;
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do socket\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do socket\n");
         return ;
     }
 
@@ -262,7 +262,7 @@ void DRV_DGR_CreateSocket_Receive() {
 		iResult = setsockopt(g_dgr_socket_receive, SOL_SOCKET, SO_BROADCAST, (char *)&flag, sizeof(flag));
 		if (iResult != 0)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do setsockopt SO_BROADCAST\n");
+			ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do setsockopt SO_BROADCAST\n");
 			close(g_dgr_socket_receive);
 			g_dgr_socket_receive = -1;
 			return ;
@@ -275,7 +275,7 @@ void DRV_DGR_CreateSocket_Receive() {
 				g_dgr_socket_receive, SOL_SOCKET, SO_REUSEADDR, (char*) &flag, sizeof(flag)
 			) < 0
 		){
-			addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do setsockopt SO_REUSEADDR\n");
+			ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do setsockopt SO_REUSEADDR\n");
 			close(g_dgr_socket_receive);
 			g_dgr_socket_receive = -1;
 		  return ;
@@ -290,7 +290,7 @@ void DRV_DGR_CreateSocket_Receive() {
 
     // bind to receive address
     if (bind(g_dgr_socket_receive, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do bind\n");
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do bind\n");
 		close(g_dgr_socket_receive);
 		g_dgr_socket_receive = -1;
         return ;
@@ -313,7 +313,7 @@ void DRV_DGR_CreateSocket_Receive() {
     	///mreq.imr_interface.s_addr = inet_addr("192.168.0.122");
 		iResult = setsockopt(g_dgr_socket_receive, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*) &mreq, sizeof(mreq));
 		if (iResult < 0) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do setsockopt IP_ADD_MEMBERSHIP %i\n",iResult);
+			ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: failed to do setsockopt IP_ADD_MEMBERSHIP %i\n",iResult);
 			close(g_dgr_socket_receive);
 			g_dgr_socket_receive = -1;
 			return ;
@@ -322,7 +322,7 @@ void DRV_DGR_CreateSocket_Receive() {
 
 	lwip_fcntl(g_dgr_socket_receive, F_SETFL,O_NONBLOCK);
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: Socket created, waiting for packets\n");
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_CreateSocket_Receive: Socket created, waiting for packets\n");
 }
 
 #if ENABLE_LED_BASIC
@@ -427,7 +427,7 @@ int DGR_CheckSequence(uint16_t seq) {
 	// make it work past wrap at
 	if((seq > m->lastSeq) || (seq+10 > m->lastSeq+10)) {
 		if(seq != (m->lastSeq+1)){
-			//addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"Seq for %s skip %i->%i\n",inet_ntoa(m->ip), m->lastSeq, seq);
+			//ADDLOG_INFO(LOG_FEATURE_DGR,"Seq for %s skip %i->%i\n",inet_ntoa(m->ip), m->lastSeq, seq);
 		}
 		addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_DGR, "Seq ok");
 		m->lastSeq = seq;
@@ -452,7 +452,7 @@ void DRV_DGR_RunEverySecond() {
 
 	if(g_dgr_socket_receive<=0 || g_dgr_socket_send <= 0) {
 		dgr_retry_time_left--;
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"no sockets, will retry creation soon, in %i secs\n",dgr_retry_time_left);
+		ADDLOG_INFO(LOG_FEATURE_DGR,"no sockets, will retry creation soon, in %i secs\n",dgr_retry_time_left);
 
 		if(dgr_retry_time_left <= 0){
 			dgr_retry_time_left = 5;
@@ -587,12 +587,12 @@ commandResult_t CMD_DGR_SendPower(const void *context, const char *cmd, const ch
 	channelsCount = Tokenizer_GetArgInteger(2);
 
 	DRV_DGR_Send_Power(groupName,channelValues,channelsCount);
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"CMD_DGR_SendPower: sent message to group %s\n",groupName);
+	ADDLOG_INFO(LOG_FEATURE_DGR,"CMD_DGR_SendPower: sent message to group %s\n",groupName);
 
 	return CMD_RES_OK;
 }
 void DRV_DGR_OnLedDimmerChange(int iVal) {
-	//addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_OnLedDimmerChange: called\n");
+	//ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_OnLedDimmerChange: called\n");
 	if (g_dgr_socket_receive == 0) {
 		return;
 	}
@@ -609,7 +609,7 @@ void DRV_DGR_OnLedDimmerChange(int iVal) {
 }
 
 void DRV_DGR_OnLedFinalColorsChange(byte rgbcw[5]) {
-	//addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DRV_DGR_OnLedFinalColorsChange: called\n");
+	//ADDLOG_INFO(LOG_FEATURE_DGR,"DRV_DGR_OnLedFinalColorsChange: called\n");
 	if (g_dgr_socket_receive == 0) {
 		return;
 	}
@@ -710,7 +710,7 @@ commandResult_t CMD_DGR_SendBrightness(const void *context, const char *cmd, con
 	brightness = Tokenizer_GetArgInteger(1);
 
 	DRV_DGR_Send_Brightness(groupName,brightness);
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_SendBrightness: sent message to group %s\n",groupName);
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_SendBrightness: sent message to group %s\n",groupName);
 
 	return CMD_RES_OK;
 }
@@ -760,7 +760,7 @@ commandResult_t CMD_DGR_SendRGBCW(const void *context, const char *cmd, const ch
 	}
 
 	DRV_DGR_Send_RGBCW(groupName,rgbcw);
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_SendRGBCW: sent message to group %s\n",groupName);
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_SendRGBCW: sent message to group %s\n",groupName);
 
 	return CMD_RES_OK;
 }
@@ -780,7 +780,7 @@ commandResult_t CMD_DGR_SendFixedColor(const void *context, const char *cmd, con
 	colorIndex = Tokenizer_GetArgInteger(1);
 
 	DRV_DGR_Send_FixedColor(groupName, colorIndex);
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR, "CMD_DGR_SendFixedColor: sent message to group %s\n", groupName);
+	ADDLOG_INFO(LOG_FEATURE_DGR, "CMD_DGR_SendFixedColor: sent message to group %s\n", groupName);
 
 	return CMD_RES_OK;
 }

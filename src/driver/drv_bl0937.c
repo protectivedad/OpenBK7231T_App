@@ -56,7 +56,7 @@ commandResult_t BL0937_PowerMax(const void* context, const char* cmd, const char
 
 	if(args == 0 || *args == 0)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "This command needs one argument");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "This command needs one argument");
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	maxPower = atof(args);
@@ -68,7 +68,7 @@ commandResult_t BL0937_PowerMax(const void* context, const char* cmd, const char
 		{
 			char dbg[128];
 			snprintf(dbg, sizeof(dbg), "PowerMax: set max to %f\n", BL0937_PMAX);
-			addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, dbg);
+			ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, dbg);
 		}
 	}
 	return CMD_RES_OK;
@@ -175,7 +175,7 @@ void BL0937_RunEverySecond(void)
 #if 1
 	if(bNeedRestart)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "BL0937 pins have changed, will reset the interrupts");
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "BL0937 pins have changed, will reset the interrupts");
 
 		BL0937_Shutdown_Pins();
 		BL0937_Init_Pins();
@@ -226,7 +226,7 @@ void BL0937_RunEverySecond(void)
 	xPassedTicks = xTaskGetTickCount();
 	ticksElapsed = (xPassedTicks - pulseStamp);
 	pulseStamp = xPassedTicks;
-	//addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER,"Voltage pulses %i, current %i, power %i\n", res_v, res_c, res_p);
+	//ADDLOG_INFO(LOG_FEATURE_ENERGYMETER,"Voltage pulses %i, current %i, power %i\n", res_v, res_c, res_p);
 
 	PwrCal_Scale(res_v, res_c, res_p, &final_v, &final_c, &final_p);
 
@@ -246,7 +246,7 @@ void BL0937_RunEverySecond(void)
 		{
 			char dbg[128];
 			snprintf(dbg, sizeof(dbg), "Power reading: %f exceeded MAX limit: %f, Last: %f\n", final_p, BL0937_PMAX, last_p);
-			addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, dbg);
+			ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, dbg);
 		}
 		final_p = last_p;
 	}
@@ -259,7 +259,7 @@ void BL0937_RunEverySecond(void)
 	{
 		char dbg[128];
 		snprintf(dbg, sizeof(dbg), "Voltage %f, current %f, power %f\n", final_v, final_c, final_p);
-		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, dbg);
+		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, dbg);
 	}
 #endif
 	BL_ProcessUpdate(final_v, final_c, final_p, NAN, NAN);

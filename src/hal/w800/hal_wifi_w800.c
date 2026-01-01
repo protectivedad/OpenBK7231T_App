@@ -112,7 +112,7 @@ void HAL_PrintNetworkInfo()
 	bk_printf(buffer);
 	// do we need this in web Log?
 	// disable for now
-//	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, buffer);
+//	ADDLOG_INFO(LOG_FEATURE_GENERAL, buffer);
 }
 
 int HAL_GetWifiStrength()

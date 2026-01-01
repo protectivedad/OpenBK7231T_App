@@ -59,7 +59,7 @@ int ADS1115_ReadChannel(i2cDevice_ADS1115_t *ads, int channel)
 		res = 0;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C, "ADS adr %i AN%i is %i", ads->base.addr, channel, (int)res);
+	ADDLOG_INFO(LOG_FEATURE_I2C, "ADS adr %i AN%i is %i", ads->base.addr, channel, (int)res);
 	return res;
 }
 void DRV_I2C_ADS1115_RunDevice(i2cDevice_t *dev)
@@ -106,10 +106,10 @@ commandResult_t DRV_I2C_AddDevice_ADS1115(const void *context, const char *cmd, 
 	busType = DRV_I2C_ParseBusType(i2cModuleStr);
 
 	if (DRV_I2C_FindDevice(busType, address)) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_I2C, "DRV_I2C_AddDevice_ADS1115: there is already some device on this bus with such addr\n");
+		ADDLOG_INFO(LOG_FEATURE_I2C, "DRV_I2C_AddDevice_ADS1115: there is already some device on this bus with such addr\n");
 		return CMD_RES_BAD_ARGUMENT;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_I2C, "DRV_I2C_AddDevice_ADS1115: module %s, address %i\n", i2cModuleStr, address);
+	ADDLOG_INFO(LOG_FEATURE_I2C, "DRV_I2C_AddDevice_ADS1115: module %s, address %i\n", i2cModuleStr, address);
 
 	for (int i = 0; i < 4; i++) {
 		channels[i] = Tokenizer_GetArgIntegerDefault(2 + i, 0xff);

@@ -418,7 +418,7 @@ int MQTT_RegisterCallback(const char* basetopic, const char* subscriptiontopic, 
 	if (!basetopic || !subscriptiontopic || !callback) {
 		return -1;
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT_RegisterCallback called for bT %s subT %s", basetopic, subscriptiontopic);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT_RegisterCallback called for bT %s subT %s", basetopic, subscriptiontopic);
 
 	// find existing to replace
 	for (index = 0; index < numCallbacks; index++) {
@@ -594,7 +594,7 @@ int channelGet(obk_mqtt_request_t* request) {
 		return 0;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelGet part topic %s", p);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "channelGet part topic %s", p);
 #if ENABLE_LED_BASIC
 	if (stribegins(p, "led_enableAll")) {
 		LED_SendEnableAllState();
@@ -621,7 +621,7 @@ int channelGet(obk_mqtt_request_t* request) {
 	// atoi won't parse any non-decimal chars, so it should skip over the rest of the topic.
 	channel = atoi(p);
 
-	//addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelGet channel %i", channel);
+	//ADDLOG_INFO(LOG_FEATURE_MQTT, "channelGet channel %i", channel);
 
 	// if channel out of range, stop here.
 	if ((channel < 0) || (channel > 32)) {
@@ -650,12 +650,12 @@ int channelSet(obk_mqtt_request_t* request) {
 		return 0;
 	}
 
-	//addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelSet part topic %s", p);
+	//ADDLOG_INFO(LOG_FEATURE_MQTT, "channelSet part topic %s", p);
 
 	// atoi won't parse any non-decimal chars, so it should skip over the rest of the topic.
 	channel = atoi(p);
 
-	//addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelSet channel %i", channel);
+	//ADDLOG_INFO(LOG_FEATURE_MQTT, "channelSet channel %i", channel);
 
 	// if channel out of range, stop here.
 	if ((channel < 0) || (channel > CHANNEL_MAX)) {
@@ -667,11 +667,11 @@ int channelSet(obk_mqtt_request_t* request) {
 
 	// if not /set, then stop here
 	if (strcmp(p, "/set")) {
-		//addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "channelSet NOT 'set'");
+		//ADDLOG_INFO(LOG_FEATURE_MQTT, "channelSet NOT 'set'");
 		return 0;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_data_cb data is %.*s for ch %i\n", MQTT_MAX_DATA_LOG_LENGTH, request->received, channel);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_data_cb data is %.*s for ch %i\n", MQTT_MAX_DATA_LOG_LENGTH, request->received, channel);
 
 	argument = ((const char*)request->received);
 
@@ -761,7 +761,7 @@ void MQTT_ProcessCommandReplyJSON(const char *cmd, const char *args, int flags) 
 int onHassStatus(obk_mqtt_request_t* request) {
 	if (!strcmp(request->topic, "homeassistant/status")) {
 		const char *args = (const char *)request->received;
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "HA status - %s\n", args);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "HA status - %s\n", args);
 		if (!strcmp(args, "online")) {
 			MQTT_PublishWholeDeviceState_Internal(true);
 		}
@@ -847,7 +847,7 @@ static void mqtt_pub_request_cb(void* arg, err_t result)
 {
 	if (result != ERR_OK)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish result: %d(%s)\n", result, get_error_name(result));
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish result: %d(%s)\n", result, get_error_name(result));
 		mqtt_publish_errors++;
 	}
 }
@@ -928,10 +928,10 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 		}
 		if (sVal_len < 128)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publishing val %s to %s retain=%i\n", sVal, pub_topic, retain);
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val %s to %s retain=%i\n", sVal, pub_topic, retain);
 		}
 		else {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publishing val (%d bytes) to %s retain=%i\n", sVal_len, pub_topic, retain);
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val (%d bytes) to %s retain=%i\n", sVal_len, pub_topic, retain);
 		}
 
 
@@ -998,7 +998,7 @@ OBK_Publish_Result MQTT_Publish(const char* sTopic, const char* sChannel, const 
 }
 
 void MQTT_OBK_Printf(char* s) {
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, s);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, s);
 }
 
 ////////////////////////////////////////
@@ -1017,7 +1017,7 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 		g_mqtt_request.received = data;
 		g_mqtt_request.receivedLen = len;
 
-		//addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT in topic %s", g_mqtt_request.topic);
+		//ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT in topic %s", g_mqtt_request.topic);
 		mqtt_received_events++;
 
 		for (i = 0; i < numCallbacks; i++)
@@ -1038,7 +1038,7 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 				//}
 			}
 		}
-		//addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT topic not handled: %s", g_mqtt_request.topic);
+		//ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT topic not handled: %s", g_mqtt_request.topic);
 	}
 }
 
@@ -1100,7 +1100,7 @@ static void mqtt_incoming_publish_cb(void* arg, const char* topic, u32_t tot_len
 			break;
 		}
 	}
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_publish_cb topic %s\n", topic);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT client in mqtt_incoming_publish_cb topic %s\n", topic);
 }
 
 static void mqtt_request_cb(void* arg, err_t err)
@@ -1122,19 +1122,19 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 	const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 	LWIP_UNUSED_ARG(client);
 
-	//   addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client < removed name > connection cb: status %d\n",  (int)status);
-	 //  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);
+	//   ADDLOG_INFO(LOG_FEATURE_MQTT,"MQTT client < removed name > connection cb: status %d\n",  (int)status);
+	 //  ADDLOG_INFO(LOG_FEATURE_MQTT,"MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);
 
 	if (status == MQTT_CONNECT_ACCEPTED)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_connection_cb: Successfully connected\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_connection_cb: Successfully connected\n");
 
 #if LWIP_ALTCP_TLS_MBEDTLS
 		if (CFG_GetMQTTUseTls() && client && client->conn && client->conn->state) {
 			altcp_mbedtls_state_t* state = client->conn->state;
 			mbedtls_ssl_context* ssl = &state->ssl_context;
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT TLS VERSION: %s\n", mbedtls_ssl_get_version(ssl));
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT TLS CIPHER : %s\n", mbedtls_ssl_get_ciphersuite(ssl));
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT TLS VERSION: %s\n", mbedtls_ssl_get_version(ssl));
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT TLS CIPHER : %s\n", mbedtls_ssl_get_ciphersuite(ssl));
 		}
 #endif
 
@@ -1156,10 +1156,10 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 						mqtt_request_cb, LWIP_CONST_CAST(void*, client_info),
 						1);
 					if (err != ERR_OK) {
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
 					}
 					else {
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
 					}
 				}
 			}
@@ -1190,7 +1190,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 		//        1);
 	}
 	else {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_connection_cb: Disconnected, reason: %d(%s)\n", status, get_callback_error(status));
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_connection_cb: Disconnected, reason: %d(%s)\n", status, get_callback_error(status));
 	}
 }
 
@@ -1206,12 +1206,12 @@ void dnsFound(const char *name, ip_addr_t *ipaddr, void *arg)
 		dns_resolved = true;
 		/* Try to reconnect immediately after resolving the host */
 		mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED + 1;
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host %s resolution SUCCESS\r\n", name);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host %s resolution SUCCESS\r\n", name);
 	}
 	else
 	{
 		dns_resolved = false;
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host %s resolution FAILED\r\n", name);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host %s resolution FAILED\r\n", name);
 	}
 	dns_in_progress_time = 0;
 }
@@ -1228,7 +1228,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 	mqtt_host = CFG_GetMQTTHost();
 
 	if (!mqtt_host[0]) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host empty, not starting mqtt\r\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host empty, not starting mqtt\r\n");
 		snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host empty, not starting mqtt");
 		return 0;
 	}
@@ -1243,7 +1243,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 #endif
 
 	if (dns_in_progress_time <= 0 && !dns_resolved) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
 			mqtt_userName,
 			/* do not log sensitive data */
 			//mqtt_pass,
@@ -1284,7 +1284,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		if (hostEntry->h_addr_list && hostEntry->h_addr_list[0]) {
 			int len = hostEntry->h_length;
 			if (len > 4) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host resolves to addr len > 4\r\n");
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host resolves to addr len > 4\r\n");
 				len = 4;
 			}
 			memcpy(&mqtt_ip, hostEntry->h_addr_list[0], len);
@@ -1292,7 +1292,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		else 
 #endif
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host resolves no addresses?\r\n");
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host resolves no addresses?\r\n");
 			snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host resolves no addresses?");
 			return 0;
 		}
@@ -1337,12 +1337,12 @@ static int MQTT_do_connect(mqtt_client_t* client)
 			mqtt_client_info.tls_config = NULL;
 		}
 		if (mqtt_use_tls) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Secure TLS connection enabled");
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Secure TLS connection enabled");
 			size_t ca_len = 0;
 			u8_t* ca = NULL;
 			if (mqtt_verify_tls_cert) {
 				if (strlen(CFG_GetMQTTCertFile()) > 0) {
-					addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Load certificate %s", CFG_GetMQTTCertFile());
+					ADDLOG_INFO(LOG_FEATURE_MQTT, "Load certificate %s", CFG_GetMQTTCertFile());
 					ca = LFS_ReadFile(CFG_GetMQTTCertFile());
 					if (ca) {
 						ca_len = strlen((char*)ca)+1;
@@ -1350,7 +1350,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 				}
 			}
 			else {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Verify certificate disabled");
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "Verify certificate disabled");
 			}
 			mqtt_client_info.tls_config = altcp_tls_create_config_client(ca, ca_len);
 			if (ca) {
@@ -1377,7 +1377,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 				}
 			}
 			else {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Secure TLS config fail. Try connect anyway.");
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "Secure TLS config fail. Try connect anyway.");
 			}
 		}
 #endif /* MQTT_USE_TLS */
@@ -1399,7 +1399,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		mqtt_connect_result = res;
 		if (res != ERR_OK)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Connect error in mqtt_client_connect - code: %d (%s)\n", res, get_error_name(res));
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "Connect error in mqtt_client_connect - code: %d (%s)\n", res, get_error_name(res));
 			snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_client_connect connect failed");
 			if (res == ERR_ISCONN)
 			{
@@ -1414,7 +1414,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 	else {
 		if (dns_in_progress_time > 0)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host %s is being resolved by gethostbyname\r\n", mqtt_host);
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host %s is being resolved by gethostbyname\r\n", mqtt_host);
 			dns_in_progress_time--;
 			/* Discount connection event if host is being resolved */
 			mqtt_connect_events--;
@@ -1423,7 +1423,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		{
 			if (!dns_resolved)
 			{
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
 				snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host %s not found by gethostbyname", mqtt_host);
 			}
 		}
@@ -1473,13 +1473,13 @@ OBK_Publish_Result MQTT_ChannelPublish(int channel, int flags)
 	if (CFG_HasFlag(OBK_FLAG_PUBLISH_MULTIPLIED_VALUES)) {
 		float dVal = CHANNEL_GetFinalValue(channel);
 		// Float value
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Channel has changed! Publishing %f to channel %i \n", dVal, channel);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Channel has changed! Publishing %f to channel %i \n", dVal, channel);
 		sprintf(valueStr, "%f", dVal);
 	}
 	else {
 		int iVal = CHANNEL_Get(channel);
 		// Integer value
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Channel has changed! Publishing %i to channel %i \n", iVal, channel);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Channel has changed! Publishing %i to channel %i \n", iVal, channel);
 		sprintf(valueStr, "%i", iVal);
 	}
 
@@ -1530,7 +1530,7 @@ commandResult_t MQTT_PublishCommand(const void* context, const char* cmd, const 
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_ALLOW_ESCAPING_QUOTATIONS | TOKENIZER_EXPAND_EARLY);
 
 	if (Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	topic = Tokenizer_GetArg(0);
@@ -1559,7 +1559,7 @@ commandResult_t MQTT_PublishFile(const void* context, const char* cmd, const cha
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_ALLOW_ESCAPING_QUOTATIONS | TOKENIZER_EXPAND_EARLY);
 
 	if (Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	topic = Tokenizer_GetArg(0);
@@ -1588,7 +1588,7 @@ commandResult_t MQTT_PublishCommandInteger(const void* context, const char* cmd,
 	Tokenizer_TokenizeString(args, 0);
 
 	if (Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	topic = Tokenizer_GetArg(0);
@@ -1614,7 +1614,7 @@ commandResult_t MQTT_PublishCommandFloat(const void* context, const char* cmd, c
 	Tokenizer_TokenizeString(args, 0);
 
 	if (Tokenizer_GetArgsCount() < 2) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "Publish command requires two arguments (topic and value)");
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	topic = Tokenizer_GetArg(0);
@@ -1726,7 +1726,7 @@ void MQTT_Test_Tick(void* param)
 					if (err == ERR_OK)
 					{
 						/* Report published */
-						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, info->value);
+						ADDLOG_INFO(LOG_FEATURE_MQTT, info->value);
 						info->report_published = true;
 						/* Stop timer */
 					}
@@ -2198,7 +2198,7 @@ int MQTT_RunEverySecondUpdate()
 		return 0;
 	}
 	if (g_mqtt_bBaseTopicDirty) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT base topic is dirty, will reinit callbacks and reconnect\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT base topic is dirty, will reinit callbacks and reconnect\n");
 		MQTT_InitCallbacks();
 		mqtt_reconnect = 5;
 	}
@@ -2206,7 +2206,7 @@ int MQTT_RunEverySecondUpdate()
 	// reconnect if went into MQTT library ERR_MEM forever loop
 	if (g_memoryErrorsThisSession >= 5)
 	{
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT will reconnect soon to fix ERR_MEM errors\n");
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT will reconnect soon to fix ERR_MEM errors\n");
 		g_memoryErrorsThisSession = 0;
 		mqtt_reconnect = 5;
 	}
@@ -2221,13 +2221,13 @@ int MQTT_RunEverySecondUpdate()
 	if (mqtt_reconnect > 0)
 	{
 		mqtt_reconnect--;
-		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT has pending reconnect in %i\n", mqtt_reconnect);
+		ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT has pending reconnect in %i\n", mqtt_reconnect);
 		if (mqtt_reconnect == 0)
 		{
 			// then if connected, disconnect, and then it will reconnect automatically in 2s
 			if (mqtt_client && res)
 			{
-				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT will now do a forced reconnect\n");
+				ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT will now do a forced reconnect\n");
 				MQTT_disconnect(mqtt_client);
 				mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
 			}
@@ -2236,7 +2236,7 @@ int MQTT_RunEverySecondUpdate()
 
 	if (mqtt_client == 0 || res == 0)
 	{
-		//addLogAdv(LOG_INFO,LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",mqtt_loopsWithDisconnected);
+		//ADDLOG_INFO(LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",mqtt_loopsWithDisconnected);
 		if (OTA_GetProgress() == -1)
 		{
 			mqtt_loopsWithDisconnected++;
@@ -2295,7 +2295,7 @@ int MQTT_RunEverySecondUpdate()
 		g_timeSinceLastMQTTPublish++;
 		if (OTA_GetProgress() != -1)
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
 			LOCK_TCPIP_CORE();
 			mqtt_disconnect(mqtt_client);
 			UNLOCK_TCPIP_CORE();
@@ -2341,7 +2341,7 @@ int MQTT_RunEverySecondUpdate()
 					if (publishRes != OBK_PUBLISH_WAS_NOT_REQUIRED)
 					{
 						if (false) {
-							addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "[g_bPublishAllStatesNow] item %i result %i\n", g_publishItemIndex, publishRes);
+							ADDLOG_INFO(LOG_FEATURE_MQTT, "[g_bPublishAllStatesNow] item %i result %i\n", g_publishItemIndex, publishRes);
 						}
 					}
 					// There are several things that can happen now
@@ -2456,7 +2456,7 @@ void MQTT_QueuePublishWithCommand(const char* topic, const char* channel, const 
 	newItem->flags = flags;
 
 	g_MqttPublishItemsQueued++;
-	addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "Queued topic=%s/%s, %i items in queue", newItem->topic, newItem->channel, g_MqttPublishItemsQueued);
+	ADDLOG_INFO(LOG_FEATURE_MQTT, "Queued topic=%s/%s, %i items in queue", newItem->topic, newItem->channel, g_MqttPublishItemsQueued);
 }
 
 /// @brief Add the specified command to the last entry in the queue.
@@ -2491,7 +2491,7 @@ OBK_Publish_Result PublishQueuedItems() {
 
 	//The next actionable item might not be at the front. The queue size is limited to MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE
 	//so this traversal is fast.
-	//addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"PublishQueuedItems g_MqttPublishItemsQueued=%i",g_MqttPublishItemsQueued );
+	//ADDLOG_INFO(LOG_FEATURE_MQTT,"PublishQueuedItems g_MqttPublishItemsQueued=%i",g_MqttPublishItemsQueued );
 	while ((head != NULL) && (count < MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE) && (g_MqttPublishItemsQueued > 0)) {
 		if (!MQTT_QUEUE_ITEM_IS_REUSABLE(head)) {  //Skip reusable entries
 			count++;
@@ -2514,7 +2514,7 @@ OBK_Publish_Result PublishQueuedItems() {
 			}
 		}
 		else {
-			//addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"PublishQueuedItems item skipped reusable");
+			//ADDLOG_INFO(LOG_FEATURE_MQTT,"PublishQueuedItems item skipped reusable");
 		}
 
 		head = head->next;
@@ -2586,7 +2586,7 @@ struct tm* mbedtls_platform_gmtime_r(const mbedtls_time_t* tt, struct tm* tm_buf
 	if (!NTP_IsTimeSynced()) {	
 		ltm = cvt_date(__DATE__, __TIME__, tm_buf);
 		if (log_gmtime_alt) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_NTP, "MBEDTLS: NTP not synchronized. Using compile time: %04d/%02d/%02d %02d:%02d:%02d",
+			ADDLOG_INFO(LOG_FEATURE_NTP, "MBEDTLS: NTP not synchronized. Using compile time: %04d/%02d/%02d %02d:%02d:%02d",
 				ltm->tm_year + 1900, ltm->tm_mon + 1, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
 			log_gmtime_alt = false; 
 		}			

@@ -29,7 +29,7 @@ int fd_console = -1;
 //	//}
 //	int res = bl_uart_data_recv(g_id);
 //	if (res >= 0) {
-//		addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "UART received: %i\n", res);
+//		ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "UART received: %i\n", res);
 //		UART_AppendByteToReceiveRingBuffer(res);
 //	}
 //}
@@ -93,11 +93,11 @@ int HAL_UART_Init(int baud, int parity, bool hwflowc, int txOverride, int rxOver
 		{
 			aos_ioctl(fd_console, IOCTL_UART_IOC_BAUD_MODE, baud);
 			aos_poll_read_fd(fd_console, console_cb_read, (void*)0x12345678);
-			addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "UART init done\r\n");
+			ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "UART init done\r\n");
 		}
 		else
 		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_ENERGYMETER, "UART init failed\r\n");
+			ADDLOG_INFO(LOG_FEATURE_ENERGYMETER, "UART init failed\r\n");
 		}
 	}
 	return 1;

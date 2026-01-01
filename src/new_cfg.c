@@ -82,7 +82,7 @@ bool CFG_HasValidLEDCorrectionTable() {
 	}
 }
 void CFG_SetDefaultLEDCorrectionTable() {
-	addLogAdv(LOG_INFO, LOG_FEATURE_CFG, "CFG_SetDefaultLEDCorrectionTable: setting defaults\r\n");
+	ADDLOG_INFO(LOG_FEATURE_CFG, "CFG_SetDefaultLEDCorrectionTable: setting defaults\r\n");
 	for (int c = 0; c < 3; c++) {
 		g_cfg.led_corr.rgb_cal[c] = 1.0f;
 	}

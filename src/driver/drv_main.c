@@ -1496,11 +1496,11 @@ void DRV_StopDriver(const char* name) {
 					g_drivers[i].stopFunc();
 				}
 				g_drivers[i].bLoaded = false;
-				addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Drv %s stopped.", g_drivers[i].name);
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "Drv %s stopped.", g_drivers[i].name);
 			}
 			else {
 				if (*name != '*') {
-					addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Drv %s not running.", name);
+					ADDLOG_INFO(LOG_FEATURE_MAIN, "Drv %s not running.", name);
 				}
 			}
 		}
@@ -1534,7 +1534,7 @@ void DRV_StartDriver(const char* name) {
 			}
 #endif
 			if (g_drivers[i].bLoaded) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Drv %s is already loaded.\n", name);
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "Drv %s is already loaded.\n", name);
 				bStarted = 1;
 				break;
 
@@ -1544,7 +1544,7 @@ void DRV_StartDriver(const char* name) {
 					g_drivers[i].initFunc();
 				}
 				g_drivers[i].bLoaded = true;
-				addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Started %s.\n", name);
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "Started %s.\n", name);
 				bStarted = 1;
 				break;
 			}
@@ -1555,14 +1555,14 @@ void DRV_StartDriver(const char* name) {
 #else
 	if (!bStarted) {
 #endif
-		addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Driver %s is not known in this build.\n", name);
-		addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Available drivers: ");
+		ADDLOG_INFO(LOG_FEATURE_MAIN, "Driver %s is not known in this build.\n", name);
+		ADDLOG_INFO(LOG_FEATURE_MAIN, "Available drivers: ");
 		for (i = 0; i < g_numDrivers; i++) {
 			if (i == 0) {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "%s", g_drivers[i].name);
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "%s", g_drivers[i].name);
 			}
 			else {
-				addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, ", %s", g_drivers[i].name);
+				ADDLOG_INFO(LOG_FEATURE_MAIN, ", %s", g_drivers[i].name);
 			}
 		}
 	}
