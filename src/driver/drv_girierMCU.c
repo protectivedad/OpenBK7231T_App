@@ -145,7 +145,7 @@ bool GirierMCU_SendFromQueue() {
 }
 
 girierMCUMapping_t* GirierMCU_FindDefForID(int dpId) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU,
 		"_FindDefForID(dpId=%d) called\n", dpId);
 	girierMCUMapping_t* cur;
 
@@ -159,7 +159,7 @@ girierMCUMapping_t* GirierMCU_FindDefForID(int dpId) {
 }
 
 girierMCUMapping_t* GirierMCU_FindDefForChannel(int channel) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU,
 		"_FindDefForChannel(channel=%d) called\n", channel);
 	girierMCUMapping_t* cur;
 
@@ -173,8 +173,8 @@ girierMCUMapping_t* GirierMCU_FindDefForChannel(int channel) {
 }
 
 girierMCUMapping_t* GirierMCU_MapIDToChannel(int dpId, int dpType, int channel, int obkFlags, float mul, int inv, float delta, float delta2, float delta3) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"_MapIDToChannel(dpId=%d, dpType=%d, channel=%d, obkFlags=%d, mul=%f, inv=%d, delta=%f, delta2=%f, delta3=%f) called", 
 		dpId, dpType, channel, obkFlags, mul, inv, delta, delta2, delta3
 	);
@@ -222,8 +222,8 @@ void GirierMCU_SendInit() {
 
 // append header, len, everything, checksum
 void GirierMCU_SendCommandWithData(byte* data, int payload_len) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"_SendCommandWithData(data=%p, payload_len=%d) called\n",
 		 data, payload_len
 	);
@@ -256,8 +256,8 @@ void GirierMCU_SendCommandWithData(byte* data, int payload_len) {
 }
 
 int GirierMCU_AppendStateInternal(byte *buffer, int bufferMax, int currentLen, uint8_t dpId, void* value, int dataLen) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"_AppendStateInternal(buffer=%p, bufferMax=%d, currentLen=%d, id=%d,value=%p, dataLen=%d) called\n", 
 		buffer, bufferMax, currentLen, dpId, value, dataLen
 	);
@@ -273,8 +273,8 @@ int GirierMCU_AppendStateInternal(byte *buffer, int bufferMax, int currentLen, u
 }
 
 void GirierMCU_SendStateInternal(uint8_t dpId, void* value, int dataLen) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"_SendStateInternal(id=%d, value=%p, dataLen=%d) called\n", 
 		dpId, value, dataLen
 	);
@@ -308,7 +308,7 @@ void GirierMCU_SendValue(uint8_t dpId, int value) {
         return;
     }
 
-    addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+    ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU,
               "dpId=%u, brightness=%u (data[0]=%u, data[1]=%u)",
               dpId, brightness, brightnessData[0], brightnessData[1]);
 
@@ -317,8 +317,8 @@ void GirierMCU_SendValue(uint8_t dpId, int value) {
 }
 
 commandResult_t GirierMCU_LinkGirierMCUOutputToChannel(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"_LinkGirierMCUOutputToChannel(context=%p, cmd=%s, args=%s, cmdFlags=%d) called\n",
 		context, cmd, args, cmdFlags
 	);
@@ -365,7 +365,7 @@ commandResult_t GirierMCU_LinkGirierMCUOutputToChannel(const void* context, cons
 }
 
 bool GirierMCU_IsChannelUsedByGirierMCU(int channel) {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU, "_IsChannelUsedByGirierMCU(channel=%d) called", channel);
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "_IsChannelUsedByGirierMCU(channel=%d) called", channel);
 	girierMCUMapping_t* mapping;
 
 	// find mapping
@@ -378,8 +378,8 @@ bool GirierMCU_IsChannelUsedByGirierMCU(int channel) {
 }
 
 void GirierMCU_OnChannelChanged(int channel, int iVal) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"_OnChannelChanged(channel=%d, iVal=%d) called", 
 		channel, iVal
 	);
@@ -398,8 +398,8 @@ void GirierMCU_OnChannelChanged(int channel, int iVal) {
 
 	int mappediVal = ((iVal - g_dimmerRangeMin) * 255) / (g_dimmerRangeMax - g_dimmerRangeMin);
 
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		"g_dimmerRangeMax:%d, g_dimmerRangeMin:%d, mapped dp %i value %d to %d\n",
 		g_dimmerRangeMax, g_dimmerRangeMin,  channel, iVal, mappediVal
 	);
@@ -411,8 +411,8 @@ void GirierMCU_OnChannelChanged(int channel, int iVal) {
 	}
 
 	if (iVal != mappediVal) {
-		addLogAdv(
-			LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+		ADDLOG_DEBUG(
+			LOG_FEATURE_TUYAMCU,
 			"OnChannelChanged: mapped value %d (OpenBK7231T_App range) to %d (GirierMCU range)\n",
 			iVal,
 			mappediVal
@@ -443,8 +443,8 @@ void GirierMCU_RunEverySecond() {
 }
 
 commandResult_t GirierMCU_SetBaudRate(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	addLogAdv(
-		LOG_DEBUG, LOG_FEATURE_TUYAMCU,
+	ADDLOG_DEBUG(
+		LOG_FEATURE_TUYAMCU,
 		 "_SetBaudRate(context=%p, cmd=%s, args=%s, cmdFlags=%d) called",
 		  context, cmd, args, cmdFlags
 	);
@@ -466,7 +466,7 @@ commandResult_t GirierMCU_SetBaudRate(const void* context, const char* cmd, cons
 static SemaphoreHandle_t g_mutex = 0;
 
 void GirierMCU_Shutdown() {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU, "_Shutdown() called");
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "_Shutdown() called");
 	girierMCUMapping_t *tmp, *nxt;
 	GirierMCUPacket_t *packet, *next_packet;
 
@@ -531,7 +531,7 @@ void GirierMCU_Shutdown() {
 }
 
 void GirierMCU_ForcePublishChannelValues() {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU, "_ForcePublishChannelValues() called");
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "_ForcePublishChannelValues() called");
 #if ENABLE_MQTT
 	girierMCUMapping_t* cur;
 
@@ -544,7 +544,7 @@ void GirierMCU_ForcePublishChannelValues() {
 }
 
 void GirierMCU_Init() {
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_TUYAMCU, "_Init() called");
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "_Init() called");
 	g_girierNextRequestDelay = 1;
 	if (g_GirierMCUpayloadBuffer == 0) {
 		g_GirierMCUpayloadBufferSize = GIRIERMCU_BUFFER_SIZE;

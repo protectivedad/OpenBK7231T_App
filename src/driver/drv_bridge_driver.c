@@ -200,7 +200,7 @@ void Bridge_driver_OnChannelChanged(int ch, int value)
         {
             if (br_ctrl[i].channel == ch)
             {
-                addLogAdv(LOG_DEBUG, LOG_FEATURE_DRV, "Bridge Driver OnChannelChanged: CH:%i VAL:%i\n", ch, value);
+                ADDLOG_DEBUG(LOG_FEATURE_DRV, "Bridge Driver OnChannelChanged: CH:%i VAL:%i\n", ch, value);
                 br_ctrl[i].new_state = value;
             }
         }

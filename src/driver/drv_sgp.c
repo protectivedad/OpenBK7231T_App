@@ -47,7 +47,7 @@ void SGP_Readmeasure() {
 	hh = buff[3];
 	hl = buff[4];
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_SENSOR, "SGP_Measure: Bits %02X %02X %02X %02X", buff[0], buff[1], buff[3], buff[4]);
+	ADDLOG_DEBUG(LOG_FEATURE_SENSOR, "SGP_Measure: Bits %02X %02X %02X %02X", buff[0], buff[1], buff[3], buff[4]);
 
 	g_co2 = ((th * 256 + tl));
 	g_tvoc = ((hh * 256 + hl));

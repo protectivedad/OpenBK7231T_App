@@ -586,7 +586,7 @@ int channelGet(obk_mqtt_request_t* request) {
 		return 1;
 	}
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "channelGet topic %i with arg %s", request->topic, request->received);
+	ADDLOG_DEBUG(LOG_FEATURE_MQTT, "channelGet topic %i with arg %s", request->topic, request->received);
 
 	p = MQTT_RemoveClientFromTopic(request->topic,0);
 
@@ -642,7 +642,7 @@ int channelSet(obk_mqtt_request_t* request) {
 	const char* p;
 	const char *argument;
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "channelSet topic %i with arg %s", request->topic, request->received);
+	ADDLOG_DEBUG(LOG_FEATURE_MQTT, "channelSet topic %i with arg %s", request->topic, request->received);
 
 	p = MQTT_RemoveClientFromTopic(request->topic,0);
 
@@ -2605,16 +2605,16 @@ static int mbedtls_verify_cb(void* data, mbedtls_x509_crt* crt, int depth, uint3
 	((void)data);
 	char buf[1024];
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "Verify requested for (Depth% d) : \n", depth);
+	ADDLOG_DEBUG(LOG_FEATURE_MQTT, "Verify requested for (Depth% d) : \n", depth);
 	mbedtls_x509_crt_info(buf, sizeof(buf) - 1, "", crt);
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "\n%s", buf);
+	ADDLOG_DEBUG(LOG_FEATURE_MQTT, "\n%s", buf);
 
 	if ((*flags) == 0) {
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "  This certificate has no flags\n");
+		ADDLOG_DEBUG(LOG_FEATURE_MQTT, "  This certificate has no flags\n");
 	}
 	else {
 		mbedtls_x509_crt_verify_info(buf, sizeof(buf), "  ! ", *flags);
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "%s\n", buf);
+		ADDLOG_DEBUG(LOG_FEATURE_MQTT, "%s\n", buf);
 	}
 	return 0;
 }
@@ -2639,102 +2639,102 @@ static void mbedtls_debug_cb(void* ctx, int level, const char* file, int line, c
 
 void mbedtls_dump_conf(mbedtls_ssl_config* conf, mbedtls_ssl_context* ssl) {
 	if (ssl && ssl->handshake) {
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE CIPHER SUITE: %s", ssl->handshake->ciphersuite_info->name);
+		ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE CIPHER SUITE: %s", ssl->handshake->ciphersuite_info->name);
 		switch (ssl->handshake->ciphersuite_info->key_exchange)
 		{
 			case MBEDTLS_KEY_EXCHANGE_NONE: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_NONE");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_NONE");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_RSA: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_RSA");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_RSA");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_DHE_RSA: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_DHE_RSA");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_DHE_RSA");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDHE_RSA");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDHE_RSA");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_PSK: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_PSK");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_PSK");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_DHE_PSK: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_DHE_PSK");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_DHE_PSK");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_RSA_PSK: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_RSA_PSK");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_RSA_PSK");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDHE_PSK");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDHE_PSK");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_ECDH_RSA: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDH_RSA");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDH_RSA");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA");
 				break;
 			case MBEDTLS_KEY_EXCHANGE_ECJPAKE: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECJPAKE");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "HANDSHAKE KEY EXCHANGE: MBEDTLS_KEY_EXCHANGE_ECJPAKE");
 				break;
 		}
 	}
 	
 	if (conf) {
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "AVAILABLE CIPHERS:");
+		ADDLOG_DEBUG(LOG_FEATURE_MQTT, "AVAILABLE CIPHERS:");
 		int len = sizeof(conf->ciphersuite_list) / (sizeof(conf->ciphersuite_list[0]));
 		for (int s = 0; s < len; s++) {
-			addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     %s",
+			ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     %s",
 				mbedtls_ssl_get_ciphersuite_name(*conf->ciphersuite_list[s]));
 		}
-		addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "AVAILABLE CURVES:");
+		ADDLOG_DEBUG(LOG_FEATURE_MQTT, "AVAILABLE CURVES:");
 		len = sizeof(conf->curve_list) / (sizeof(mbedtls_ecp_group_id));
 		const mbedtls_ecp_group_id* c = conf->curve_list;
 		for (; *c; c++) {
 			switch (*c)
 			{
 			case MBEDTLS_ECP_DP_NONE: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_NONE");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_NONE");
 				break;
 			case MBEDTLS_ECP_DP_SECP192R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP192R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP192R1");
 				break;
 			case MBEDTLS_ECP_DP_SECP224R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP224R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP224R1");
 				break;
 			case MBEDTLS_ECP_DP_SECP256R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP256R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP256R1");
 				break;
 			case MBEDTLS_ECP_DP_SECP384R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP384R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP384R1");
 				break;
 			case MBEDTLS_ECP_DP_SECP521R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP521R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP521R1");
 				break;
 			case MBEDTLS_ECP_DP_BP256R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_BP256R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_BP256R1");
 				break;
 			case MBEDTLS_ECP_DP_BP384R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_BP384R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_BP384R1");
 				break;
 			case MBEDTLS_ECP_DP_BP512R1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_BP512R1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_BP512R1");
 				break;
 			case MBEDTLS_ECP_DP_CURVE25519: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_CURVE25519");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_CURVE25519");
 				break;
 			case MBEDTLS_ECP_DP_SECP192K1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP192K1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP192K1");
 				break;
 			case MBEDTLS_ECP_DP_SECP224K1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP224K1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP224K1");
 				break;
 			case MBEDTLS_ECP_DP_SECP256K1: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP256K1");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_SECP256K1");
 				break;
 			case MBEDTLS_ECP_DP_CURVE448: 
-				addLogAdv(LOG_DEBUG, LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_CURVE448");
+				ADDLOG_DEBUG(LOG_FEATURE_MQTT, "     MBEDTLS_ECP_DP_CURVE448");
 				break;
 			}
 		}

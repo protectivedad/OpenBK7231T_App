@@ -271,7 +271,7 @@ static void DRV_SSDP_Send_Advert_To(struct sockaddr_in *addr) {
 
 	DRV_SSDP_SendReply(addr,advert_message);
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Advert_To: sent message");
+	ADDLOG_DEBUG(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Advert_To: sent message");
 }
 
 
@@ -390,7 +390,7 @@ static int DRV_SSDP_Service_Http(http_request_t* request){
         http_message = (char *)malloc(http_message_len+1);
     }
 
-	addLogAdv(LOG_DEBUG, LOG_FEATURE_HTTP, "DRV_SSDP_Service_Http");
+	ADDLOG_DEBUG(LOG_FEATURE_HTTP, "DRV_SSDP_Service_Http");
 
     snprintf(http_message, http_message_len, http_reply, 
         freindly_name,
