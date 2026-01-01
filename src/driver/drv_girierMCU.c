@@ -303,7 +303,7 @@ void GirierMCU_SendValue(uint8_t dpId, int value) {
     } else if (dpId == 2) {
         brightnessData[1] = brightness;   // CH2 value in second byte
     } else {
-        addLogAdv(LOG_WARN, LOG_FEATURE_TUYAMCU,
+        ADDLOG_WARN(LOG_FEATURE_TUYAMCU,
                   "Invalid dpId=%u (expected 1 or 2)", dpId);
         return;
     }

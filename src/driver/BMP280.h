@@ -206,7 +206,7 @@ uint8_t BMP280_begin(BMP280_mode mode,
         isHumidityAvail = true;
         break;
     case BME680_CHIP_ID:
-        addLogAdv(LOG_WARN, LOG_FEATURE_SENSOR, "BME680 detected! Unsupported.");
+        ADDLOG_WARN(LOG_FEATURE_SENSOR, "BME680 detected! Unsupported.");
         chip_name = "BME680";
         break;
     case 0xFF:
