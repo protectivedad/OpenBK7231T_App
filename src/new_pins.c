@@ -1380,6 +1380,24 @@ void CFG_ApplyChannelStartValues() {
 			//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Pin %i is being set channel state %i", i, g_channelValues[iValue]);
 		}
 	}
+	// preload pin values from channels for pin types that look at g_lastValidState
+	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
+		switch (g_cfg.pins.roles[i]) {
+		case IOR_DigitalInput:
+		case IOR_DigitalInput_n:
+		case IOR_ToggleChannelOnToggle:
+		case IOR_DigitalInput_NoPup:
+		case IOR_DigitalInput_NoPup_n:
+#if ENABLE_DRIVER_DOORSENSOR
+		case IOR_DoorSensorWithDeepSleep:
+		case IOR_DoorSensorWithDeepSleep_NoPup:
+		case IOR_DoorSensorWithDeepSleep_pd:
+#endif
+			iValue = g_cfg.pins.channels[i];
+			g_lastValidState[i] = g_channelValues[iValue];
+			//addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Pin %i is being set channel state %i", i, g_channelValues[iValue]);
+		}
+	}
 }
 int ChannelType_GetDecimalPlaces(int type) {
 	int pl;
