@@ -107,11 +107,11 @@ static commandResult_t CMD_setMutex(const void *context, const char *cmd, const 
 	int pinUp = Tokenizer_GetArgInteger(4);
 
 	if (idx < 0 || idx >= MAX_PINMUTEX) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "setMutex: index %d out of range (0..%d)", idx, MAX_PINMUTEX - 1);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "setMutex: index %d out of range (0..%d)", idx, MAX_PINMUTEX - 1);
 		return CMD_RES_BAD_ARGUMENT;
 	}
 	if (delayMs < 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "setMutex: delay must be >= 0");
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "setMutex: delay must be >= 0");
 		return CMD_RES_BAD_ARGUMENT;
 	}
 
@@ -129,7 +129,7 @@ static commandResult_t CMD_setMutex(const void *context, const char *cmd, const 
 	HAL_PIN_SetOutputValue(pinUp, 0);
 	HAL_PIN_SetOutputValue(pinDown, 0);
 
-	addLogAdv(LOG_ERROR, LOG_FEATURE_GENERAL, "PinMutex[%d] = ch=%d, up=%d, down=%d, t=%dms",
+	ADDLOG_ERROR(LOG_FEATURE_GENERAL, "PinMutex[%d] = ch=%d, up=%d, down=%d, t=%dms",
 		idx, channel, pinUp, pinDown, delayMs);
 	return CMD_RES_OK;
 }

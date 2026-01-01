@@ -136,7 +136,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
     g_ssdp_socket_receive = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (g_ssdp_socket_receive < 0) {
 		g_ssdp_socket_receive = -1;
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do socket\n");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do socket\n");
         return ;
     }
 
@@ -146,7 +146,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 		iResult = setsockopt(g_ssdp_socket_receive, SOL_SOCKET, SO_BROADCAST, (char *)&flag, sizeof(flag));
 		if (iResult != 0)
 		{
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_BROADCAST\n");
+			ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_BROADCAST\n");
 			close(g_ssdp_socket_receive);
 			g_ssdp_socket_receive = -1;
 			return ;
@@ -160,7 +160,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 				g_ssdp_socket_receive, SOL_SOCKET, SO_REUSEADDR, (char*) &flag, sizeof(flag)
 			) < 0
 		){
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_REUSEADDR\n");
+			ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt SO_REUSEADDR\n");
 			close(g_ssdp_socket_receive);
 			g_ssdp_socket_receive = -1;
 		  return ;
@@ -177,7 +177,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
     // bind to receive address
     //
     if (bind(g_ssdp_socket_receive, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_DGR_CreateSocket_Receive: failed to do bind\n");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_DGR_CreateSocket_Receive: failed to do bind\n");
 		close(g_ssdp_socket_receive);
 		g_ssdp_socket_receive = -1;
         return ;
@@ -202,7 +202,7 @@ static void DRV_SSDP_CreateSocket_Receive() {
 		if (
 			iResult < 0
 		){
-			addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt IP_ADD_MEMBERSHIP %i\n",iResult);
+			ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_CreateSocket_Receive: failed to do setsockopt IP_ADD_MEMBERSHIP %i\n",iResult);
 			close(g_ssdp_socket_receive);
 			g_ssdp_socket_receive = -1;
 			return ;
@@ -241,7 +241,7 @@ void DRV_SSDP_SendReply(struct sockaddr_in *addr, const char *message) {
 
 	int nbytes;
 	if (g_ssdp_socket_receive <= 0) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP, "DRV_SSDP_SendReply: no socket");
+		ADDLOG_ERROR(LOG_FEATURE_HTTP, "DRV_SSDP_SendReply: no socket");
 		return;
 	}
 	// set up destination address
@@ -299,7 +299,7 @@ static void DRV_SSDP_Send_Notify() {
     struct sockaddr_in multicastaddr;
 
     if (g_ssdp_socket_receive <= 0){
-    	addLogAdv(LOG_ERROR, LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: no socket");
+    	ADDLOG_ERROR(LOG_FEATURE_HTTP,"DRV_SSDP_Send_Notify: no socket");
         return;
     }
     // set up destination address

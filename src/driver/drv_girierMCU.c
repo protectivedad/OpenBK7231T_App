@@ -263,7 +263,7 @@ int GirierMCU_AppendStateInternal(byte *buffer, int bufferMax, int currentLen, u
 	);
 
 	if (currentLen + 1 + dataLen >= bufferMax) {
-		addLogAdv(LOG_ERROR, LOG_FEATURE_TUYAMCU, "Girier buff overflow");
+		ADDLOG_ERROR(LOG_FEATURE_TUYAMCU, "Girier buff overflow");
 		return 0;
 	}
 	buffer[currentLen + 0] = dpId;
