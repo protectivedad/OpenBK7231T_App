@@ -50,11 +50,11 @@ static commandResult_t CMD_PWMG_Set(const void* context, const char* cmd, const 
 	uint32_t duty2_s = (duty2 / 100.0 * period); //No need to use upscaled variable
 	uint32_t dead_s = (dead / 100.0 * period); //No need to use upscaled variable
 	err = bk_pwm_group_mode_disable(pwm1);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "bk_pwm_group_mode_disable %i", err);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "bk_pwm_group_mode_disable %i", err);
 	err = bk_pwm_group_initialize(pwm1, pwm2, period, duty1_s, duty2_s, dead_s);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "bk_pwm_group_initialize %i", err);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "bk_pwm_group_initialize %i", err);
 	err = bk_pwm_group_mode_enable(pwm1);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "bk_pwm_group_mode_enable %i", err);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "bk_pwm_group_mode_enable %i", err);
 #endif
 
 	return CMD_RES_OK;
@@ -82,11 +82,11 @@ static commandResult_t CMD_PWMG_Raw(const void* context, const char* cmd, const 
 	int pwm2 = PIN_GetPWMIndexForPinIndex(p2);
 
 	err = bk_pwm_group_mode_disable(pwm1);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "bk_pwm_group_mode_disable %i", err);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "bk_pwm_group_mode_disable %i", err);
 	err = bk_pwm_group_initialize(pwm1, pwm2, freq, duty1, duty2, dead);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "bk_pwm_group_initialize %i", err);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "bk_pwm_group_initialize %i", err);
 	err = bk_pwm_group_mode_enable(pwm1);
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "bk_pwm_group_mode_enable %i", err);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "bk_pwm_group_mode_enable %i", err);
 #endif
 
 	return CMD_RES_OK;

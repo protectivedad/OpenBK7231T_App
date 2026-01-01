@@ -222,7 +222,7 @@ static int WEMO_BasicEvent1(http_request_t* request) {
 	const char* cmd = request->bodystart;
 
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_HTTP, "Wemo post event %s", cmd);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "Wemo post event %s", cmd);
 	// Sample event data taken by my user
 	/*
 	<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetBinaryState xmlns:u="urn:Belkin:service:basicevent:1"><BinaryState>1</BinaryState></u:GetBinaryState></s:Body></s:Envelope>

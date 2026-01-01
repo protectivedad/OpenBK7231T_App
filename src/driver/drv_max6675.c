@@ -56,7 +56,7 @@ float MAX6675_ReadTemperature() {
 }
 void MAX6675_RunEverySecond() {
 	float f = MAX6675_ReadTemperature();
-	addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "T %f.", f);
+	ADDLOG_INFO(LOG_FEATURE_MAIN, "T %f.", f);
 	if (targetChannel != -1) {
 		int type = CHANNEL_GetType(targetChannel);
 		if (type == ChType_Temperature_div10) {

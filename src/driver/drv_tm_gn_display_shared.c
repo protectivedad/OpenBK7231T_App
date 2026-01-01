@@ -217,10 +217,10 @@ void TMGN_ReadButtons() {
 	addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_MAIN, "CMD_TMGN_Read: %i", tmp);
 	for (i = 0; i < 32; i++) {
 		if (!BIT_CHECK(g_previousButtons, i) && BIT_CHECK(tmp, i)) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Button %i went down", i);
+			ADDLOG_INFO(LOG_FEATURE_MAIN, "Button %i went down", i);
 			EventHandlers_FireEvent(CMD_EVENT_CUSTOM_DOWN, i);
 		} else if (BIT_CHECK(g_previousButtons, i) && !BIT_CHECK(tmp, i)) {
-			addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "Button %i went up", i);
+			ADDLOG_INFO(LOG_FEATURE_MAIN, "Button %i went up", i);
 			EventHandlers_FireEvent(CMD_EVENT_CUSTOM_UP, i);
 		}
 	}
@@ -622,7 +622,7 @@ void TM_GN_Display_SharedInit(tmGnType_t type) {
 		g_i2c.pin_clk = PIN_FindPinIndexForRole(IOR_TM1637_CLK, 16);
 		g_i2c.pin_data = PIN_FindPinIndexForRole(IOR_TM1637_DIO, 14);
 		g_i2c.pin_stb = -1;
-		addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "TM/GN driver: using I2C mode (TM1637)");
+		ADDLOG_INFO(LOG_FEATURE_MAIN, "TM/GN driver: using I2C mode (TM1637)");
 
 		g_totalDigits = 6;
 	}
@@ -631,7 +631,7 @@ void TM_GN_Display_SharedInit(tmGnType_t type) {
 			g_i2c.pin_clk = PIN_FindPinIndexForRole(IOR_TM1638_CLK, 17);
 			g_i2c.pin_data = PIN_FindPinIndexForRole(IOR_TM1638_DAT, 15);
 			g_i2c.pin_stb = PIN_FindPinIndexForRole(IOR_TM1638_STB, 28);
-			addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "TM/GN driver: using SPI mode (TM1638)");
+			ADDLOG_INFO(LOG_FEATURE_MAIN, "TM/GN driver: using SPI mode (TM1638)");
 			g_doTM1638RowsToColumnsSwap = Tokenizer_GetArgIntegerDefault(1,1);
 			
 			for (i = 0; i < 8; i++) {
@@ -642,7 +642,7 @@ void TM_GN_Display_SharedInit(tmGnType_t type) {
 			g_i2c.pin_clk = PIN_FindPinIndexForRole(IOR_GN6932_CLK, 17);
 			g_i2c.pin_data = PIN_FindPinIndexForRole(IOR_GN6932_DAT, 15);
 			g_i2c.pin_stb = PIN_FindPinIndexForRole(IOR_GN6932_STB, 28);
-			addLogAdv(LOG_INFO, LOG_FEATURE_MAIN, "TM/GN driver: using SPI mode (GN6932)");
+			ADDLOG_INFO(LOG_FEATURE_MAIN, "TM/GN driver: using SPI mode (GN6932)");
 			// GN6932 has no remap
 			for (i = 0; i < sizeof(g_remap); i++) {
 				g_remap[i] = i;

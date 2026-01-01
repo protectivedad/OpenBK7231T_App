@@ -146,7 +146,7 @@ void HAL_PrintNetworkInfo()
 	bk_wlan_get_ip_status(&ipStatus, STATION);
 
 	char* fmt = "dhcp=%d ip=%s gate=%s mask=%s mac=" MACSTR "\r\n";
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, fmt,
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, fmt,
 		ipStatus.dhcp, ipStatus.ip, ipStatus.gate,
 		ipStatus.mask, MAC2STR((unsigned char*)ipStatus.mac));
 
@@ -154,7 +154,7 @@ void HAL_PrintNetworkInfo()
 	LinkStatusTypeDef linkStatus;
 	network_InitTypeDef_ap_st ap_info;
 	char ssid[33] = { 0 };
-	addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL,
+	ADDLOG_INFO(LOG_FEATURE_GENERAL,
 #if CFG_IEEE80211N
 		"sta: %d, softap: %d, b/g/n\r\n",
 #else
@@ -171,7 +171,7 @@ void HAL_PrintNetworkInfo()
 
 		int cipher = bk_sta_cipher_type();
 
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, 
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, 
 			"sta:rssi=%d,ssid=%s,bssid=" MACSTR ",channel=%d,cipher_type:%s",
 			linkStatus.wifi_strength, 
 			ssid, 
@@ -234,13 +234,13 @@ void HAL_PrintNetworkInfo()
 		memset(&ap_info, 0x0, sizeof(network_InitTypeDef_ap_st));
 		bk_wlan_ap_para_info_get(&ap_info);
 		memcpy(ssid, ap_info.wifi_ssid, 32);
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "softap:ssid=%s,channel=%d,dhcp=%d,cipher_type:%s",
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "softap:ssid=%s,channel=%d,dhcp=%d,cipher_type:%s",
 			ssid, 
 			ap_info.channel, 
 			ap_info.dhcp_mode,
 			get_security_type(ap_info.security)
 			);
-		addLogAdv(LOG_INFO, LOG_FEATURE_GENERAL, "ip=%s,gate=%s,mask=%s,dns=%s\r\n",
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "ip=%s,gate=%s,mask=%s,dns=%s\r\n",
 			ap_info.local_ip_addr,
 			ap_info.gateway_ip_addr,
 			ap_info.net_mask,

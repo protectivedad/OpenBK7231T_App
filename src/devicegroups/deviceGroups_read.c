@@ -19,15 +19,15 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 	MSG_BeginReading(&msg,data,len);
 
 	if(MSG_CheckAndSkip(&msg,TASMOTA_DEVICEGROUPS_HEADER,strlen(TASMOTA_DEVICEGROUPS_HEADER))==0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_Parse: data chunk with len %i had bad header",len);
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_Parse: data chunk with len %i had bad header",len);
 		return 1;
 	}
 	if(MSG_ReadString(&msg,groupName,sizeof(groupName)) <= 0) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_Parse: data chunk with len %i failed to read group name",len);
+		ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_Parse: data chunk with len %i failed to read group name",len);
 		return 1;
 	}
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_Parse: grp name %s len %d", groupName, strlen(groupName));
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_Parse: grp name %s len %d", groupName, strlen(groupName));
 
 	if(dev != 0) {
 		// right now, only single group support
@@ -50,7 +50,7 @@ int DGR_Parse(const byte *data, int len, dgrDevice_t *dev, struct sockaddr *addr
 	}
 
 
-	addLogAdv(LOG_INFO, LOG_FEATURE_DGR,"DGR_Parse: [%s] seq 0x%04X, flags 0x%02X",inet_ntoa(((struct sockaddr_in *)addr)->sin_addr),sequence, flags);
+	ADDLOG_INFO(LOG_FEATURE_DGR,"DGR_Parse: [%s] seq 0x%04X, flags 0x%02X",inet_ntoa(((struct sockaddr_in *)addr)->sin_addr),sequence, flags);
 
 	while(MSG_EOF(&msg)==0) {
 		type = MSG_ReadByte(&msg);

@@ -197,11 +197,11 @@ uint8_t BMP280_begin(BMP280_mode mode,
     switch(chip_id)
     {
     case BMP280_CHIP_ID:
-        addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "BMP280 detected!");
+        ADDLOG_INFO(LOG_FEATURE_SENSOR, "BMP280 detected!");
         chip_name = "BMP280";
         break;
     case BME280_CHIP_ID:
-        addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "BME280 detected!");
+        ADDLOG_INFO(LOG_FEATURE_SENSOR, "BME280 detected!");
         chip_name = "BME280";
         isHumidityAvail = true;
         break;
@@ -210,10 +210,10 @@ uint8_t BMP280_begin(BMP280_mode mode,
         chip_name = "BME680";
         break;
     case 0xFF:
-        addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "No sensor detected!");
+        ADDLOG_INFO(LOG_FEATURE_SENSOR, "No sensor detected!");
         return 0;
     default:
-        addLogAdv(LOG_INFO, LOG_FEATURE_SENSOR, "BMxx80 wrong ID! Detected: %#02x", chip_id);
+        ADDLOG_INFO(LOG_FEATURE_SENSOR, "BMxx80 wrong ID! Detected: %#02x", chip_id);
         return 0;
     }
 

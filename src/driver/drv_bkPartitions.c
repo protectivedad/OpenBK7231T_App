@@ -87,7 +87,7 @@ int ReadSection(int ofs) {
 			(g_buf[base + data_size ] << 8);
 
 		if (crc != stored) {
-			//addLogAdv(LOG_INFO, LOG_FEATURE_CMD,"Invalid CRC at %i",base);
+			//ADDLOG_INFO(LOG_FEATURE_CMD,"Invalid CRC at %i",base);
 			crc_error++;
 			// CRC FAIL
 		}
@@ -120,7 +120,7 @@ static int is_printable_str(const char *s) {
 bool is_valid_pr(PartitionRecord *out) {
 
 	if (out->length > 0x400000) {
-		addLogAdv(LOG_INFO, LOG_FEATURE_CMD,
+		ADDLOG_INFO(LOG_FEATURE_CMD,
 			"Abnormal partition length, probably invalid, skipping");
 		return 0;
 	}
@@ -172,7 +172,7 @@ void ReadPartition(int ofs) {
 			parse_fal64(g_buf, pos, &rec) || 
 			parse_fal48(g_buf, pos, &rec)) {
 			unsigned int abs_off = ofs + pos;
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD,
+			ADDLOG_INFO(LOG_FEATURE_CMD,
 				"Partition found at 0x%X: %s flash=%s offset=0x%X size=%u extra=%u layout=%s\n",
 				abs_off, rec.name, rec.flash, rec.offset, rec.length, rec.extra, rec.layout);
 		}
@@ -191,10 +191,10 @@ void BKPartitions_QuickFrame() {
 	for (int pos = 0; pos <= scan_len; pos++) {
 		if (memcmp(&g_buf[pos], search_magic, magic_len) == 0) {
 			unsigned int abs_off = (unsigned int)(cur_adr + pos);
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "AS: found magic at 0x%X\n", abs_off);
+			ADDLOG_INFO(LOG_FEATURE_CMD, "AS: found magic at 0x%X\n", abs_off);
 			// find nearest first record 
 			int nearest = (abs_off/ 34) * 34;
-			addLogAdv(LOG_INFO, LOG_FEATURE_CMD, "AS: nearest at 0x%X\n", nearest);
+			ADDLOG_INFO(LOG_FEATURE_CMD, "AS: nearest at 0x%X\n", nearest);
 			ReadPartition(nearest);
 		}
 	}
