@@ -1,8 +1,12 @@
-//////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////
 // specify which parts of the app we wish to be active
 //
 #ifndef OBK_CONFIG_H
 #define OBK_CONFIG_H
+
+// XHS7-2001-WHT specific device information
+#define PLATFORM_BEKEN							1
+#define PLATFORM_BK7231N						1
 
 // Default 250ms needs to be in increments of 10ms
 #define OBK_STARTUP_MS_DELAY					250
@@ -37,11 +41,13 @@
 #define ENABLE_HTTP_MAC							1
 #define ENABLE_HTTP_FLAGS						1
 #define ENABLE_HTTP_STARTUP						1
-#define ENABLE_HTTP_PING						1
+#define ENABLE_HTTP_PING						1 // adds +816
 #define ENABLE_LED_BASIC						1
 #define ENABLE_DRIVER_DOORSENSOR				1 // adds +1k12 for BK7238
 #define ENABLE_DEEPSLEEP						1 // adds +656 bytes 
 #define ENABLE_CMD_CHANNEL						1 // adds +1872
+
+//#define ENABLE_PING_WATCHDOG					1 // adds +640
 
 #if PLATFORM_XRADIO
 
@@ -629,3 +635,65 @@
 
 // closing OBK_CONFIG_H
 #endif
+
+// XHS7-2001-WHT specific overrides
+#define OBK_STARTUP_MS_DELAY					0
+#define ENABLE_MQTT								1
+#define NO_CHIP_TEMPERATURE						1
+
+//#undef OBK_TIMING_LOGGING_ENABLED
+//#undef OBK_INFO_LOGGING_ENABLED
+//#undef OBK_DEBUG_LOGGING_ENABLED
+//#undef OBK_EXTRADEBUG_LOGGING_ENABLED
+
+// Use MQTT server times
+#undef ENABLE_TIME_DST
+#undef ENABLE_NTP
+#undef ENABLE_TIME_SUNRISE_SUNSET
+#undef ENABLE_CALENDAR_EVENTS
+
+#undef ENABLE_DRIVER_TUYAMCU
+#undef ENABLE_ADVANCED_CHANNELTYPES_DISCOVERY
+
+#undef ENABLE_HA_DISCOVERY
+#undef ENABLE_DRIVER_TCL
+
+#undef ENABLE_TASMOTADEVICEGROUPS
+#undef ENABLE_HTTP_DGR
+
+#undef ENABLE_LITTLEFS
+#undef ENABLE_DRIVER_WEMO
+#undef ENABLE_DRIVER_HUE
+#undef ENABLE_DRIVER_LED
+#undef ENABLE_I2C
+#undef ENABLE_DRIVER_SM16703P
+#undef ENABLE_DRIVER_PIXELANIM
+#undef ENABLE_DRIVER_SM15155E
+#undef ENABLE_DRIVER_DHT
+#undef ENABLE_DRIVER_AHT2X
+#undef ENABLE_DRIVER_IR
+#undef ENABLE_DRIVER_DS1820
+#undef ENABLE_DRIVER_CHT83XX
+#undef ENABLE_DRIVER_KP18058
+#undef ENABLE_DRIVER_ADCSMOOTHER
+#undef ENABLE_DRIVER_BL0937
+#undef ENABLE_DRIVER_BL0942
+#undef ENABLE_DRIVER_BL0942SPI
+#undef ENABLE_DRIVER_HLW8112SPI
+#undef ENABLE_DRIVER_CSE7766
+#undef ENABLE_DRIVER_BRIDGE
+#undef ENABLE_DRIVER_DDP
+#undef ENABLE_DRIVER_NEO6M
+#undef ENABLE_DRIVER_RC
+#undef ENABLE_DRIVER_SSDP
+#undef ENABLE_DRIVER_DRAWERS
+#undef ENABLE_DRIVER_TMGN
+#undef ENABLE_LED_BASIC
+#undef ENABLE_EXPAND_CONSTANT
+
+#undef ENABLE_OBK_SCRIPTING // adds +784
+#undef ENABLE_CMD_CHANNEL // adds +1872
+
+// Remove all ping stuff
+#undef ENABLE_PING_WATCHDOG // adds +640
+#undef ENABLE_HTTP_PING // adds +816
