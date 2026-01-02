@@ -591,6 +591,7 @@ static commandResult_t CMD_Choice(const void* context, const char* cmd, const ch
 
 	return CMD_RES_OK;
 }
+#if ENABLE_PING_WATCHDOG
 static commandResult_t CMD_PingHost(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, 0);
 
@@ -619,6 +620,7 @@ static commandResult_t CMD_PingInterval(const void* context, const char* cmd, co
 
 	return CMD_RES_OK;
 }
+#endif
 static commandResult_t CMD_SetStartValue(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int ch, val;
 
