@@ -758,6 +758,12 @@ void Main_OnEverySecond()
 	}
 #endif
 
+	if (g_newWiFiStatus != g_prevWiFiStatus) {
+		g_prevWiFiStatus = g_newWiFiStatus;
+		// Argument type here is HALWifiStatus_t enumeration
+		EventHandlers_FireEvent(CMD_EVENT_WIFI_STATE, g_newWiFiStatus);
+	}
+
 #if ENABLE_MQTT
 	// run_adc_test();
 	newMQTTState = MQTT_RunEverySecondUpdate();
@@ -770,12 +776,6 @@ void Main_OnEverySecond()
 			EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, 0);
 		}
 	}
-#endif
-	if (g_newWiFiStatus != g_prevWiFiStatus) {
-		g_prevWiFiStatus = g_newWiFiStatus;
-		// Argument type here is HALWifiStatus_t enumeration
-		EventHandlers_FireEvent(CMD_EVENT_WIFI_STATE, g_newWiFiStatus);
-	}
 	// Update time with no MQTT
 	if (bMQTTconnected) {
 		i = 0;
@@ -787,10 +787,9 @@ void Main_OnEverySecond()
 	// save new value
 	g_noMQTTTime = i;
 
-
-#if ENABLE_MQTT
 	MQTT_Dedup_Tick();
 #endif
+
 #if ENABLE_LED_BASIC
 	LED_RunOnEverySecond();
 #endif
@@ -827,6 +826,7 @@ void Main_OnEverySecond()
 #if ENABLE_MQTT
 			if (MQTT_IsReady()) {
 				MQTT_DoItemPublish(PUBLISHITEM_SELF_IP);
+				MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
 			}
 #endif
 			EventHandlers_FireEvent(CMD_EVENT_IPCHANGE, 0);
