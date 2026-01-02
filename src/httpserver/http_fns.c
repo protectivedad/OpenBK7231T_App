@@ -917,7 +917,7 @@ int http_fn_index(http_request_t* request) {
 				hprintf255(request, "%i event handlers", i);
 				bFirst = false;
 			}
-#if defined(WINDOWS) || defined(PLATFORM_BEKEN)
+#if defined(ENABLE_OBK_SCRIPTING) && (defined(WINDOWS) || defined(PLATFORM_BEKEN))
 			i = CMD_GetCountActiveScriptThreads();
 			if (i) {
 				if (bFirst == false) {
