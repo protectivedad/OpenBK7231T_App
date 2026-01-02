@@ -1640,7 +1640,9 @@ bool CHANNEL_HasLabel(int ch);
 const char* CHANNEL_GetLabel(int ch);
 void CHANNEL_SetLabel(int ch, const char *s, int bHideTogglePrefix);
 bool CHANNEL_ShouldAddTogglePrefixToUI(int ch);
+#if ENABLE_CMD_CHANNEL
 bool CHANNEL_HasNeverPublishFlag(int ch);
+#endif
 //ledRemap_t *CFG_GetLEDRemap();
 
 void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount);
