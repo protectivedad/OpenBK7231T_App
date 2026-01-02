@@ -758,6 +758,12 @@ void Main_OnEverySecond()
 	}
 #endif
 
+	if (g_newWiFiStatus != g_prevWiFiStatus) {
+		g_prevWiFiStatus = g_newWiFiStatus;
+		// Argument type here is HALWifiStatus_t enumeration
+		EventHandlers_FireEvent(CMD_EVENT_WIFI_STATE, g_newWiFiStatus);
+	}
+
 #if ENABLE_MQTT
 	// run_adc_test();
 	newMQTTState = MQTT_RunEverySecondUpdate();
@@ -770,12 +776,6 @@ void Main_OnEverySecond()
 			EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, 0);
 		}
 	}
-#endif
-	if (g_newWiFiStatus != g_prevWiFiStatus) {
-		g_prevWiFiStatus = g_newWiFiStatus;
-		// Argument type here is HALWifiStatus_t enumeration
-		EventHandlers_FireEvent(CMD_EVENT_WIFI_STATE, g_newWiFiStatus);
-	}
 	// Update time with no MQTT
 	if (bMQTTconnected) {
 		i = 0;
@@ -787,10 +787,9 @@ void Main_OnEverySecond()
 	// save new value
 	g_noMQTTTime = i;
 
-
-#if ENABLE_MQTT
 	MQTT_Dedup_Tick();
 #endif
+
 #if ENABLE_LED_BASIC
 	LED_RunOnEverySecond();
 #endif
@@ -822,6 +821,17 @@ void Main_OnEverySecond()
 #endif
 	if (bSafeMode == 0) {
 		const char* ip = HAL_GetMyIPString();
+#if ENABLE_MQTT
+#if defined(PLATFORM_BK7231N)
+		if (!bMQTTconnected) {
+			// try to catch the connect before the long wait for the next second
+			rtos_delay_milliseconds(20);
+		}
+#endif
+		if (MQTT_IsReady()) {
+			MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
+		}
+#endif
 		// this will return non-zero if there were any changes
 		if (strcpy_safe_checkForChanges(g_currentIPString, ip, sizeof(g_currentIPString))) {
 #if ENABLE_MQTT
@@ -838,6 +848,20 @@ void Main_OnEverySecond()
 #endif
 		}
 	}
+
+	// Only startup the HTTP server if we have a connection to the
+	// outside world and any initial MQTT has occurred but once running
+	// leave it be
+#if MQTT_USE_TLS
+	if (!CFG_GetDisableWebServer() || bSafeMode) {
+#endif
+		if (!HTTPService_Started() && g_bHasWiFiConnected) {
+			HTTPServer_Start();
+			ADDLOGF_DEBUG("Started http tcp server\r\n");
+		}
+#if MQTT_USE_TLS
+	} 
+#endif		
 
 #if ENABLE_PING_WATCHDOG
 	// some users say that despite our simple reconnect mechanism
