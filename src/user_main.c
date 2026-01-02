@@ -80,13 +80,16 @@ static int g_bOpenAccessPointMode = 0;
 static int g_doUnsafeInitIn = 0;
 int g_bootFailures = 0;
 static int g_saveCfgAfter = 0;
+#if ENABLE_PING_WATCHDOG
 int g_startPingWatchDogAfter = 60;
+int g_prevTimeSinceLastPingReply = -1;
+#endif
+// used in MQTT and INFO log TODO: pull out
+int g_timeSinceLastPingReply = -1;
 // many boots failed? do not run pins or anything risky
 int bSafeMode = 0;
 // not really <time>, but rather a loop count, but it doesn't really matter much
 // start disabled.
-int g_timeSinceLastPingReply = -1;
-int g_prevTimeSinceLastPingReply = -1;
 char g_wifi_bssid[33] = { "30:B5:C2:5D:70:72" };
 uint8_t g_wifi_channel = 12;
 // was it ran?
@@ -496,7 +499,9 @@ void Main_OnWiFiStatusChange(int code)
 			g_connectToWiFi = 15;
 		}
 		g_bHasWiFiConnected = 0;
+#if ENABLE_PING_WATCHDOG
 		g_timeSinceLastPingReply = -1;
+#endif
 		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED - %i\r\n", __func__, code);
 		break;
 	case WIFI_STA_AUTH_FAILED:
@@ -571,10 +576,12 @@ void CFG_Save_SetupTimer()
 	g_saveCfgAfter = 3;
 }
 
+#if ENABLE_PING_WATCHDOG
 void Main_OnPingCheckerReply(int ms)
 {
 	g_timeSinceLastPingReply = 0;
 }
+#endif
 
 int g_doHomeAssistantDiscoveryIn = 0;
 int g_bBootMarkedOK = 0;
@@ -829,6 +836,7 @@ void Main_OnEverySecond()
 		}
 	}
 
+#if ENABLE_PING_WATCHDOG
 	// some users say that despite our simple reconnect mechanism
 	// there are some rare cases when devices stuck outside network
 	// That is why we can also reconnect them by basing on ping
@@ -852,6 +860,7 @@ void Main_OnEverySecond()
 			}
 		}
 	}
+#endif
 
 	if (bSafeMode == 0)
 	{
@@ -982,6 +991,7 @@ void Main_OnEverySecond()
 		}
 	}
 
+#if ENABLE_PING_WATCHDOG
 	//ADDLOGF_INFO("g_startPingWatchDogAfter %i, g_bPingWatchDogStarted %i ", g_startPingWatchDogAfter, g_bPingWatchDogStarted);
 	if (g_bHasWiFiConnected) {
 		if (g_startPingWatchDogAfter) {
@@ -999,9 +1009,7 @@ void Main_OnEverySecond()
 				{
 					// mark as enabled
 					g_timeSinceLastPingReply = 0;
-#if ENABLE_PING_WATCHDOG
 					Main_SetupPingWatchDog(pingTargetServer);
-#endif
 				}
 				else {
 					// mark as disabled
@@ -1009,8 +1017,8 @@ void Main_OnEverySecond()
 				}
 			}
 		}
-
 	}
+#endif
 	if (g_connectToWiFi)
 	{
 		g_connectToWiFi--;

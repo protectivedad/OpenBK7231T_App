@@ -939,7 +939,7 @@ int http_fn_index(http_request_t* request) {
 	hprintf255(request, "<h5>Chip temperature: %.1f°C</h5>", g_wifi_temperature);
 #endif
 
-#if ENABLE_PING_WATCHDOG
+#if ENABLE_HTTP_PING
 	inputName = CFG_GetPingHost();
 	if (inputName && *inputName && CFG_GetPingDisconnectedSecondsToRestart()) {
 		hprintf255(request, "<h5>Ping watchdog (%s) - ", inputName);
