@@ -2205,6 +2205,21 @@ int MQTT_RunEverySecondUpdate()
 	{
 		return 0;
 	}
+
+	bool isReady = MQTT_IsReady();
+	if (OTA_GetProgress() != -1)
+	{
+		if (isReady) {
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
+			LOCK_TCPIP_CORE();
+			mqtt_disconnect(mqtt_client);
+			UNLOCK_TCPIP_CORE();
+		}
+		MQTT_Mutex_Free();
+		mqtt_initialised = 0; // don't come back here until restart
+		return 0;
+	}
+
 	if (g_mqtt_bBaseTopicDirty) {
 		ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT base topic is dirty, will reinit callbacks and reconnect\n");
 		MQTT_InitCallbacks();
@@ -2219,12 +2234,6 @@ int MQTT_RunEverySecondUpdate()
 		mqtt_reconnect = 5;
 	}
 
-	int res = 0;
-	if (mqtt_client){
-		LOCK_TCPIP_CORE();
-		res = mqtt_client_is_connected(mqtt_client);
-		UNLOCK_TCPIP_CORE();
-	}
 	// if asked to reconnect (e.g. change of topic(s))
 	if (mqtt_reconnect > 0)
 	{
@@ -2233,49 +2242,46 @@ int MQTT_RunEverySecondUpdate()
 		if (mqtt_reconnect == 0)
 		{
 			// then if connected, disconnect, and then it will reconnect automatically in 2s
-			if (mqtt_client && res)
+			if (isReady)
 			{
 				ADDLOG_INFO(LOG_FEATURE_MQTT, "MQTT will now do a forced reconnect\n");
 				MQTT_disconnect(mqtt_client);
 				mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
+				isReady = 0;
 			}
 		}
 	}
 
-	if (mqtt_client == 0 || res == 0)
+	if (!isReady)
 	{
 		//ADDLOG_INFO(LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",mqtt_loopsWithDisconnected);
-		if (OTA_GetProgress() == -1)
+		mqtt_loopsWithDisconnected++;
+		if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED)
 		{
-			mqtt_loopsWithDisconnected++;
-			if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED)
+			if (mqtt_client == 0)
 			{
-				if (mqtt_client == 0)
-				{
-					LOCK_TCPIP_CORE();
-					mqtt_client = mqtt_client_new();
-					UNLOCK_TCPIP_CORE();
-				}
-				else
-				{
-					LOCK_TCPIP_CORE();
-					mqtt_disconnect(mqtt_client);
-#if defined(MQTT_CLIENT_CLEANUP)
-					mqtt_client_cleanup(mqtt_client);
-#endif
-					UNLOCK_TCPIP_CORE();
-				}
-				if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
-					// silently allow retry next frame
-				}
-				else {
-					mqtt_loopsWithDisconnected = 0;
-				}
-				mqtt_connect_events++;
+				LOCK_TCPIP_CORE();
+				mqtt_client = mqtt_client_new();
+				UNLOCK_TCPIP_CORE();
 			}
+			else
+			{
+				LOCK_TCPIP_CORE();
+				mqtt_disconnect(mqtt_client);
+#if defined(MQTT_CLIENT_CLEANUP)
+				mqtt_client_cleanup(mqtt_client);
+#endif
+				UNLOCK_TCPIP_CORE();
+			}
+			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
+				// silently allow retry next frame
+			}
+			else {
+				mqtt_loopsWithDisconnected = 0;
+			}
+			mqtt_connect_events++;
 		}
 		MQTT_Mutex_Free();
-		return 0;
 	}
 	else {
 		// things to do in our threads on connection accepted.
@@ -2301,14 +2307,6 @@ int MQTT_RunEverySecondUpdate()
 			g_wantTasmotaTeleSend = 0;
 		}
 		g_timeSinceLastMQTTPublish++;
-		if (OTA_GetProgress() != -1)
-		{
-			ADDLOG_INFO(LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
-			LOCK_TCPIP_CORE();
-			mqtt_disconnect(mqtt_client);
-			UNLOCK_TCPIP_CORE();
-			return 1;
-		}
 
 		if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
 			static int g_mqtt_tasmotaTeleCounter_sensor = 0;
@@ -2329,13 +2327,7 @@ int MQTT_RunEverySecondUpdate()
 		// Do it slowly in order not to overload the buffers
 		// The item indexes start at negative values for special items
 		// and then covers Channel indexes up to CHANNEL_MAX
-		//Handle only queued items. Don't need to do this separately if entire state is being published.
-		if ((g_MqttPublishItemsQueued > 0) && !g_bPublishAllStatesNow)
-		{
-			PublishQueuedItems();
-			return 1;
-		}
-		else if (g_bPublishAllStatesNow)
+		if (g_bPublishAllStatesNow)
 		{
 			// Doing step by a step a full publish state
 			//if (g_timeSinceLastMQTTPublish > 2)
@@ -2396,7 +2388,7 @@ int MQTT_RunEverySecondUpdate()
 			}
 		}
 	}
-	return 1;
+	return isReady;
 }
 
 MqttPublishItem_t* get_queue_tail(MqttPublishItem_t* head) {
