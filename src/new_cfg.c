@@ -251,6 +251,7 @@ int CFG_GetBootOkSeconds() {
 	}
 	return g_cfg.timeRequiredToMarkBootSuccessfull;
 }
+#if ENABLE_PING_WATCHDOG
 const char *CFG_GetPingHost() {
 	return g_cfg.ping_host;
 }
@@ -281,6 +282,7 @@ void CFG_SetPingIntervalSeconds(int i) {
 		g_cfg_pendingChanges++;
 	}
 }
+#endif
 void CFG_SetShortStartupCommand_AndExecuteNow(const char *s) {
 	CFG_SetShortStartupCommand(s);
 	CMD_ExecuteCommand(s,COMMAND_FLAG_SOURCE_SCRIPT);
