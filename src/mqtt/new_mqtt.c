@@ -928,9 +928,11 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 		}
 		if (sVal_len < 128)
 		{
+			ADDLOGF_TIMING("%i - %s - Publishing val %s to %s retain=%i", xTaskGetTickCount(), __func__, sVal, pub_topic, retain);
 			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val %s to %s retain=%i\n", sVal, pub_topic, retain);
 		}
 		else {
+			ADDLOGF_TIMING("%i - %s - Publishing val (%d bytes) to %s retain=%i", xTaskGetTickCount(), __func__,  sVal_len, pub_topic, retain);
 			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val (%d bytes) to %s retain=%i\n", sVal_len, pub_topic, retain);
 		}
 
@@ -1233,6 +1235,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host empty, not starting mqtt");
 		return 0;
 	}
+	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 
 	mqtt_userName = CFG_GetMQTTUserName();
 	mqtt_pass = CFG_GetMQTTPass();
