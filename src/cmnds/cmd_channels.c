@@ -1,8 +1,10 @@
+#include "../obk_config.h"
+
+#if ENABLE_CMD_CHANNEL
 
 #include "../logging/logging.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
-#include "../obk_config.h"
 #include "../driver/drv_public.h"
 #include <ctype.h>
 #include "cmd_local.h"
@@ -635,3 +637,19 @@ void CMD_InitChannelCommands(){
 	CMD_RegisterCommand("Ch", CMD_Ch, NULL);
 
 }
+#else
+
+#include <stdbool.h>
+const char *CHANNEL_GetLabel(int ch) {
+	static char tmp[8];
+	sprintf(tmp, "%i", ch);
+	return tmp;
+}
+bool CHANNEL_ShouldAddTogglePrefixToUI(int ch) {
+	if (ch < 0)
+		return true;
+	if (ch >= 32)
+		return true;
+	return false;
+}
+#endif // ENABLE_CMD_CHANNEL
