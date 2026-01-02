@@ -1329,7 +1329,9 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 #if ENABLE_SEND_POSTANDGET
 	CMD_InitSendCommands();
 #endif
+#if ENABLE_CMD_CHANNEL
 	CMD_InitChannelCommands();
+#endif
 	EventHandlers_Init();
 
 	// CMD_Init() is now split into Early and Delayed
