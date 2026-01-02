@@ -499,8 +499,8 @@ static commandResult_t CMD_ClearAll(const void* context, const char* cmd, const 
 	CHANNEL_ClearAllChannels();
 	CMD_ClearAllHandlers(0, 0, 0, 0);
 	RepeatingEvents_Cmd_ClearRepeatingEvents(0, 0, 0, 0);
-#if defined(WINDOWS) || defined(PLATFORM_BL602) || defined(PLATFORM_BEKEN) || defined(PLATFORM_LN882H) \
- || defined(PLATFORM_ESPIDF) || defined(PLATFORM_TR6260) || defined(PLATFORM_REALTEK)
+#if defined(ENABLE_OBK_SCRIPTING) && (defined(WINDOWS) || defined(PLATFORM_BL602) || defined(PLATFORM_BEKEN) \
+ || defined(PLATFORM_LN882H) || defined(PLATFORM_ESPIDF) || defined(PLATFORM_TR6260) || defined(PLATFORM_REALTEK))
 	CMD_resetSVM(0, 0, 0, 0);
 #endif
 

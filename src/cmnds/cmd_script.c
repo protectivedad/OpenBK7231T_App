@@ -1,8 +1,11 @@
 
+#include "../obk_config.h"
+
+#if ENABLE_OBK_SCRIPTING
+
 #include "../logging/logging.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
-#include "../obk_config.h"
 #include "../driver/drv_public.h"
 #include <ctype.h>
 #include "cmd_local.h"
@@ -997,3 +1000,5 @@ void CMD_InitScripting(){
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("waitFor", CMD_waitFor, NULL);
 }
+
+#endif // ENABLE_OBK_SCRIPTING
