@@ -242,7 +242,9 @@ int http_fn_pmntp(http_request_t* request) {
 
 // bit mask telling which channels are hidden from HTTP
 // If given bit is set, then given channel is hidden
+#if ENABLE_CMD_CHANNEL
 extern int g_hiddenChannels;
+#endif
 
 int http_fn_index(http_request_t* request) {
 	int j, i, ch1, ch2;
@@ -404,10 +406,12 @@ int http_fn_index(http_request_t* request) {
 		for (i = 0; i < CHANNEL_MAX; i++) {
 
 			channelType = CHANNEL_GetType(i);
+#if ENABLE_CMD_CHANNEL
 			// check ability to hide given channel from gui
 			if (BIT_CHECK(g_hiddenChannels, i)) {
 				continue; // hidden
 			}
+#endif
 			bool bToggleInv = channelType == ChType_Toggle_Inv;
 			if (h_isChannelRelay(i) || channelType == ChType_Toggle) {
 				if (i <= 1) {
@@ -429,11 +433,12 @@ int http_fn_index(http_request_t* request) {
 	poststr(request, "<table>");	//Table default to 100% width in stylesheet
 	for (i = 0; i < CHANNEL_MAX; i++) {
 
-
+#if ENABLE_CMD_CHANNEL
 		// check ability to hide given channel from gui
 		if (BIT_CHECK(g_hiddenChannels, i)) {
 			continue; // hidden
 		}
+#endif
 
 		channelType = CHANNEL_GetType(i);
 		bool bToggleInv = channelType == ChType_Toggle_Inv;
@@ -491,10 +496,12 @@ int http_fn_index(http_request_t* request) {
 		const char **types;
 		int numTypes;
 
+#if ENABLE_CMD_CHANNEL
 		// check ability to hide given channel from gui
 		if (BIT_CHECK(g_hiddenChannels, i)) {
 			continue; // hidden
 		}
+#endif
 
 		channelType = CHANNEL_GetType(i);
 		if (channelType == ChType_TimerSeconds) {
@@ -1937,12 +1944,14 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	// no channels published yet
 	flagsChannelPublished = 0;
 
+#if ENABLE_CMD_CHANNEL
 	for (i = 0; i < CHANNEL_MAX; i++) {
 		if (CHANNEL_HasNeverPublishFlag(i)) {
 			BIT_SET(flagsChannelPublished, i);
 			excludedCount++;
 		}
 	}
+#endif
 	
 	if (topic == 0 || *topic == 0) {
 		topic = "homeassistant";
