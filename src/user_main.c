@@ -824,8 +824,16 @@ void Main_OnEverySecond()
 		// this will return non-zero if there were any changes
 		if (strcpy_safe_checkForChanges(g_currentIPString, ip, sizeof(g_currentIPString))) {
 #if ENABLE_MQTT
+#if PLATFORM_BK7231N
+			if (!bMQTTconnected) {
+				// try to catch the connect before the long wait for the next second
+				rtos_delay_milliseconds(20);
+			}
+#endif
 			if (MQTT_IsReady()) {
 				MQTT_DoItemPublish(PUBLISHITEM_SELF_IP);
+				// do this here to immediately capture any queued items from drivers
+				// may cause double posting if MQTT runs g_bPublishAllStatesNow logic
 				MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
 			}
 #endif
