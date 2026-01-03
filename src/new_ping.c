@@ -19,7 +19,7 @@
 #include "lwip/icmp.h"
 #include "lwip/netif.h"
 #include "lwip/sys.h"
-#ifdef PLATFORM_XR809
+#if defined(PLATFORM_XR809) || defined(PLATFORM_RDA5981)
 
 #else
 #include "lwip/timeouts.h"
