@@ -279,9 +279,11 @@ void LED_I2CDriver_WriteRGBCW(float* finalRGBCW) {
 	if (DRV_IsRunning("SM2235")) {
 		SM2235_Write(finalRGBCW);
 	}
+#if ENABLE_DRIVER_KP18058
 	if (DRV_IsRunning("KP18058")) {
 		KP18058_Write(finalRGBCW);
 	}
+#endif
 #endif
 #ifdef ENABLE_DRIVER_SM15155E
 	if (DRV_IsRunning("SM15155E")) {
