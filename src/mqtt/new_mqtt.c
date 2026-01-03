@@ -2006,9 +2006,11 @@ void MQTT_init()
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("publishDriver", MQTT_PublishCommandDriver, NULL);
 }
+#ifndef NO_CHIP_TEMPERATURE
 static float getInternalTemperature() {
 	return g_wifi_temperature;
 }
+#endif
 
 OBK_Publish_Result MQTT_DoItemPublishString(const char* sChannel, const char* valueStr)
 {
