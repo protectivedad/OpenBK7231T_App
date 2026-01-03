@@ -18,8 +18,6 @@
 #define MAX_SOCKETS_TCP MEMP_NUM_TCP_PCB
 #endif
 
-void HTTPServer_Start();
-
 #define HTTP_SERVER_PORT			80
 #define INVALID_SOCK				-1
 
@@ -40,6 +38,7 @@ typedef struct
 } tcp_thread_t;
 
 static beken_thread_t g_http_thread = NULL;
+bool g_thread_created = false;
 static const size_t max_socks = MAX_SOCKETS_TCP - 1;
 static int listen_sock = INVALID_SOCK;
 static tcp_thread_t sock[MAX_SOCKETS_TCP - 1] =
@@ -317,6 +316,7 @@ static void tcp_server_thread(beken_thread_arg_t arg)
 
 error:
 	ADDLOG_ERROR(LOG_FEATURE_HTTP, "TCP Server Error");
+	g_thread_created = false;
 	if(listen_sock != INVALID_SOCK)
 	{
 		close(listen_sock);
@@ -347,6 +347,7 @@ void HTTPServer_Start()
 {
 	OSStatus err = kNoErr;
 
+	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 	if(g_http_thread != NULL)
 	{
 		rtos_delete_thread(&g_http_thread);
@@ -360,7 +361,14 @@ void HTTPServer_Start()
 	if(err != kNoErr)
 	{
 		ADDLOG_ERROR(LOG_FEATURE_HTTP, "create \"TCP_server\" thread failed with %i!\r\n", err);
+	} else {
+		g_thread_created = true;
 	}
+}
+
+bool HTTPService_Started()
+{
+	return g_thread_created;
 }
 
 #endif
