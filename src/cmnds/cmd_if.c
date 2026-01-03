@@ -331,11 +331,11 @@ float getRebootReason(const char *s) {
 	return g_rebootReason;
 }
 
-
+#ifndef NO_CHIP_TEMPERATURE
 float getInternalTemperature(const char *s) {
 	return g_wifi_temperature;
 }
-
+#endif
 
 const constant_t g_constants[] = {
 	//cnstdetail:{"name":"MQTTOn",

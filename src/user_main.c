@@ -699,12 +699,15 @@ bool Main_HasFastConnect() {
 #endif
 	return false;
 }
+
+#ifndef NO_CHIP_TEMPERATURE
 #if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266
 // Quick hack to display LN-only temperature,
 // we may improve it in the future
 extern float g_wifi_temperature;
 #else
 float g_wifi_temperature = 0;
+#endif
 #endif
 
 static byte g_secondsSpentInLowMemoryWarning = 0;
@@ -724,7 +727,8 @@ void Main_OnEverySecond()
 	g_bHasWiFiConnected = 1;
 #endif
 
-	// display temperature - thanks to giedriuslt
+#ifndef NO_CHIP_TEMPERATURE
+// display temperature - thanks to giedriuslt
 // only in Normal mode, and if boot is not failing
 	if (!bSafeMode && g_bootFailures <= 1)
 	{
@@ -749,6 +753,7 @@ void Main_OnEverySecond()
 		g_wifi_temperature = hal_adc_tempsensor();
 #endif
 	}
+#endif
 
 #if ENABLE_MQTT
 	// run_adc_test();
