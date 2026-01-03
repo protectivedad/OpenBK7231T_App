@@ -1,13 +1,14 @@
 // HLW8112
 
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_HLW8112SPI
+
 // workaround for code folding region pragma remove it when compiler are updated
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunknown-pragmas" 
 
 #include "drv_hlw8112.h"
-#include "../obk_config.h"
-
-#if ENABLE_DRIVER_HLW8112SPI
 
 #include <math.h>
 #include <stdint.h>
