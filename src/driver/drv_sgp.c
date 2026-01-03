@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_SGP
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -266,3 +270,5 @@ void SGP_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 		hprintf255(request, "WARNING: Baseline calculation in progress");
 	}
 }
+
+#endif // ENABLE_DRIVER_SGP

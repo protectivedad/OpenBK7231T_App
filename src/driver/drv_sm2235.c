@@ -3,6 +3,10 @@
 // it will work just fine.
 // SM2235 and SM2335 are 10 bit LED drivers, SM2135 is 8bit
 // NOTE: SM2235 driver seems to work for SM2185N
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_LED
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -123,3 +127,4 @@ void SM2235_Init() {
 	CMD_CreateAliasHelper("LED_Map", "SM2235_Map");
 }
 
+#endif // ENABLE_DRIVER_LED

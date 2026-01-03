@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_LED
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -195,3 +199,5 @@ void BP5758D_Init() {
 	// alias for LED_Map. In future we may want to migrate totally to shared LED_Map command.... 
 	CMD_CreateAliasHelper("LED_Map", "BP5758D_Map");
 }
+
+#endif // ENABLE_DRIVER_LED

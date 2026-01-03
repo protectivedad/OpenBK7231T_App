@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_LED
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -194,4 +198,4 @@ void SM2135_Init() {
 	CMD_CreateAliasHelper("LED_Map", "SM2135_Map");
 }
 
-
+#endif // ENABLE_DRIVER_LED

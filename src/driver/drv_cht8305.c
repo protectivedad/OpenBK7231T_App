@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_CHT83XX
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -325,3 +329,5 @@ void CHT83XX_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreS
 		hprintf255(request, "WARNING: You don't have configured target channels for temp and humid results, set the first and second channel index in Pins!");
 	}
 }
+
+#endif // ENABLE_DRIVER_CHT83XX

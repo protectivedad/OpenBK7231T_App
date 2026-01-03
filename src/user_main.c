@@ -1387,6 +1387,7 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 #ifndef OBK_DISABLE_ALL_DRIVERS
 		if (!CFG_HasFlag(OBK_FLAG_DRV_DISABLE_AUTOSTART)) {
 			// autostart drivers
+#if ENABLE_DRIVER_LED
 			if (PIN_FindPinIndexForRole(IOR_SM2135_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_SM2135_DAT, -1) != -1)
 			{
 				DRV_StartDriver("SM2135");
@@ -1402,37 +1403,28 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 			if (PIN_FindPinIndexForRole(IOR_BP1658CJ_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_BP1658CJ_DAT, -1) != -1) {
 				DRV_StartDriver("BP1658CJ");
 			}
+#if ENABLE_DRIVER_KP18058
 			if (PIN_FindPinIndexForRole(IOR_KP18058_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_KP18058_DAT, -1) != -1) {
 				DRV_StartDriver("KP18058");
 			}
-			if (PIN_FindPinIndexForRole(IOR_BL0937_CF, -1) != -1 && PIN_FindPinIndexForRole(IOR_BL0937_CF1, -1) != -1
-				&& (PIN_FindPinIndexForRole(IOR_BL0937_SEL, -1) != -1 || PIN_FindPinIndexForRole(IOR_BL0937_SEL_n, -1) != -1)) {
-				DRV_StartDriver("BL0937");
-			}
-			if ((PIN_FindPinIndexForRole(IOR_BridgeForward, -1) != -1) && (PIN_FindPinIndexForRole(IOR_BridgeReverse, -1) != -1))
-			{
-				DRV_StartDriver("Bridge");
-			}
-#if ENABLE_DRIVER_DOORSENSOR
-			if ((PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep, -1) != -1) ||
-				(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_NoPup, -1) != -1) ||
-				(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_pd, -1) != -1))
-			{
-				DRV_StartDriver("DoorSensor");
-			}
-#endif // ENABLE_DRIVER_DOORSENSOR
-			if (PIN_FindPinIndexForRole(IOR_CHT83XX_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_CHT83XX_DAT, -1) != -1) {
-				DRV_StartDriver("CHT83XX");
-			}
-			if (PIN_FindPinIndexForRole(IOR_SHT3X_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_SHT3X_DAT, -1) != -1) {
-				DRV_StartDriver("SHT3X");
-			}
+#endif
+#endif
+#if ENABLE_DRIVER_SGP
 			if (PIN_FindPinIndexForRole(IOR_SGP_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_SGP_DAT, -1) != -1) {
 				DRV_StartDriver("SGP");
 			}
-			if (PIN_FindPinIndexForRole(IOR_BAT_ADC, -1) != -1) {
-				DRV_StartDriver("Battery");
+#endif
+#if ENABLE_DRIVER_CHT83XX
+			if (PIN_FindPinIndexForRole(IOR_CHT83XX_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_CHT83XX_DAT, -1) != -1) {
+				DRV_StartDriver("CHT83XX");
 			}
+#endif
+#if ENABLE_DRIVER_SHT3X
+			if (PIN_FindPinIndexForRole(IOR_SHT3X_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_SHT3X_DAT, -1) != -1) {
+				DRV_StartDriver("SHT3X");
+			}
+#endif
+#if ENABLE_DRIVER_TMGN
 			if (PIN_FindPinIndexForRole(IOR_TM1637_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_TM1637_DIO, -1) != -1) {
 				DRV_StartDriver("TM1637");
 			}
@@ -1442,9 +1434,37 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 			{
 				DRV_StartDriver("GN6932");
 			}
+#endif
+#if ENABLE_DRIVER_BL0937
+			if (PIN_FindPinIndexForRole(IOR_BL0937_CF, -1) != -1 && PIN_FindPinIndexForRole(IOR_BL0937_CF1, -1) != -1
+				&& (PIN_FindPinIndexForRole(IOR_BL0937_SEL, -1) != -1 || PIN_FindPinIndexForRole(IOR_BL0937_SEL_n, -1) != -1)) {
+				DRV_StartDriver("BL0937");
+			}
+#endif
+#if ENABLE_DRIVER_BRIDGE
+			if ((PIN_FindPinIndexForRole(IOR_BridgeForward, -1) != -1) && (PIN_FindPinIndexForRole(IOR_BridgeReverse, -1) != -1))
+			{
+				DRV_StartDriver("Bridge");
+			}
+#endif
+#if ENABLE_DRIVER_DOORSENSOR
+			if ((PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep, -1) != -1) ||
+				(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_NoPup, -1) != -1) ||
+				(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_pd, -1) != -1))
+			{
+				DRV_StartDriver("DoorSensor");
+			}
+#endif // ENABLE_DRIVER_DOORSENSOR
+#if ENABLE_DRIVER_BATTERY
+			if (PIN_FindPinIndexForRole(IOR_BAT_ADC, -1) != -1) {
+				DRV_StartDriver("Battery");
+			}
+#endif
+#if ENABLE_DRIVER_HLW8112SPI
 			if (PIN_FindPinIndexForRole(IOR_HLW8112_SCSN, -1) != -1) {
 				DRV_StartDriver("HLW8112SPI");
 			}
+#endif
 #if ENABLE_DRIVER_TUYAMCU
 			if (PIN_FindPinIndexForRole(IOR_TuyaMCU, -1) != -1) {
 				DRV_StartDriver("TuyaMCU");

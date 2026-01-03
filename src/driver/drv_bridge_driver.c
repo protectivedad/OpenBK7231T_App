@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_BRIDGE
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../cmnds/cmd_public.h"
@@ -209,3 +213,4 @@ void Bridge_driver_OnChannelChanged(int ch, int value)
 
 /***************************************************************************************/
 
+#endif // ENABLE_DRIVER_BRIDGE

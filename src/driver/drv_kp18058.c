@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_KP18058
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -123,3 +127,5 @@ void KP18058_Init() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("KP18058_Current", KP18058_Current, NULL);
 }
+
+#endif // ENABLE_DRIVER_KP18058
