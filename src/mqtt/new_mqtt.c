@@ -1235,6 +1235,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host empty, not starting mqtt");
 		return 0;
 	}
+	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 
 	mqtt_userName = CFG_GetMQTTUserName();
 	mqtt_pass = CFG_GetMQTTPass();
