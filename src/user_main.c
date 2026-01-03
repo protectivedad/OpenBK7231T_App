@@ -847,6 +847,20 @@ void Main_OnEverySecond()
 		}
 	}
 
+	// Only startup the HTTP server if we have a connection to the
+	// outside world and any initial MQTT has occurred but once running
+	// leave it be
+#if MQTT_USE_TLS
+	if (!CFG_GetDisableWebServer() || bSafeMode) {
+#endif
+		if (!HTTPService_Started() && g_bHasWiFiConnected) {
+			HTTPServer_Start();
+			ADDLOGF_DEBUG("Started http tcp server\r\n");
+		}
+#if MQTT_USE_TLS
+	} 
+#endif		
+
 #if ENABLE_PING_WATCHDOG
 	// some users say that despite our simple reconnect mechanism
 	// there are some rare cases when devices stuck outside network
@@ -1606,15 +1620,6 @@ void Main_Init_After_Delay()
 
 	// NOT WORKING, I done it other way, see ethernetif.c
 	//net_dhcp_hostname_set(g_shortDeviceName);
-
-#if MQTT_USE_TLS
-	if (!CFG_GetDisableWebServer() || bSafeMode) {
-#endif		
-		HTTPServer_Start();
-		ADDLOGF_DEBUG("Started http tcp server\r\n");
-#if MQTT_USE_TLS
-	} 
-#endif		
 
 	// only initialise certain things if we are not in AP mode
 	if (!bSafeMode)

@@ -2209,8 +2209,8 @@ int MQTT_RunEverySecondUpdate()
 	bool isReady = MQTT_IsReady();
 	if (OTA_GetProgress() != -1)
 	{
-		ADDLOG_INFO(LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
 		if (isReady) {
+			ADDLOG_INFO(LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
 			LOCK_TCPIP_CORE();
 			mqtt_disconnect(mqtt_client);
 			UNLOCK_TCPIP_CORE();
