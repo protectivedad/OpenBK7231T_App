@@ -1,10 +1,11 @@
-// HLW8012 aka BL0937
-#include "drv_bl0937.h"
 #include "../obk_config.h"
-#include "../hal/hal_pins.h"
-#include "../new_pins.h"
 
 #if ENABLE_DRIVER_BL0937
+
+// HLW8012 aka BL0937
+#include "drv_bl0937.h"
+#include "../hal/hal_pins.h"
+#include "../new_pins.h"
 
 //dummy
 #include <math.h>
