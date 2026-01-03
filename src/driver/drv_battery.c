@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_BATTERY
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -197,3 +201,4 @@ void Batt_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreStat
 	hprintf255(request, "<h2>Battery level=%.2f%%, voltage=%.2fmV</h2>", g_battlevel, g_battvoltage);
 }
 
+#endif // ENABLE_DRIVER_BATTERY
