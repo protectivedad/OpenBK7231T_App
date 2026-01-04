@@ -220,15 +220,11 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	// door input always uses opposite level for wakeup
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		if (
-#if ENABLE_DRIVER_DOORSENSOR
-			g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep
-			|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup
-			|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd ||
-#endif
 			g_cfg.pins.roles[i] == IOR_DigitalInput
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_n
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
-			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n) {
+			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n
+			|| IS_PIN_DS_ROLE(g_cfg.pins.roles[i])) {
 			//value = CHANNEL_Get(g_cfg.pins.channels[i]);
 
 			// added per request
@@ -739,9 +735,7 @@ bool BTN_ShouldInvert(int index) {
 	}
 #if ENABLE_DRIVER_DOORSENSOR
 	if (CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE)) {
-		if (role == IOR_DoorSensorWithDeepSleep || role == IOR_DoorSensorWithDeepSleep_NoPup || role == IOR_DoorSensorWithDeepSleep_pd) {
-			return true;
-		}
+		return (IS_PIN_DS_ROLE(role));
 	}
 #endif
 	return false;
@@ -1909,12 +1903,10 @@ bool CHANNEL_ShouldBePublished(int ch) {
 			if (role == IOR_Relay || role == IOR_Relay_n
 				|| role == IOR_LED || role == IOR_LED_n
 				|| role == IOR_ADC || role == IOR_BAT_ADC
-				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || role == IOR_SGP_DAT
+				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
 				|| role == IOR_DigitalInput || role == IOR_DigitalInput_n
-#if ENABLE_DRIVER_DOORSENSOR
-				|| role == IOR_DoorSensorWithDeepSleep || role == IOR_DoorSensorWithDeepSleep_NoPup
-				|| role == IOR_DoorSensorWithDeepSleep_pd
-#endif
+				|| IS_PIN_AIR_SENSOR_ROLE(role)
+				|| IS_PIN_DS_ROLE(role)
 				|| IS_PIN_DHT_ROLE(role)
 				|| role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
 				return true;
@@ -1925,7 +1917,7 @@ bool CHANNEL_ShouldBePublished(int ch) {
 				return true;
 			}
 			// SGP, CHT8305 and SHT3X uses secondary channel for humidity
-			if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || role == IOR_SGP_DAT) {
+			if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || IS_PIN_AIR_SENSOR_ROLE(role)) {
 				return true;
 			}
 		}
@@ -2253,11 +2245,7 @@ void PIN_ticks(void* param)
 			else if (
 				g_cfg.pins.roles[i] == IOR_DigitalInput || g_cfg.pins.roles[i] == IOR_DigitalInput_n ||
 				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup || g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n
-#if ENABLE_DRIVER_DOORSENSOR
-				|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep || g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup
-				|| g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd
-#endif
-				)
+				|| IS_PIN_DS_ROLE(g_cfg.pins.roles[i]))
 			{
 				// read pin digital value (and already invert it if needed)
 				value = PIN_ReadDigitalInputValue_WithInversionIncluded(i);
@@ -2728,11 +2716,9 @@ int h_isChannelDigitalInput(int tg_ch) {
 		if (role == IOR_DigitalInput || role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
 			return true;
 		}
-#if ENABLE_DRIVER_DOORSENSOR
-		if (role == IOR_DoorSensorWithDeepSleep || role == IOR_DoorSensorWithDeepSleep_NoPup || role == IOR_DoorSensorWithDeepSleep_pd) {
+		if (IS_PIN_DS_ROLE(role)) {
 			return true;
 		}
-#endif
 	}
 	return false;
 }
