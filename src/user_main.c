@@ -693,13 +693,6 @@ bool Main_HasFastConnect() {
 	if (CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT)) {
 		return true;
 	}
-#if ENABLE_DRIVER_DOORSENSOR
-	if ((PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep, -1) != -1) ||
-		(PIN_FindPinIndexForRole(IOR_DoorSensorWithDeepSleep_NoPup, -1) != -1))
-	{
-		return true;
-	}
-#endif
 	return false;
 }
 
