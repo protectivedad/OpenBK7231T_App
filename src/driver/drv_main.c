@@ -912,7 +912,7 @@ static driver_t g_drivers[] = {
 	DoorDeepSleep_OnEverySecond,             // onEverySecond
 	DoorDeepSleep_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
-	NULL,                                    // stopFunction
+	DoorDeepSleep_StopDriver,                // stopFunction
 	DoorDeepSleep_OnChannelChanged,          // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	false,                                   // loaded

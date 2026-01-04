@@ -21,9 +21,9 @@
 #include "../hal/hal_adc.h"
 #include "../hal/hal_ota.h"
 
-static int g_noChangeTimePassed = 0; // time without change. Every event in any of the doorsensor channels resets it.
+static int g_noChangeTimePassed = 0; // time without change. Every event of the doorsensor channel resets it.
 static int g_emergencyTimeWithNoConnection = 0; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
-static int g_lastEventState = -1; // last state of doorsensor channel
+static int g_registeredPin = -1; // pin found on initialization
 static int setting_automaticWakeUpAfterSleepTime = 0;
 static int setting_timeRequiredUntilDeepSleep = 60;
 
@@ -64,8 +64,17 @@ commandResult_t DoorDeepSleep_SetTime(const void* context, const char* cmd, cons
 	return CMD_RES_OK;
 }
 
+int DoorDeepSleep_Load() {
+	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
+		if (IS_PIN_DS_ROLE(g_cfg.pins.roles[i])) {
+			g_registeredPin = i;
+			break;
+		}
+	}
+	return g_registeredPin;
+}
+
 void DoorDeepSleep_Init() {
-	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 	// 0 seconds since last change
 	g_noChangeTimePassed = 0;
 
@@ -74,72 +83,32 @@ void DoorDeepSleep_Init() {
 	//cmddetail:"fn":"DoorDeepSleep_SetTime","file":"driver/drv_doorSensorWithDeepSleep.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DSTime", DoorDeepSleep_SetTime, NULL);
-}
 
-void DoorDeepSleep_QueueNewEvents() {
-	int i, curr_value;
-	char sChannel[8]; // channel as a string
-	char sValue[8];   // channel value as a string
-
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (IS_PIN_DS_ROLE(g_cfg.pins.roles[i])) {
-
-			int channel = g_cfg.pins.channels[i];
-			sprintf(sChannel, "%i/get", channel); // manually adding the suffix "/get" to the topic
-			// Explanation: I manually add "/get" suffix to the sChannel, because for some reason, 
-			// when queued messages are published through PublishQueuedItems(), the  
-			// functionality of appendding /get is disabled (in MQTT_PublishTopicToClient()), 
-			// and there is no flag to enforce it. 
-			// There is only a flag (OBK_PUBLISH_FLAG_FORCE_REMOVE_GET) to remove 
-			// suffix, but for some reason there is no flag to add it. 
-			// Would be great if such flag exists, so I can add it when calling
-			// MQTT_QueuePublish(), so /get is appended when published through
-			// PublishQueuedItems(). 
-
-			curr_value = CHANNEL_Get(channel);
-			if (curr_value != g_lastEventState) {
-				ADDLOGF_TIMING("%i - %s - Channel %i is being set to state %i, last state %i", xTaskGetTickCount(), __func__, channel, curr_value, g_lastEventState);
-				g_lastEventState = curr_value;
-				sprintf(sValue, "%i", curr_value); // get the value of the channel
-#if ENABLE_MQTT
-				MQTT_QueuePublish(CFG_GetMQTTClientId(), sChannel, sValue, 0); // queue the publishing
-				// Current state (or state change) will be queued and published when device establishes 
-				// the connection to WiFi and MQTT Broker (300 seconds by default for that).  
-#endif
-			}
-		}
-	}
+	DoorDeepSleep_Load();
+	ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
 }
 
 void DoorDeepSleep_OnEverySecond() {
 
 	if (OTA_GetProgress() >= 0) {
-		// update active
-		g_noChangeTimePassed = 0;
-		g_emergencyTimeWithNoConnection = 0;
-	} else if (Main_HasMQTTConnected() && Main_HasWiFiConnected()) { // executes every second when connection is established
-			
-			DoorDeepSleep_QueueNewEvents();
-#if ENABLE_MQTT
-			PublishQueuedItems(); // publish those items that were queued when device was offline
-#endif
-			
-			g_noChangeTimePassed++;
-			if (g_noChangeTimePassed >= setting_timeRequiredUntilDeepSleep) {
-				// start deep sleep in the next loop
-				// The deep sleep start will check for role: IOR_DoorSensorWithDeepSleep
-				// and for those pins, it will wake up on the pin change to opposite state
-				// (so if door sensor is low, it will wake up on rising edge,
-				// if door sensor is high, it will wake up on falling)
-				g_bWantPinDeepSleep = true;
-				g_pinDeepSleepWakeUp = setting_automaticWakeUpAfterSleepTime;
-			}
+		return;
 	}
-	else { // executes every second while the device is woken up, but offline
-		DoorDeepSleep_QueueNewEvents();
-		
-		g_emergencyTimeWithNoConnection++;
-		if (g_emergencyTimeWithNoConnection >= EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT) {
+
+	if (g_registeredPin == -1) {
+		ADDLOG_WARN(LOG_FEATURE_DRV, "doorsensor: Driver not assigned to pin, restart device");
+		return;
+	}
+#if ENABLE_MQTT
+	if (Main_HasMQTTConnected()) { // executes every second when connection is established
+		if (++g_noChangeTimePassed >= setting_timeRequiredUntilDeepSleep) {
+			g_bWantPinDeepSleep = true;
+			g_pinDeepSleepWakeUp = setting_automaticWakeUpAfterSleepTime;
+		}
+	}
+	else 
+#endif
+	{ // executes every second while the device is woken up, but offline
+		if (++g_emergencyTimeWithNoConnection >= EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT) {
 			g_bWantPinDeepSleep = true;
 			g_pinDeepSleepWakeUp = setting_automaticWakeUpAfterSleepTime;
 		}
@@ -147,7 +116,10 @@ void DoorDeepSleep_OnEverySecond() {
 }
 
 void DoorDeepSleep_StopDriver() {
-
+	// reset pins and time passed values
+	g_registeredPin = -1;
+	g_noChangeTimePassed = 0;
+	g_emergencyTimeWithNoConnection = 0;
 }
 
 void DoorDeepSleep_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
@@ -157,11 +129,14 @@ void DoorDeepSleep_AppendInformationToHTTPIndexPage(http_request_t* request, int
 	}
 	int untilSleep;
 
+#if ENABLE_MQTT
 	if (Main_HasMQTTConnected()) {
 		untilSleep = setting_timeRequiredUntilDeepSleep - g_noChangeTimePassed;
 		hprintf255(request, "<h2>Door (initial: %i): time until deep sleep: %i</h2>", g_initialPinStates, untilSleep);
 	}
-	else {
+	else 
+#endif
+	{
 		untilSleep = EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT - g_emergencyTimeWithNoConnection;
 		hprintf255(request, "<h2>Door (initial: %i): waiting for MQTT connection (but will emergency sleep in %i)</h2>", g_initialPinStates, untilSleep);
 	}
@@ -170,8 +145,9 @@ void DoorDeepSleep_AppendInformationToHTTPIndexPage(http_request_t* request, int
 void DoorDeepSleep_OnChannelChanged(int ch, int value) {
 	// detect door state change
 	// (only sleep when there are no changes for certain time)
-	if (CHANNEL_HasChannelPinWithRoleOrRole(ch, IOR_DoorSensorWithDeepSleep, IOR_DoorSensorWithDeepSleep_NoPup)
-		|| CHANNEL_HasChannelPinWithRoleOrRole(ch, IOR_DoorSensorWithDeepSleep, IOR_DoorSensorWithDeepSleep_pd)) {
+
+	if (g_cfg.pins.channels[g_registeredPin] == ch) {
+		ADDLOGF_TIMING("%i - %s - Channel %i is being set to state %i", xTaskGetTickCount(), __func__, ch, value);
 		// 0 seconds since last change
 		g_noChangeTimePassed = 0;
 		g_emergencyTimeWithNoConnection = 0;
