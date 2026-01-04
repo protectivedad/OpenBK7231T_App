@@ -272,6 +272,7 @@ static int http_tasmota_json_SENSOR(void* request, jsonCb_t printer) {
 //		printer(request, "\"%s\":{\"Temperature\": %.1f},", PLATFORM_MCU_NAME, g_wifi_temperature);
 		printer(request, "\"ESP32\":{\"Temperature\": %.1f},", g_wifi_temperature);
 #endif
+#if ENABLE_DRIVER_SHT3X
 	if (DRV_IsRunning("SHT3X")) {
 		g_pin_1 = PIN_FindPinIndexForRole(IOR_SHT3X_DAT, g_pin_1);
 		channel_1 = g_cfg.pins.channels[g_pin_1];
@@ -289,6 +290,7 @@ static int http_tasmota_json_SENSOR(void* request, jsonCb_t printer) {
 		// close ENERGY block
 		printer(request, "},");
 	}
+#endif
 #if (ENABLE_DRIVER_DS1820)
 	if (DRV_IsRunning("DS1820")) {		//DS1820_simple.c with one sensor
 		g_pin_1 = PIN_FindPinIndexForRole(IOR_DS1820_IO, g_pin_1);
@@ -319,6 +321,7 @@ static int http_tasmota_json_SENSOR(void* request, jsonCb_t printer) {
 		printer(request, str);
 	}
 #endif
+#if ENABLE_DRIVER_CHT83XX
 	if (DRV_IsRunning("CHT83XX")) {
 		g_pin_1 = PIN_FindPinIndexForRole(IOR_CHT83XX_DAT, g_pin_1);
 		channel_1 = g_cfg.pins.channels[g_pin_1];
@@ -336,7 +339,7 @@ static int http_tasmota_json_SENSOR(void* request, jsonCb_t printer) {
 		// close ENERGY block
 		printer(request, "},");
 	}
-
+#endif
 	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		int role = PIN_GetPinRoleForPinIndex(i);
 		if (role != IOR_DHT11 && role != IOR_DHT12 && role != IOR_DHT21 && role != IOR_DHT22)
@@ -357,6 +360,7 @@ static int http_tasmota_json_SENSOR(void* request, jsonCb_t printer) {
 		// close ENERGY block
 		printer(request, "},");
 	}
+#if ENABLE_DRIVER_SGP
 	if (DRV_IsRunning("SGP")) {
 		g_pin_1 = PIN_FindPinIndexForRole(IOR_SGP_DAT, g_pin_1);
 		channel_1 = g_cfg.pins.channels[g_pin_1];
@@ -374,6 +378,7 @@ static int http_tasmota_json_SENSOR(void* request, jsonCb_t printer) {
 		// close ENERGY block
 		printer(request, "},");
 	}
+#endif
 	return 0;
 }
 // Test command: http://192.168.0.159/cm?cmnd=STATUS%208
