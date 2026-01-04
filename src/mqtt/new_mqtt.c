@@ -1121,6 +1121,9 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 	err_t err = ERR_OK;
 	const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 	LWIP_UNUSED_ARG(client);
+#if ENABLE_TIMING_INFO_IN_LOG
+	addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"%s - %i - Status: %i\n", __func__, xTaskGetTickCount(), status);
+#endif
 
 	//   addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client < removed name > connection cb: status %d\n",  (int)status);
 	 //  addLogAdv(LOG_INFO,LOG_FEATURE_MQTT,"MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);

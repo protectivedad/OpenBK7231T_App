@@ -65,6 +65,9 @@ commandResult_t DoorDeepSleep_SetTime(const void* context, const char* cmd, cons
 }
 
 void DoorDeepSleep_Init() {
+#if ENABLE_TIMING_INFO_IN_LOG
+	ADDLOG_INFO(LOG_FEATURE_DRV, "DRV_DOORSENSOR : %i : Driver initialization", xTaskGetTickCount());
+#endif
 	// 0 seconds since last change
 	g_noChangeTimePassed = 0;
 
@@ -99,6 +102,9 @@ void DoorDeepSleep_QueueNewEvents() {
 
 			curr_value = CHANNEL_Get(channel);
 			if (curr_value != g_lastEventState) {
+#if ENABLE_TIMING_INFO_IN_LOG
+				ADDLOG_INFO(LOG_FEATURE_DRV, "DRV_DOORSENSOR : %i : Channel %i is being set to state %i, last state %i", xTaskGetTickCount(), channel, curr_value, g_lastEventState);
+#endif
 				g_lastEventState = curr_value;
 				sprintf(sValue, "%i", curr_value); // get the value of the channel
 #if ENABLE_MQTT
