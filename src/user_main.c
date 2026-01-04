@@ -1295,15 +1295,18 @@ void Main_Init_AfterDelay_Unsafe(bool bStartAutoRunScripts) {
 	CMD_Init_Delayed();
 
 	if (bStartAutoRunScripts) {
+
+#if defined(ENABLE_DRIVER_IR) || defined(ENABLE_DRIVER_IRREMOTEESP)
+#ifndef OBK_DISABLE_ALL_DRIVERS
 		if (PIN_FindPinIndexForRole(IOR_IRRecv, -1) != -1 || PIN_FindPinIndexForRole(IOR_IRSend, -1) != -1
 			|| PIN_FindPinIndexForRole(IOR_IRRecv_nPup, -1) != -1) {
 			// start IR driver 5 seconds after boot.  It may affect wifi connect?
 			// yet we also want it to start if no wifi for IR control...
-#ifndef OBK_DISABLE_ALL_DRIVERS
 			DRV_StartDriver("IR");
 			//ScheduleDriverStart("IR",5);
-#endif
 		}
+#endif
+#endif
 
 		// NOTE: this will try to read autoexec.bat,
 		// so ALL commands expected in autoexec.bat should have been registered by now...
