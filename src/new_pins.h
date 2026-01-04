@@ -648,7 +648,16 @@ typedef enum ioRole_e {
 
 #define IS_PIN_DHT_ROLE(role) (((role)>=IOR_DHT11) && ((role)<=IOR_DHT22))
 #define IS_PIN_TEMP_HUM_SENSOR_ROLE(role) (((role)==IOR_SHT3X_DAT) || ((role)==IOR_CHT83XX_DAT))
+#if ENABLE_DRIVER_SGP
 #define IS_PIN_AIR_SENSOR_ROLE(role) (((role)==IOR_SGP_DAT))
+#else
+#define IS_PIN_AIR_SENSOR_ROLE(role) (false)
+#endif
+#if ENABLE_DRIVER_DOORSENSOR
+#define IS_PIN_DS_ROLE(role) (((role)==IOR_DoorSensorWithDeepSleep) || ((role)==IOR_DoorSensorWithDeepSleep_NoPup) || ((role)==IOR_DoorSensorWithDeepSleep_pd))
+#else
+#define IS_PIN_DS_ROLE(role) (false)
+#endif
 
 typedef enum channelType_e {
 	//chandetail:{"name":"Default",

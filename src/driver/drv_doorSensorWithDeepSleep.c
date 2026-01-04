@@ -82,9 +82,7 @@ void DoorDeepSleep_QueueNewEvents() {
 	char sValue[8];   // channel value as a string
 
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep ||
-			g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup ||
-			g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd) {
+		if (IS_PIN_DS_ROLE(g_cfg.pins.roles[i])) {
 
 			int channel = g_cfg.pins.channels[i];
 			sprintf(sChannel, "%i/get", channel); // manually adding the suffix "/get" to the topic
