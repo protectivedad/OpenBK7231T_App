@@ -533,16 +533,19 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
-
+#if ENABLE_TASMOTADEVICEGROUPS
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
 				ScheduleDriverStart("DGR", 5);
 			}
+#endif
+#if ENABLE_DRIVER_SSDP
 			// if SSDP should be active, 
 			// restart it now.
 			if (DRV_SSDP_Active) {
 				ScheduleDriverStart("SSDP", 5);
 				//DRV_SSDP_Restart(); // this kills things
 			}
+#endif
 		}
 #if defined(PLATFORM_LN882H)
 		// LN882H hack, maybe place somewhere else?
