@@ -363,4 +363,9 @@ void HTTPServer_Start()
 	}
 }
 
+bool HTTPService_Started()
+{
+	return (g_http_thread != NULL);
+}
+
 #endif
