@@ -1218,80 +1218,28 @@ typedef enum channelType_e {
 
 
 #if PLATFORM_W800 || PLATFORM_BK7252 || PLATFORM_BK7252N || PLATFORM_XR872
-
 #define MAX_PIN_ROLES 48
-
-typedef struct pinsState_s {
-	// All above values are indexed by physical pin index
-	// (so we assume we have maximum of 32 pins)
-	byte roles[48];
-	byte channels[48];
-	// extra channels array - this is needed for
-	// buttons, so button can toggle one relay on single click
-	// and other relay on double click
-	byte channels2[48];
-	// This single field above, is indexed by CHANNEL INDEX
-	// (not by pin index)
-	byte channelTypes[CHANNEL_MAX];
-} pinsState_t;
-
 #elif PLATFORM_ESPIDF
-
 #define MAX_PIN_ROLES 50
-
-typedef struct pinsState_s
-{
-	// All above values are indexed by physical pin index
-	// (so we assume we have maximum of 32 pins)
-	byte roles[50];
-	byte channels[50];
-	// extra channels array - this is needed for
-	// buttons, so button can toggle one relay on single click
-	// and other relay on double click
-	byte channels2[50];
-	// This single field above, is indexed by CHANNEL INDEX
-	// (not by pin index)
-	byte channelTypes[CHANNEL_MAX];
-} pinsState_t;
-
 #elif PLATFORM_RTL8720D || PLATFORM_RTL8721DA || PLATFORM_RTL8720E || PLATFORM_TXW81X
-
 #define MAX_PIN_ROLES 64
-
-typedef struct pinsState_s
-{
-	// All above values are indexed by physical pin index
-	// (so we assume we have maximum of 32 pins)
-	byte roles[64];
-	byte channels[64];
-	// extra channels array - this is needed for
-	// buttons, so button can toggle one relay on single click
-	// and other relay on double click
-	byte channels2[64];
-	// This single field above, is indexed by CHANNEL INDEX
-	// (not by pin index)
-	byte channelTypes[CHANNEL_MAX];
-} pinsState_t;
-
 #else
-
 #define MAX_PIN_ROLES 32
+#endif
 
 typedef struct pinsState_s {
 	// All above values are indexed by physical pin index
 	// (so we assume we have maximum of 32 pins)
-	byte roles[32];
-	byte channels[32];
+	byte roles[MAX_PIN_ROLES];
+	byte channels[MAX_PIN_ROLES];
 	// extra channels array - this is needed for
 	// buttons, so button can toggle one relay on single click
 	// and other relay on double click
-	byte channels2[32];
+	byte channels2[MAX_PIN_ROLES];
 	// This single field above, is indexed by CHANNEL INDEX
 	// (not by pin index)
 	byte channelTypes[CHANNEL_MAX];
 } pinsState_t;
-
-#endif
 
 #if MAX_PIN_ROLES < PLATFORM_GPIO_MAX
 #error "MAX_PIN_ROLES < PLATFORM_GPIO_MAX, undefined behaviour"
