@@ -2835,6 +2835,9 @@ void TuyaMCU_Init()
 	//cmddetail:"examples":"tuyaMcu_batteryPoweredMode "}
 	CMD_RegisterCommand("tuyaMcu_batteryPoweredMode", Cmd_TuyaMCU_BatteryPoweredMode, NULL);
 
+	/* Request production information */
+	TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+
 	ADDLOGF_TIMING("%i - %s - Initialization of TuyaMCU", xTaskGetTickCount(), __func__);
 }
 
