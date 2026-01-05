@@ -1438,8 +1438,8 @@ void DRV_OnEverySecond() {
 			}
 		}
 	}
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	// unconditionally run TIME
+#if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
+	// unconditionally run TIME unless explicitly disabled
 	TIME_OnEverySecond();
 #endif
 	DRV_Mutex_Free();
@@ -1607,8 +1607,8 @@ void DRV_Generic_Init() {
 	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopDriver", DRV_Stop, NULL);
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	// init TIME unconditionally on start
+#if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
+	// init TIME unconditionally on start unless explicitly disabled
 	TIME_Init();
 #endif
 }
@@ -1636,7 +1636,7 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-#ifndef OBK_DISABLE_ALL_DRIVERS
+#if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
 	TIME_AppendInformationToHTTPIndexPage(request, bPreState);
 #endif
 	for (i = 0; i < g_numDrivers; i++) {

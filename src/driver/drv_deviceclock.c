@@ -1,7 +1,11 @@
+#include "../obk_config.h"
+
+#include "../new_common.h"
+
+#if ENABLE_DRIVER_DEVICECLOCK
 
 //#include <time.h>
 
-#include "../new_common.h"
 #include "../new_cfg.h"
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
@@ -598,5 +602,11 @@ void TIME_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreStat
 #endif
 	);
 }
-
-
+#else
+uint32_t TIME_GetCurrentTime() {
+	return g_secondsElapsed;
+}
+uint32_t TIME_GetCurrentTimeWithoutOffset() {
+	return g_secondsElapsed;
+}
+#endif // ENABLE_DRIVER_DEVICECLOCK
