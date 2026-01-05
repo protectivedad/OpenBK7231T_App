@@ -1653,7 +1653,7 @@ void CHANNEL_Set_Ex(int ch, int iVal, int iFlags, int ausemovingaverage) {
 	}
 	if (ch < 0 || ch >= CHANNEL_MAX) {
 		//if(bMustBeSilent==0) {
-		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Set: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "%s: Channel index %i is out of range <0,%i)", __func__, ch, CHANNEL_MAX);
 		//}
 		return;
 	}
@@ -1661,13 +1661,13 @@ void CHANNEL_Set_Ex(int ch, int iVal, int iFlags, int ausemovingaverage) {
 	if (bForce == 0) {
 		if (prevValue == iVal) {
 			if (bSilent == 0) {
-				ADDLOG_INFO(LOG_FEATURE_GENERAL, "No change in channel %i (still set to %i) - ignoring\n\r", ch, prevValue);
+				ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s: No change in channel %i (still set to %i) - ignoring", __func__, ch, prevValue);
 			}
 			return;
 		}
 	}
 	if (bSilent == 0) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "CHANNEL_Set channel %i has changed to %i (flags %i)\n\r", ch, iVal, iFlags);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s: Channel %i has changed to %i (flags %i)", __func__, ch, iVal, iFlags);
 	}
 	#ifdef ENABLE_BL_MOVINGAVG
 	//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CHANNEL_Set debug channel %i has changed to %i (flags %i)\n\r", ch, iVal, iFlags);
