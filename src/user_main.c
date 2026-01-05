@@ -709,6 +709,14 @@ float g_wifi_temperature = 0;
 static byte g_secondsSpentInLowMemoryWarning = 0;
 void Main_OnEverySecond()
 {
+#if ENABLE_DEEPSLEEP
+	if (g_bWantPinDeepSleep) {
+		g_bWantPinDeepSleep = 0;
+		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
+		return;
+	}
+#endif
+
 #if PLATFORM_W600 || PLATFORM_W800
 #define TimeOut_t xTimeOutType 
 #endif
@@ -758,7 +766,6 @@ void Main_OnEverySecond()
 	}
 
 #if ENABLE_MQTT
-	// run_adc_test();
 	newMQTTState = MQTT_RunEverySecondUpdate();
 	if (newMQTTState != bMQTTconnected) {
 		bMQTTconnected = newMQTTState;
@@ -815,12 +822,6 @@ void Main_OnEverySecond()
 	if (bSafeMode == 0) {
 		const char* ip = HAL_GetMyIPString();
 #if ENABLE_MQTT
-#if defined(PLATFORM_BK7231N)
-		if (!bMQTTconnected) {
-			// try to catch the connect before the long wait for the next second
-			rtos_delay_milliseconds(20);
-		}
-#endif
 		if (MQTT_IsReady()) {
 			MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
 		}
@@ -1123,14 +1124,6 @@ unsigned int g_deltaTimeMS;
 // this is what we do in a qucik tick
 void QuickTick(void* param)
 {
-#if ENABLE_DEEPSLEEP
-	if (g_bWantPinDeepSleep) {
-		g_bWantPinDeepSleep = 0;
-		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
-		return;
-	}
-#endif
-
 #if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
 	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick
 #else
