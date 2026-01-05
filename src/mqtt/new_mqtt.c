@@ -2284,7 +2284,7 @@ int MQTT_RunEverySecondUpdate()
 			else {
 				mqtt_loopsWithDisconnected = 0;
 				// try to catch the connect before the long wait for the next second
-				rtos_delay_milliseconds(20);
+				rtos_delay_milliseconds(30);
 				isReady = MQTT_IsReady();
 			}
 			mqtt_connect_events++;
