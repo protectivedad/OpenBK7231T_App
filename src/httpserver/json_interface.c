@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_TASMOTA_JSON
+
 #include "../new_common.h"
 #include "http_fns.h"
 #include "../new_pins.h"
@@ -26,8 +30,6 @@
 
 
 #include "../libraries/obktime/obktime.h"	// for time functions
-
-#if ENABLE_TASMOTA_JSON
 
 void JSON_PrintKeyValue_String(void* request, jsonCb_t printer, const char* key, const char* value, bool bComma) {
 	printer(request, "\"%s\":\"%s\"", key, value);
@@ -1197,6 +1199,3 @@ int JSON_ProcessCommandReply(const char* cmd, const char* arg, void* request, js
 }
 // close for ENABLE_TASMOTA_JSON
 #endif
-
-
-
