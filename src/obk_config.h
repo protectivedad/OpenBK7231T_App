@@ -40,6 +40,7 @@
 #define ENABLE_HTTP_PING						1
 #define ENABLE_LED_BASIC						1
 #define ENABLE_DRIVER_DOORSENSOR				1 // adds +1k12 for BK7238
+#define ENABLE_DRIVER_DEVICECLOCK				1
 #define ENABLE_DEEPSLEEP						1 // adds +656 bytes 
 #define ENABLE_CMD_CHANNEL						1 // adds +1872
 
