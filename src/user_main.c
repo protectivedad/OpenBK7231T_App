@@ -1493,8 +1493,11 @@ void Main_ForceUnsafeInit() {
 // power on.
 void Main_Init_Before_Delay()
 {
+#if OBK_TIMING_LOGGING_ENABLED
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
+#else
 	ADDLOGF_INFO("%s", __func__);
+#endif
 	// read or initialise the boot count flash area
 	HAL_FlashVars_IncreaseBootCount();
 
@@ -1537,8 +1540,11 @@ void Main_Init_Before_Delay()
 // (e.g. are we delayed by it reading temperature?)
 void Main_Init_Delay()
 {
+#if OBK_TIMING_LOGGING_ENABLED
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
+#else
 	ADDLOGF_INFO("%s", __func__);
+#endif
 	bk_printf("\r\%s\r\n", __func__);
 
 	extended_app_waiting_for_launch2();
@@ -1557,9 +1563,11 @@ void Main_Init_Delay()
 void Main_Init_After_Delay()
 {
 	const char* wifi_ssid, * wifi_pass;
+#if OBK_TIMING_LOGGING_ENABLED
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
+#else
 	ADDLOGF_INFO("%s", __func__);
-
+#endif
 	// we can log this after delay.
 	if (bSafeMode) {
 		ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
