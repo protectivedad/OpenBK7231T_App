@@ -843,19 +843,18 @@ void Main_OnEverySecond()
 		}
 	}
 
-	// Only startup the HTTP server if we have a connection to the
-	// outside world and any initial MQTT has occurred but once running
-	// leave it be
+	// Always start HTTP service in safe mode.
+	// Otherwise only start HTTP service if we have a connection to the
+	// outside world or AP mode, unless it has been disabled.
+	if (!HTTPService_Started() && 
+		(g_bHasWiFiConnected || g_bOpenAccessPointMode || bSafeMode)
 #if MQTT_USE_TLS
-	if (!CFG_GetDisableWebServer() || bSafeMode) {
+		&& !(CFG_GetDisableWebServer() && !bSafeMode)
 #endif
-		if (!HTTPService_Started() && g_bHasWiFiConnected) {
-			HTTPServer_Start();
-			ADDLOGF_DEBUG("Started http tcp server\r\n");
-		}
-#if MQTT_USE_TLS
-	} 
-#endif		
+		) {
+		HTTPServer_Start();
+		ADDLOGF_DEBUG("Started http tcp server\r\n");
+	}
 
 #if ENABLE_PING_WATCHDOG
 	// some users say that despite our simple reconnect mechanism
