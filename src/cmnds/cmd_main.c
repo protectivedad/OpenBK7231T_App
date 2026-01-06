@@ -126,7 +126,7 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 		bOn = Tokenizer_GetArgInteger(0);
 	}
 #if (PLATFORM_LN882H)	
-	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: will set to %i%s", bOn, Main_IsConnectedToWiFi() == 0 ? " after WiFi is connected" : "");
+	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: will set to %i%s", bOn, Main_HasWiFiConnected() == 0 ? " after WiFi is connected" : "");
 #else
 	ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: will set to %i", bOn);
 #endif
@@ -170,7 +170,7 @@ static commandResult_t CMD_PowerSave(const void* context, const char* cmd, const
 	}
 #elif defined(PLATFORM_LN882H)
 	// this will be applied after WiFi connect
-	if (Main_IsConnectedToWiFi() == 0){
+	if (Main_HasWiFiConnected() == 0){
 		g_ln882h_pendingPowerSaveCommand = bOn;
 	}
 	else LN882H_ApplyPowerSave(bOn);

@@ -325,7 +325,7 @@ void NTP_SendRequest_BlockingMode() {
 void NTP_OnEverySecond()
 {
 
-    if(Main_IsConnectedToWiFi()==0)
+    if(Main_HasWiFiConnected()==0)
     {
         return;
     }
