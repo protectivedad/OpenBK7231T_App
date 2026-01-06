@@ -82,15 +82,11 @@ commandResult_t SetTimeZoneOfs(const void *context, const char *cmd, const char 
 #if ENABLE_TIME_DST
     	setDST();	// check if local time is DST or not and set offset
 #endif
-	ADDLOG_INFO(LOG_FEATURE_NTP,"Time offset set to %i seconds"
 #if ENABLE_TIME_DST
-	" (DST offset %i seconds)"
-#endif	
-	,g_UTCoffset
-#if ENABLE_TIME_DST
-	,getDST_offset()
-#endif	
-	);
+	ADDLOG_INFO(LOG_FEATURE_NTP,"Time offset set to %i seconds (DST offset %i seconds)", g_UTCoffset, getDST_offset());
+#else
+	ADDLOG_INFO(LOG_FEATURE_NTP,"Time offset set to %i seconds", g_UTCoffset);
+#endif
 	return CMD_RES_OK;
 }
 
