@@ -1019,7 +1019,6 @@ void MAIN_ScheduleUnsafeInit(int delSeconds);
 #if ENABLE_HA_DISCOVERY
 void Main_ScheduleHomeAssistantDiscovery(int seconds);
 #endif
-int Main_IsConnectedToWiFi();
 int Main_IsOpenAccessPointMode();
 void Main_Init();
 bool Main_HasFastConnect();
