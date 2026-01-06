@@ -470,6 +470,23 @@ const char* CFG_GetWiFiPassX() {
 #endif
 }
 
+static int bMQTTconnected = 0;
+
+int Main_HasMQTTConnected()
+{
+	return bMQTTconnected;
+}
+
+// run MQTT every second entry if connection status changes fire event
+void Main_MQTT_EntryPoint() {
+#if ENABLE_MQTT
+	if (MQTT_RunEverySecondUpdate() != bMQTTconnected) {
+		bMQTTconnected = (bMQTTconnected == false); // toggle connection status
+		EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, bMQTTconnected);
+	}
+#endif
+}
+
 void Main_OnWiFiStatusChange(int code)
 {
 	// careful what you do in here.
@@ -533,6 +550,11 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
+			if (Main_HasFastConnect()) {
+				rtos_delay_milliseconds(50);
+				Main_MQTT_EntryPoint();
+			}
+
 #if ENABLE_TASMOTADEVICEGROUPS
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
 				ScheduleDriverStart("DGR", 5);
@@ -589,13 +611,8 @@ void Main_OnPingCheckerReply(int ms)
 int g_doHomeAssistantDiscoveryIn = 0;
 int g_bBootMarkedOK = 0;
 int g_rebootReason = 0;
-static int bMQTTconnected = 0;
 
-int Main_HasMQTTConnected()
-{
-	return bMQTTconnected;
-}
-
+// returns g_bHasWiFiConnected
 int Main_HasWiFiConnected()
 {
 	return g_bHasWiFiConnected;
@@ -723,7 +740,6 @@ void Main_OnEverySecond()
 #if ! ( WINDOWS || PLATFORM_TXW81X  || PLATFORM_RDA5981) 
 	TimeOut_t myTimeout;	// to get uptime from xTicks - not working on WINDOWS and TXW81X and RDA5981
 #endif
-	int newMQTTState;
 	const char* safe;
 	int i;
 
@@ -766,16 +782,7 @@ void Main_OnEverySecond()
 	}
 
 #if ENABLE_MQTT
-	newMQTTState = MQTT_RunEverySecondUpdate();
-	if (newMQTTState != bMQTTconnected) {
-		bMQTTconnected = newMQTTState;
-		if (newMQTTState) {
-			EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, 1);
-		}
-		else {
-			EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, 0);
-		}
-	}
+	Main_MQTT_EntryPoint();
 	// Update time with no MQTT
 	if (bMQTTconnected) {
 		i = 0;
@@ -821,18 +828,14 @@ void Main_OnEverySecond()
 #endif
 	if (bSafeMode == 0) {
 		const char* ip = HAL_GetMyIPString();
-#if ENABLE_MQTT
 		if (MQTT_IsReady()) {
 			MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
 		}
-#endif
 		// this will return non-zero if there were any changes
 		if (strcpy_safe_checkForChanges(g_currentIPString, ip, sizeof(g_currentIPString))) {
-#if ENABLE_MQTT
 			if (MQTT_IsReady()) {
 				MQTT_DoItemPublish(PUBLISHITEM_SELF_IP);
 			}
-#endif
 			EventHandlers_FireEvent(CMD_EVENT_IPCHANGE, 0);
 #if ENABLE_HA_DISCOVERY
 			//Invoke Hass discovery if ipaddr changed
