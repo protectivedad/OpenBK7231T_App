@@ -2193,11 +2193,12 @@ void MQTT_BroadcastTasmotaTeleSTATE() {
 	MQTT_ProcessCommandReplyJSON("STATE", "", COMMAND_FLAG_SOURCE_TELESENDER);
 #endif
 }
+
 // called from user timer.
-int MQTT_RunEverySecondUpdate()
+bool MQTT_RunEverySecondUpdate()
 {
 	if (!mqtt_initialised)
-		return 0;
+		return false;
 
 	if (Main_HasWiFiConnected() == 0)
 	{
@@ -2208,13 +2209,13 @@ int MQTT_RunEverySecondUpdate()
 		else {
 			mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
 		}
-		return 0;
+		return false;
 	}
 
 	// take mutex for connect and disconnect operations
 	if (MQTT_Mutex_Take(100) == 0)
 	{
-		return 0;
+		return false;
 	}
 
 	bool isReady = MQTT_IsReady();
@@ -2228,7 +2229,7 @@ int MQTT_RunEverySecondUpdate()
 		}
 		MQTT_Mutex_Free();
 		mqtt_initialised = 0; // don't come back here until restart
-		return 0;
+		return false;
 	}
 
 	if (g_mqtt_bBaseTopicDirty) {
