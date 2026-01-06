@@ -550,7 +550,7 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
-			rtos_delay_milliseconds(200);
+			rtos_delay_milliseconds(50);
 			Main_MQTT_EntryPoint();
 
 #if ENABLE_TASMOTADEVICEGROUPS
