@@ -44,7 +44,7 @@ static void DRV_SSDP_Send_Notify();
 static int ssdp_timercount = 0;
 
 extern const char *HAL_GetMyIPString();
-extern int Main_IsConnectedToWiFi();
+extern int Main_HasWiFiConnected();
 
 
 // allocated at first use, freed if stopped
@@ -418,7 +418,7 @@ static commandResult_t Cmd_obkDeviceList(const void *context, const char *cmd, c
 
 void DRV_SSDP_Init()
 {
-    if (!Main_IsConnectedToWiFi()){
+    if (!Main_HasWiFiConnected()){
         ADDLOG_INFO(LOG_FEATURE_HTTP,"DRV_SSDP_Init - no wifi, so await connection");
         DRV_SSDP_Active = 1;
         return;

@@ -1180,7 +1180,7 @@ void QuickTick(void* param)
 			PIN_set_wifi_led(g_wifi_ledState);
 		}
 	}
-	else if (Main_IsConnectedToWiFi()) {
+	else if (g_bHasWiFiConnected) {
 		// In WiFi client success mode, just stay enabled
 		PIN_set_wifi_led(1);
 	}
@@ -1254,12 +1254,6 @@ int Main_IsOpenAccessPointMode()
 {
 	return g_bOpenAccessPointMode;
 }
-
-int Main_IsConnectedToWiFi()
-{
-	return g_bHasWiFiConnected;
-}
-
 
 // called from idle thread each loop.
 // - just so we know it is running.
