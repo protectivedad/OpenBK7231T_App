@@ -2549,7 +2549,6 @@ bool MQTT_IsReady() {
 	return mqtt_client && res;
 }
 
-#endif // ENABLE_MQTT
 #if MQTT_USE_TLS
 #ifdef MBEDTLS_ENTROPY_HARDWARE_ALT
 #include "fake_clock_pub.h"
@@ -2755,3 +2754,16 @@ void mbedtls_dump_conf(mbedtls_ssl_config* conf, mbedtls_ssl_context* ssl) {
 }
 #endif  //ALTCP_MBEDTLS_DEBUG
 #endif  //MQTT_USE_TLS
+
+#else
+
+#include "../new_common.h"
+bool MQTT_IsReady() {
+	return false;
+}
+OBK_Publish_Result MQTT_DoItemPublish(int idx) {
+	return NULL;
+}
+
+#endif // ENABLE_MQTT
+
