@@ -928,12 +928,18 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 		}
 		if (sVal_len < 128)
 		{
+#if OBK_TIMING_LOGGING_ENABLED
 			ADDLOGF_TIMING("%i - %s - Publishing val %s to %s retain=%i", xTaskGetTickCount(), __func__, sVal, pub_topic, retain);
+#else
 			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val %s to %s retain=%i\n", sVal, pub_topic, retain);
+#endif
 		}
 		else {
+#if OBK_TIMING_LOGGING_ENABLED
 			ADDLOGF_TIMING("%i - %s - Publishing val (%d bytes) to %s retain=%i", xTaskGetTickCount(), __func__,  sVal_len, pub_topic, retain);
+#else
 			ADDLOG_INFO(LOG_FEATURE_MQTT, "Publishing val (%d bytes) to %s retain=%i\n", sVal_len, pub_topic, retain);
+#endif
 		}
 
 
@@ -2188,10 +2194,10 @@ void MQTT_BroadcastTasmotaTeleSTATE() {
 #endif
 }
 // called from user timer.
-int MQTT_RunEverySecondUpdate()
+bool MQTT_RunEverySecondUpdate()
 {
 	if (!mqtt_initialised)
-		return 0;
+		return false;
 
 	if (Main_HasWiFiConnected() == 0)
 	{
@@ -2202,13 +2208,13 @@ int MQTT_RunEverySecondUpdate()
 		else {
 			mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
 		}
-		return 0;
+		return false;
 	}
 
 	// take mutex for connect and disconnect operations
 	if (MQTT_Mutex_Take(100) == 0)
 	{
-		return 0;
+		return false;
 	}
 
 	bool isReady = MQTT_IsReady();
@@ -2222,7 +2228,7 @@ int MQTT_RunEverySecondUpdate()
 		}
 		MQTT_Mutex_Free();
 		mqtt_initialised = 0; // don't come back here until restart
-		return 0;
+		return false;
 	}
 
 	if (g_mqtt_bBaseTopicDirty) {
