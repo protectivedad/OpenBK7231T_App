@@ -550,8 +550,9 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
-			// Give connecting to MQTT a try
+			rtos_delay_milliseconds(10);
 			Main_MQTT_EntryPoint();
+
 #if ENABLE_TASMOTADEVICEGROUPS
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
 				ScheduleDriverStart("DGR", 5);
@@ -609,6 +610,7 @@ int g_doHomeAssistantDiscoveryIn = 0;
 int g_bBootMarkedOK = 0;
 int g_rebootReason = 0;
 
+// returns g_bHasWiFiConnected
 int Main_HasWiFiConnected()
 {
 	return g_bHasWiFiConnected;
