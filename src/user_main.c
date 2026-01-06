@@ -533,6 +533,13 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
+#if ENABLE_MQTT
+			rtos_delay_milliseconds(100);
+			if (MQTT_RunEverySecondUpdate()) {
+				ADDLOGF_INFO("%s - MQTT Connected", __func__);
+//				MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
+			}
+#endif
 #if ENABLE_TASMOTADEVICEGROUPS
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
 				ScheduleDriverStart("DGR", 5);

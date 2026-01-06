@@ -2269,21 +2269,19 @@ bool MQTT_RunEverySecondUpdate()
 		mqtt_loopsWithDisconnected++;
 		if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED)
 		{
+			LOCK_TCPIP_CORE();
 			if (mqtt_client == 0)
 			{
-				LOCK_TCPIP_CORE();
 				mqtt_client = mqtt_client_new();
-				UNLOCK_TCPIP_CORE();
 			}
 			else
 			{
-				LOCK_TCPIP_CORE();
 				mqtt_disconnect(mqtt_client);
 #if defined(MQTT_CLIENT_CLEANUP)
 				mqtt_client_cleanup(mqtt_client);
 #endif
-				UNLOCK_TCPIP_CORE();
 			}
+			UNLOCK_TCPIP_CORE();
 			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
 				// silently allow retry next frame
 			}
@@ -2302,6 +2300,7 @@ bool MQTT_RunEverySecondUpdate()
 	if (isReady) {
 		// things to do in our threads on connection accepted.
 		if (g_just_connected){
+			ADDLOGF_TIMING("%i - %s - MQTT Just connected", xTaskGetTickCount(), __func__);
 			g_just_connected = 0;
 			// publish all values on state
 			if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
