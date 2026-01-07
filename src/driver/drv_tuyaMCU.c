@@ -2343,6 +2343,32 @@ void TuyaMCU_PrintPacket(byte *data, int len) {
 			EventHandlers_FireEvent_String(CMD_EVENT_ON_UART, buffer_for_log);
 #endif
 }
+/* For V3 battery connection mode */
+/* Devices are powered by the TuyaMCU, transmit information and get turned off */
+/* Use the minimal amount of communications as quickly as possible */
+void TuyaMCU_RunBatteryMode() {
+	/* Don't worry about connection after state is updated device will be turned off */
+	if (!state_updated) {
+		/* Don't send heartbeats just work on product information */
+		heartbeat_valid = true;
+		if (product_information_valid == false)
+		{
+			/* Request production information */
+			ADDLOGF_TIMING("%i - %s - Request product information", xTaskGetTickCount(), __func__);
+			TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+		}
+		else 
+		{
+			/* Don't bother with MCU config */
+			working_mode_valid = true;
+			/* No query state. Will be updated when connected to mqtt */
+			if (Main_HasMQTTConnected() != 0) {
+				ADDLOGF_TIMING("%i - %s - Told TuyaMCU connected to cloud", xTaskGetTickCount(), __func__);
+				Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
+			}
+		}
+	}
+}
 void TuyaMCU_RunReceive() {
 	byte data[192];
 	int len;
@@ -2361,27 +2387,8 @@ void TuyaMCU_RunReceive() {
 void TuyaMCU_RunStateMachine_V3() {
 
 	/* For power saving mode */
-	/* Devices are powered by the TuyaMCU, transmit information and get turned off */
-	/* Use the minimal amount of communications */
+	/* Processing is done in the QuickTick thread */
 	if (g_tuyaMCU_batteryPoweredMode) {
-		/* Don't worry about connection after state is updated device will be turned off */
-		if (!state_updated) {
-			/* Don't send heartbeats just work on product information */
-			heartbeat_valid = true;
-			if (product_information_valid == false)
-			{
-				ADDLOG_EXTRADEBUG(LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_QUERY_PRODUCT.\n");
-				/* Request production information */
-				TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-			}
-			else 
-			{
-				/* Don't bother with MCU config */
-				working_mode_valid = true;
-				/* No query state. Will be updated when connected to wifi/mqtt */
-				TuyaMCU_RunWiFiUpdateAndPackets();
-			}
-		}
 		return;
 	}
 
@@ -2540,6 +2547,11 @@ int timer_send = 0;
 void TuyaMCU_RunFrame() {
 	TuyaMCU_RunReceive();
 
+	// quick non blocking code to send status information to the TuyaMCU
+	if (g_tuyaMCU_batteryPoweredMode) {
+		TuyaMCU_RunBatteryMode();
+		return;
+	}
 
 	if (timer_send > 0) {
 		timer_send -= g_deltaTimeMS;
