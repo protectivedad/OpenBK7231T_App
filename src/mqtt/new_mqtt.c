@@ -2290,12 +2290,15 @@ bool MQTT_RunEverySecondUpdate()
 			}
 			else {
 				mqtt_loopsWithDisconnected = 0;
-				// try to catch the connect before the long wait for the next second
-				rtos_delay_milliseconds(20);
-				isReady = MQTT_IsReady();
-				if (isReady) {
-					ADDLOGF_TIMING("%i - %s - isReady right after MQTT_do_connect", xTaskGetTickCount(), __func__);
-				}
+				int i = 20;
+				do {
+					isReady = MQTT_IsReady();
+					rtos_delay_milliseconds(10);
+					if (!--i) {
+						break;
+					}
+				} while (!isReady);
+				ADDLOGF_TIMING("%i - %s - isReady took %i ms", xTaskGetTickCount(), __func__, (20 - i) * 10);
 			}
 			mqtt_connect_events++;
 		}
