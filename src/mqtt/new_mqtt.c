@@ -2291,7 +2291,7 @@ bool MQTT_RunEverySecondUpdate()
 			else {
 				mqtt_loopsWithDisconnected = 0;
 				// try to catch the connect before the long wait for the next second
-				rtos_delay_milliseconds(30);
+				rtos_delay_milliseconds(60);
 				isReady = MQTT_IsReady();
 				if (isReady) {
 					ADDLOGF_TIMING("%i - %s - isReady right after MQTT_do_connect", xTaskGetTickCount(), __func__);
