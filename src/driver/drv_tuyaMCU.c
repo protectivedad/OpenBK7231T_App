@@ -19,6 +19,7 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 #include "../cmnds/cmd_public.h"
 #include "../logging/logging.h"
 #include "../hal/hal_wifi.h"
+#include "../hal/hal_ota.h"
 #include "../mqtt/new_mqtt.h"
 #include "drv_public.h"
 #include "drv_tuyaMCU.h"
@@ -2347,6 +2348,11 @@ void TuyaMCU_PrintPacket(byte *data, int len) {
 /* Devices are powered by the TuyaMCU, transmit information and get turned off */
 /* Use the minimal amount of communications as quickly as possible */
 bool TuyaMCU_RunBatteryMode() {
+
+	if (OTA_GetProgress() != -1) {
+		return false;
+	}
+
 	/* Don't worry about connection after state is updated device will be turned off */
 	if (!state_updated) {
 		/* Don't send heartbeats just work on product information */
@@ -2356,18 +2362,39 @@ bool TuyaMCU_RunBatteryMode() {
 			/* Request production information */
 			ADDLOGF_TIMING("%i - %s - Request product information", xTaskGetTickCount(), __func__);
 			TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-			return 1;
+			return true;
 		}
 		else 
 		{
 			/* Don't bother with MCU config */
 			working_mode_valid = true;
 			/* No query state. Will be updated when connected to mqtt */
-			if (Main_HasMQTTConnected() != 0) {
-				ADDLOGF_TIMING("%i - %s - Told TuyaMCU connected to cloud", xTaskGetTickCount(), __func__);
-				Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
+			if (Main_HasWiFiConnected() != 0)
+			{
+				if (!wifi_state)
+				{
+					ADDLOGF_TIMING("%i - %s - Told TuyaMCU connected to router", xTaskGetTickCount(), __func__);
+					Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER);
+					wifi_state = true;
+					wifi_state_timer = 0;
+					return true;
+				}
+				else
+				{
+					if ((Main_HasMQTTConnected() != 0) && (wifi_state_timer == 0))
+					{
+						ADDLOGF_TIMING("%i - %s - Told TuyaMCU connected to cloud", xTaskGetTickCount(), __func__);
+						Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
+						wifi_state_timer = 1;
+						return true;
+					}
+				}
 			}
-			return true;
+			else
+			{
+					wifi_state = false;
+					wifi_state_timer = 0;
+			}
 		}
 	}
 	return false;
