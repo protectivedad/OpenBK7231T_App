@@ -2346,7 +2346,7 @@ void TuyaMCU_PrintPacket(byte *data, int len) {
 /* For V3 battery connection mode */
 /* Devices are powered by the TuyaMCU, transmit information and get turned off */
 /* Use the minimal amount of communications as quickly as possible */
-void TuyaMCU_RunBatteryMode() {
+bool TuyaMCU_RunBatteryMode() {
 	/* Don't worry about connection after state is updated device will be turned off */
 	if (!state_updated) {
 		/* Don't send heartbeats just work on product information */
@@ -2356,6 +2356,7 @@ void TuyaMCU_RunBatteryMode() {
 			/* Request production information */
 			ADDLOGF_TIMING("%i - %s - Request product information", xTaskGetTickCount(), __func__);
 			TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+			return 1;
 		}
 		else 
 		{
@@ -2366,8 +2367,10 @@ void TuyaMCU_RunBatteryMode() {
 				ADDLOGF_TIMING("%i - %s - Told TuyaMCU connected to cloud", xTaskGetTickCount(), __func__);
 				Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
 			}
+			return true;
 		}
 	}
+	return false;
 }
 void TuyaMCU_RunReceive() {
 	byte data[192];
@@ -2544,13 +2547,20 @@ void TuyaMCU_RunStateMachine_BatteryPowered() {
 	}
 }
 int timer_send = 0;
+int battery_send = 0;
 void TuyaMCU_RunFrame() {
 	TuyaMCU_RunReceive();
 
-	// quick non blocking code to send status information to the TuyaMCU
 	if (g_tuyaMCU_batteryPoweredMode) {
-		TuyaMCU_RunBatteryMode();
-		return;
+		// quick non blocking code to send status information to the TuyaMCU
+		if (battery_send > 0) {
+			battery_send -= g_deltaTimeMS;
+		}
+		else {
+			if (TuyaMCU_RunBatteryMode()) {
+				battery_send = 100;
+			}
+		}
 	}
 
 	if (timer_send > 0) {
