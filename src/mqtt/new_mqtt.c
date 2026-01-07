@@ -2179,10 +2179,11 @@ void MQTT_BroadcastTasmotaTeleSTATE() {
 #endif
 }
 // called from user timer.
-int MQTT_RunEverySecondUpdate()
+// return true/false on connected/disconnected
+bool MQTT_RunEverySecondUpdate()
 {
 	if (!mqtt_initialised)
-		return 0;
+		return false;
 
 	if (Main_HasWiFiConnected() == 0)
 	{
@@ -2193,14 +2194,28 @@ int MQTT_RunEverySecondUpdate()
 		else {
 			mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
 		}
-		return 0;
+		return false;
 	}
 
 	// take mutex for connect and disconnect operations
 	if (MQTT_Mutex_Take(100) == 0)
 	{
-		return 0;
+		return false;
 	}
+
+	bool isReady = MQTT_IsReady();
+	// check OTA right away, close connection and stop processing
+	if (OTA_GetProgress() != -1) {
+		if (isReady) {
+			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
+			LOCK_TCPIP_CORE();
+			mqtt_disconnect(mqtt_client);
+			UNLOCK_TCPIP_CORE();
+		}
+		MQTT_Mutex_Free();
+		return false;
+	}
+
 	if (g_mqtt_bBaseTopicDirty) {
 		addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT base topic is dirty, will reinit callbacks and reconnect\n");
 		MQTT_InitCallbacks();
@@ -2215,12 +2230,6 @@ int MQTT_RunEverySecondUpdate()
 		mqtt_reconnect = 5;
 	}
 
-	int res = 0;
-	if (mqtt_client){
-		LOCK_TCPIP_CORE();
-		res = mqtt_client_is_connected(mqtt_client);
-		UNLOCK_TCPIP_CORE();
-	}
 	// if asked to reconnect (e.g. change of topic(s))
 	if (mqtt_reconnect > 0)
 	{
@@ -2229,170 +2238,175 @@ int MQTT_RunEverySecondUpdate()
 		if (mqtt_reconnect == 0)
 		{
 			// then if connected, disconnect, and then it will reconnect automatically in 2s
-			if (mqtt_client && res)
+			if (isReady)
 			{
 				addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "MQTT will now do a forced reconnect\n");
-				MQTT_disconnect(mqtt_client);
+				LOCK_TCPIP_CORE();
+				mqtt_disconnect(mqtt_client);
+				UNLOCK_TCPIP_CORE();
 				mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
+				return false;
 			}
 		}
 	}
 
-	if (mqtt_client == 0 || res == 0)
+	if (!isReady)
 	{
 		//addLogAdv(LOG_INFO,LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",mqtt_loopsWithDisconnected);
-		if (OTA_GetProgress() == -1)
+		mqtt_loopsWithDisconnected++;
+		if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED)
 		{
-			mqtt_loopsWithDisconnected++;
-			if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED)
+			if (mqtt_client == 0)
 			{
-				if (mqtt_client == 0)
-				{
-					LOCK_TCPIP_CORE();
-					mqtt_client = mqtt_client_new();
-					UNLOCK_TCPIP_CORE();
-				}
-				else
-				{
-					LOCK_TCPIP_CORE();
-					mqtt_disconnect(mqtt_client);
-#if defined(MQTT_CLIENT_CLEANUP)
-					mqtt_client_cleanup(mqtt_client);
-#endif
-					UNLOCK_TCPIP_CORE();
-				}
-				if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
-					// silently allow retry next frame
-				}
-				else {
-					mqtt_loopsWithDisconnected = 0;
-				}
-				mqtt_connect_events++;
+				LOCK_TCPIP_CORE();
+				mqtt_client = mqtt_client_new();
+				UNLOCK_TCPIP_CORE();
 			}
-		}
-		MQTT_Mutex_Free();
-		return 0;
-	}
-	else {
-		// things to do in our threads on connection accepted.
-		if (g_just_connected){
-			g_just_connected = 0;
-			// publish all values on state
-			if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
-				g_wantTasmotaTeleSend = 1;
-				MQTT_PublishWholeDeviceState();
+			else
+			{
+				LOCK_TCPIP_CORE();
+				mqtt_disconnect(mqtt_client);
+#if defined(MQTT_CLIENT_CLEANUP)
+				mqtt_client_cleanup(mqtt_client);
+#endif
+				UNLOCK_TCPIP_CORE();
+			}
+			mqtt_connect_events++;
+			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
+				// silently allow retry next frame
+				return false;
 			}
 			else {
-				//MQTT_PublishOnlyDeviceChannelsIfPossible();
-			}
-		}
-
-		MQTT_Mutex_Free();
-		// below mutex is not required any more
-
-		// it is connected publish TELE
-		if (g_wantTasmotaTeleSend) {
-			MQTT_BroadcastTasmotaTeleSTATE();
-			MQTT_BroadcastTasmotaTeleSENSOR();
-			g_wantTasmotaTeleSend = 0;
-		}
-		g_timeSinceLastMQTTPublish++;
-		if (OTA_GetProgress() != -1)
-		{
-			addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "OTA started MQTT will be closed\n");
-			LOCK_TCPIP_CORE();
-			mqtt_disconnect(mqtt_client);
-			UNLOCK_TCPIP_CORE();
-			return 1;
-		}
-
-		if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
-			static int g_mqtt_tasmotaTeleCounter_sensor = 0;
-			g_mqtt_tasmotaTeleCounter_sensor++;
-			if (g_mqtt_tasmotaTeleCounter_sensor >= g_teleSensor_interval) {
-				g_mqtt_tasmotaTeleCounter_sensor = 0;
-				MQTT_BroadcastTasmotaTeleSENSOR();
-			}
-			static int g_mqtt_tasmotaTeleCounter_state = 0;
-			g_mqtt_tasmotaTeleCounter_state++;
-			if (g_mqtt_tasmotaTeleCounter_state >= g_teleState_interval) {
-				g_mqtt_tasmotaTeleCounter_state = 0;
-				MQTT_BroadcastTasmotaTeleSTATE();
-			}
-		}
-
-		// do we want to broadcast full state?
-		// Do it slowly in order not to overload the buffers
-		// The item indexes start at negative values for special items
-		// and then covers Channel indexes up to CHANNEL_MAX
-		//Handle only queued items. Don't need to do this separately if entire state is being published.
-		if ((g_MqttPublishItemsQueued > 0) && !g_bPublishAllStatesNow)
-		{
-			PublishQueuedItems();
-			return 1;
-		}
-		else if (g_bPublishAllStatesNow)
-		{
-			// Doing step by a step a full publish state
-			//if (g_timeSinceLastMQTTPublish > 2)
-			{
-				OBK_Publish_Result publishRes;
-				int g_sent_thisFrame = 0;
-
-				while (g_publishItemIndex < CHANNEL_MAX)
-				{
-					publishRes = MQTT_DoItemPublish(g_publishItemIndex);
-					if (publishRes != OBK_PUBLISH_WAS_NOT_REQUIRED)
+				mqtt_loopsWithDisconnected = 0;
+				// wait for up to 200 ms in the hope of connecting to the MQTT broker
+				if (Main_HasFastConnect()) {
+					int notgivingup = 20;
+					do
 					{
-						if (false) {
-							addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "[g_bPublishAllStatesNow] item %i result %i\n", g_publishItemIndex, publishRes);
-						}
-					}
-					// There are several things that can happen now
-					// OBK_PUBLISH_OK - it was required and was published
-					if (publishRes == OBK_PUBLISH_OK)
-					{
-						g_sent_thisFrame++;
-						if (g_sent_thisFrame >= g_maxBroadcastItemsPublishedPerSecond)
-						{
-							g_publishItemIndex++;
-							break;
-						}
-					}
-					// OBK_PUBLISH_MUTEX_FAIL - MQTT is busy
-					if (publishRes == OBK_PUBLISH_MUTEX_FAIL
-						|| publishRes == OBK_PUBLISH_WAS_DISCONNECTED)
-					{
-						// retry the same later
-						break;
-					}
-					// OBK_PUBLISH_WAS_NOT_REQUIRED
-					// The item is not used for this device
-					g_publishItemIndex++;
-				}
-
-				if (g_publishItemIndex >= CHANNEL_MAX)
-				{
-					// done
-					g_bPublishAllStatesNow = 0;
-				}
-			}
-		}
-		else {
-			// not doing anything
-			if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEPERMINUTE))
-			{
-				// this is called every second
-				g_secondsBeforeNextFullBroadcast--;
-				if (g_secondsBeforeNextFullBroadcast <= 0)
-				{
-					g_secondsBeforeNextFullBroadcast = g_intervalBetweenMQTTBroadcasts;
-					MQTT_PublishWholeDeviceState();
+						isReady = MQTT_IsReady();
+						rtos_delay_milliseconds(10);
+					} while (!isReady && --notgivingup);
 				}
 			}
 		}
 	}
-	return 1;
+
+	// are we still not ready
+	if (!isReady) {
+		ADDLOGF_TIMING("%i - %s - Still not ready after MQTT_do_connect, waiting ...", xTaskGetTickCount(), __func__);
+		return false;
+	}
+
+	// things to do in our threads on connection accepted.
+	if (g_just_connected){
+		g_just_connected = 0;
+		// publish all values on state
+		if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
+			g_wantTasmotaTeleSend = 1;
+			MQTT_PublishWholeDeviceState();
+		}
+		else {
+			//MQTT_PublishOnlyDeviceChannelsIfPossible();
+		}
+	}
+
+	MQTT_Mutex_Free();
+	// below mutex is not required any more
+
+	// it is connected publish TELE
+	if (g_wantTasmotaTeleSend) {
+		MQTT_BroadcastTasmotaTeleSTATE();
+		MQTT_BroadcastTasmotaTeleSENSOR();
+		g_wantTasmotaTeleSend = 0;
+	}
+	g_timeSinceLastMQTTPublish++;
+
+	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
+		static int g_mqtt_tasmotaTeleCounter_sensor = 0;
+		g_mqtt_tasmotaTeleCounter_sensor++;
+		if (g_mqtt_tasmotaTeleCounter_sensor >= g_teleSensor_interval) {
+			g_mqtt_tasmotaTeleCounter_sensor = 0;
+			MQTT_BroadcastTasmotaTeleSENSOR();
+		}
+		static int g_mqtt_tasmotaTeleCounter_state = 0;
+		g_mqtt_tasmotaTeleCounter_state++;
+		if (g_mqtt_tasmotaTeleCounter_state >= g_teleState_interval) {
+			g_mqtt_tasmotaTeleCounter_state = 0;
+			MQTT_BroadcastTasmotaTeleSTATE();
+		}
+	}
+
+	// do we want to broadcast full state?
+	// Do it slowly in order not to overload the buffers
+	// The item indexes start at negative values for special items
+	// and then covers Channel indexes up to CHANNEL_MAX
+	//Handle only queued items. Don't need to do this separately if entire state is being published.
+	if ((g_MqttPublishItemsQueued > 0) && !g_bPublishAllStatesNow)
+	{
+		PublishQueuedItems();
+		return isReady;
+	}
+	else if (g_bPublishAllStatesNow)
+	{
+		// Doing step by a step a full publish state
+		//if (g_timeSinceLastMQTTPublish > 2)
+		{
+			OBK_Publish_Result publishRes;
+			int g_sent_thisFrame = 0;
+
+			while (g_publishItemIndex < CHANNEL_MAX)
+			{
+				publishRes = MQTT_DoItemPublish(g_publishItemIndex);
+				if (publishRes != OBK_PUBLISH_WAS_NOT_REQUIRED)
+				{
+					if (false) {
+						addLogAdv(LOG_INFO, LOG_FEATURE_MQTT, "[g_bPublishAllStatesNow] item %i result %i\n", g_publishItemIndex, publishRes);
+					}
+				}
+				// There are several things that can happen now
+				// OBK_PUBLISH_OK - it was required and was published
+				if (publishRes == OBK_PUBLISH_OK)
+				{
+					g_sent_thisFrame++;
+					if (g_sent_thisFrame >= g_maxBroadcastItemsPublishedPerSecond)
+					{
+						g_publishItemIndex++;
+						break;
+					}
+				}
+				// OBK_PUBLISH_MUTEX_FAIL - MQTT is busy
+				if (publishRes == OBK_PUBLISH_MUTEX_FAIL
+					|| publishRes == OBK_PUBLISH_WAS_DISCONNECTED)
+				{
+					// retry the same later
+					break;
+				}
+				// OBK_PUBLISH_WAS_NOT_REQUIRED
+				// The item is not used for this device
+				g_publishItemIndex++;
+			}
+
+			if (g_publishItemIndex >= CHANNEL_MAX)
+			{
+				// done
+				g_bPublishAllStatesNow = 0;
+			}
+		}
+	}
+	else {
+		// not doing anything
+		if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEPERMINUTE))
+		{
+			// this is called every second
+			g_secondsBeforeNextFullBroadcast--;
+			if (g_secondsBeforeNextFullBroadcast <= 0)
+			{
+				g_secondsBeforeNextFullBroadcast = g_intervalBetweenMQTTBroadcasts;
+				MQTT_PublishWholeDeviceState();
+			}
+		}
+	}
+	return true;
 }
 
 MqttPublishItem_t* get_queue_tail(MqttPublishItem_t* head) {
