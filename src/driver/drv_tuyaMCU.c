@@ -2358,30 +2358,50 @@ void TuyaMCU_RunReceive() {
 		}
 	}
 }
+
+bool TuyaMCU_RunBattery() {
+	/* Don't worry about connection after state is updated device will be turned off */
+	if (!state_updated) {
+		/* Don't send heartbeats just work on product information */
+		heartbeat_valid = true;
+		if (product_information_valid == false) {
+			addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_QUERY_PRODUCT.\n");
+			/* Request production information */
+			TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+			return true;
+		} else {
+			/* Don't bother with MCU config */
+			working_mode_valid = true;
+			/* No query state. Will be updated when connected to wifi/mqtt */
+			/* One way process device will be turned off after publishing */
+			if (Main_HasWiFiConnected()) {
+				if (!wifi_state) {
+					ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to router", xTaskGetTickCount(), __func__);
+					Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER);
+					wifi_state = true;
+					wifi_state_timer = false;
+					return true;
+				} else if (Main_HasMQTTConnected()) {\
+					if (!wifi_state_timer) {
+						ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
+						Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
+						wifi_state_timer = true;
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
 void TuyaMCU_RunStateMachine_V3() {
 
 	/* For power saving mode */
 	/* Devices are powered by the TuyaMCU, transmit information and get turned off */
 	/* Use the minimal amount of communications */
 	if (g_tuyaMCU_batteryPoweredMode) {
-		/* Don't worry about connection after state is updated device will be turned off */
-		if (!state_updated) {
-			/* Don't send heartbeats just work on product information */
-			heartbeat_valid = true;
-			if (product_information_valid == false)
-			{
-				addLogAdv(LOG_EXTRADEBUG, LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_QUERY_PRODUCT.\n");
-				/* Request production information */
-				TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-			}
-			else 
-			{
-				/* Don't bother with MCU config */
-				working_mode_valid = true;
-				/* No query state. Will be updated when connected to wifi/mqtt */
-				TuyaMCU_RunWiFiUpdateAndPackets();
-			}
-		}
+		TuyaMCU_RunBattery();
 		return;
 	}
 
@@ -2537,9 +2557,18 @@ void TuyaMCU_RunStateMachine_BatteryPowered() {
 	}
 }
 int timer_send = 0;
+int timer_battery = 0;
 void TuyaMCU_RunFrame() {
 	TuyaMCU_RunReceive();
 
+	if (timer_battery > 0) {
+		timer_battery -= g_deltaTimeMS;
+	}
+	else {
+		if (TuyaMCU_RunBattery()) {
+			timer_battery = 100;
+		}
+	}
 
 	if (timer_send > 0) {
 		timer_send -= g_deltaTimeMS;
