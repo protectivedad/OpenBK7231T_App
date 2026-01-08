@@ -463,7 +463,7 @@ int PIN_FindPinIndexForRole(int role, int defaultIndexToReturnIfNotFound) {
 }
 int PIN_GetPinChannel2ForPinIndex(int index) {
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR, LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return 0;
 	}
 	return g_cfg.pins.channels2[index];
@@ -927,7 +927,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 	bool bSampleInitialState = false;
 
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR, LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
 		return;
 	}
 #if 0
@@ -1272,7 +1272,7 @@ void PIN_SetGenericDoubleClickCallback(void (*cb)(int pinIndex)) {
 void Channel_SaveInFlashIfNeeded(int ch) {
 	// save, if marked as save value in flash (-1)
 	if (g_cfg.startChannelValues[ch] == -1) {
-		//ADDLOG_INFO, LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is being saved to flash, state %i", ch, g_channelValues[ch]);
+		//ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is being saved to flash, state %i", ch, g_channelValues[ch]);
 		HAL_FlashVars_SaveChannel(ch, g_channelValues[ch]);
 	}
 	else {
