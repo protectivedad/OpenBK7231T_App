@@ -1402,11 +1402,23 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		  For now MQTT version 3.1.1 is always used */
 
 		LOCK_TCPIP_CORE();
-		res = mqtt_client_connect(mqtt_client,
-			&mqtt_ip, mqtt_port,
-			mqtt_connection_cb, LWIP_CONST_CAST(void*, &mqtt_client_info),
-			&mqtt_client_info);
+		// wait for up to 120 ms for a route to the broker
+		int notGivingUp = Main_HasFastConnect() ? 6 : 1;
+		do {
+			res = mqtt_client_connect(mqtt_client,
+				&mqtt_ip, mqtt_port,
+				mqtt_connection_cb, LWIP_CONST_CAST(void*, &mqtt_client_info),
+				&mqtt_client_info);
+			if (res != ERR_RTE) {
+				break;
+			} else if (--notGivingUp) {
+				UNLOCK_TCPIP_CORE();
+				rtos_delay_milliseconds((notGivingUp == 5) ? 40 : 20);
+				LOCK_TCPIP_CORE();
+			}
+		} while (notGivingUp);
 		UNLOCK_TCPIP_CORE();
+		ADDLOGF_TIMING("%i - %s - Finished mqtt_client_connect, using %i of 5 delays", xTaskGetTickCount(), __func__, 6 - notGivingUp);
 		mqtt_connect_result = res;
 		if (res != ERR_OK)
 		{
@@ -2286,22 +2298,20 @@ bool MQTT_RunEverySecondUpdate()
 			}
 			UNLOCK_TCPIP_CORE();
 			mqtt_connect_events++;
-			if ( MQTT_do_connect(mqtt_client) == ERR_RTE) {
+			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
 				MQTT_Mutex_Free();
 				return false;
-			} else {
-				mqtt_loopsWithDisconnected = 0;
-				// wait for up to 200 ms in the hope of connecting to the MQTT broker
-				// g_just_connected is set in the mqtt_connection_cb routine
-				int notGivingUp = Main_HasFastConnect() ? 21 : 1;
-				while (!g_just_connected && --notGivingUp) {
-					rtos_delay_milliseconds(10);
-				}
-				if (!notGivingUp) {
-					MQTT_Mutex_Free();
-					return false;
-				}
-				ADDLOGF_TIMING("%i - %s - Waited for %i ms for connection", xTaskGetTickCount(), __func__, 200 - notGivingUp * 10);
+			}
+			mqtt_loopsWithDisconnected = 0;
+			// wait for up to 140 ms in the hope of connecting to the MQTT broker
+			int notGivingUp = Main_HasFastConnect() ? 11 : 1;
+			while (!g_just_connected && --notGivingUp) {
+				rtos_delay_milliseconds((notGivingUp == 5) ? 60 : 20);
+			}
+			ADDLOGF_TIMING("%i - %s - Finished waiting for MQTT connection, using %i of 10 delays", xTaskGetTickCount(), __func__, 11 - notGivingUp);
+			if (!notGivingUp) {
+				MQTT_Mutex_Free();
+				return false;
 			}
 		}
 	}
@@ -2311,6 +2321,8 @@ bool MQTT_RunEverySecondUpdate()
 	// things to do in our threads on connection accepted.
 	if (g_just_connected) {
 		g_just_connected = 0;
+		// publish any queued items
+		MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
 		// publish all values on state
 		if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
 			g_wantTasmotaTeleSend = 1;
