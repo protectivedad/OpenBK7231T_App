@@ -2328,10 +2328,7 @@ bool MQTT_RunEverySecondUpdate()
 	if (!isReady) {
 		//ADDLOG_INFO(LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",mqtt_loopsWithDisconnected);
 		mqtt_loopsWithDisconnected++;
-		if (mqtt_loopsWithDisconnected <= LOOPS_WITH_DISCONNECTED) {
-			MQTT_Mutex_Free();
-			return false;
-		} else {
+		if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED) {
 			LOCK_TCPIP_CORE();
 			if (mqtt_client == 0) {
 				mqtt_client = mqtt_client_new();
@@ -2342,20 +2339,13 @@ bool MQTT_RunEverySecondUpdate()
 #endif
 			}
 			UNLOCK_TCPIP_CORE();
-// TODO: probably not needed should always be taken car of after connect
-// put back to previous behaviour
+			if (MQTT_do_connect(mqtt_client) != ERR_RTE) {
+				mqtt_loopsWithDisconnected = 0;
 			mqtt_connect_events++;
-			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
-				MQTT_Mutex_Free();
-				return false;
 			}
-			mqtt_loopsWithDisconnected = 0;
-			if (!g_just_connected || !Main_HasFastConnect()) {
-				MQTT_Mutex_Free();
-				return false;
-			}
-			ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect", xTaskGetTickCount(), __func__);
 		}
+		MQTT_Mutex_Free();
+		return false;
 	}
 
 	MQTT_Mutex_Free();
