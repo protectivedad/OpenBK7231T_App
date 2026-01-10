@@ -2178,12 +2178,36 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 	return OBK_PUBLISH_WAS_NOT_REQUIRED; // didnt publish
 }
 
+// clears just connected flag and processes items
+// that run just after connection either from
+// OnEverySecond or QuickTick
+void MQTT_JustConnected() {
+	g_just_connected = 0;
+	// publish all values on state
+	if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
+		g_wantTasmotaTeleSend = 1;
+		MQTT_PublishWholeDeviceState();
+	}
+	else {
+		//MQTT_PublishOnlyDeviceChannelsIfPossible();
+	}
+}
+
 // from 5ms quicktick
 int MQTT_RunQuickTick(){
 #ifndef PLATFORM_BEKEN
 	// on Beken, we use a one-shot timer for this.
 	MQTT_process_received();
 #endif
+	// only run from here if fast connect is enabled even if
+	// fast connect is enabled the OnEverySecond function may
+	// run this first
+	if (g_just_connected && Main_HasFastConnect()) {
+		// do just connected logic
+		MQTT_JustConnected();
+		// publish queued items
+		PublishQueuedItems();
+	}
 	return 0;
 }
 
@@ -2212,8 +2236,6 @@ void MQTT_BroadcastTasmotaTeleSTATE() {
 	MQTT_ProcessCommandReplyJSON("STATE", "", COMMAND_FLAG_SOURCE_TELESENDER);
 #endif
 }
-
-#define MQTT_CONNECT_DELAYS 10		// upto 60,20,20,... ms
 
 // called from user timer.
 // return true/false on connected/disconnected
@@ -2312,32 +2334,18 @@ bool MQTT_RunEverySecondUpdate()
 				return false;
 			}
 			mqtt_loopsWithDisconnected = 0;
-			// wait for up to 240 ms in the hope of connecting to the MQTT broker
-			int notGivingUp = Main_HasFastConnect() ? MQTT_CONNECT_DELAYS + 1 : 1;
-			while (!g_just_connected && --notGivingUp) {
-				rtos_delay_milliseconds((notGivingUp == MQTT_CONNECT_DELAYS) ? 60 : 20);
-			}
-			ADDLOGF_TIMING("%i - %s - Finished waiting for MQTT connection, using %i of %i delays", xTaskGetTickCount(), __func__, MQTT_CONNECT_DELAYS - notGivingUp + 1, MQTT_CONNECT_DELAYS);
-			if (!notGivingUp) {
+			if (!g_just_connected || !Main_HasFastConnect()) {
 				MQTT_Mutex_Free();
 				return false;
 			}
+			ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect", xTaskGetTickCount(), __func__);
 		}
 	}
 
 	MQTT_Mutex_Free();
 
-	// things to do in our threads on connection accepted.
 	if (g_just_connected) {
-		g_just_connected = 0;
-		// publish all values on state
-		if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
-			g_wantTasmotaTeleSend = 1;
-			MQTT_PublishWholeDeviceState();
-		}
-		else {
-			//MQTT_PublishOnlyDeviceChannelsIfPossible();
-		}
+		MQTT_JustConnected();
 	}
 
 	// it is connected publish TELE
