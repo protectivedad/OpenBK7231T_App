@@ -2365,6 +2365,11 @@ void TuyaMCU_RunReceive() {
 	}
 }
 
+// call from second or quick tick timers
+// returns true when it sent information to the TuyaMCU
+// no processing after state is updated
+// Devices are powered by the TuyaMCU, transmit information and get turned off
+// Use the minimal amount of communications
 bool TuyaMCU_RunBattery() {
 	/* Don't worry about connection after state is updated device will be turned off */
 	if (!state_updated) {
@@ -2387,7 +2392,7 @@ bool TuyaMCU_RunBattery() {
 					wifi_state = true;
 					wifi_state_timer = false;
 					return true;
-				} else if (MQTT_IsReady()) { // us MQTT function, main function isn't updated soon enough
+				} else if (MQTT_IsReady()) { // use MQTT function, main function isn't updated soon enough
 					if (!wifi_state_timer) {
 						ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
 						Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
@@ -2403,7 +2408,7 @@ bool TuyaMCU_RunBattery() {
 
 void TuyaMCU_RunStateMachine_V3() {
 
-	/* For power saving mode */
+	/* For battery powered mode */
 	/* Devices are powered by the TuyaMCU, transmit information and get turned off */
 	/* Use the minimal amount of communications */
 	if (g_tuyaMCU_batteryPoweredMode) {
@@ -2563,15 +2568,14 @@ void TuyaMCU_RunStateMachine_BatteryPowered() {
 	}
 }
 int timer_send = 0;
-int timer_battery = 0;
 void TuyaMCU_RunFrame() {
 	TuyaMCU_RunReceive();
 
-	if (timer_battery > 0) {
-		timer_battery -= g_deltaTimeMS;
-	}
-	else {
-		if (TuyaMCU_RunBattery()) {
+	if (g_tuyaMCU_batteryPoweredMode) {
+		static int timer_battery = 0;
+		if (timer_battery > 0) {
+			timer_battery -= g_deltaTimeMS;
+		} else if (TuyaMCU_RunBattery()) {
 			timer_battery = 100;
 		}
 	}
