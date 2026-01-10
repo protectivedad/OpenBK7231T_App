@@ -794,7 +794,6 @@ void Main_OnEverySecond()
 
 	MQTT_Dedup_Tick();
 #endif
-
 #if ENABLE_LED_BASIC
 	LED_RunOnEverySecond();
 #endif
@@ -826,9 +825,6 @@ void Main_OnEverySecond()
 #endif
 	if (bSafeMode == 0) {
 		const char* ip = HAL_GetMyIPString();
-		if (MQTT_IsReady()) {
-			MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
-		}
 		// this will return non-zero if there were any changes
 		if (strcpy_safe_checkForChanges(g_currentIPString, ip, sizeof(g_currentIPString))) {
 			if (MQTT_IsReady()) {

@@ -2307,7 +2307,7 @@ bool MQTT_RunEverySecondUpdate()
 				return false;
 			}
 			mqtt_loopsWithDisconnected = 0;
-			// wait for up to 140 ms in the hope of connecting to the MQTT broker
+			// wait for up to 240 ms in the hope of connecting to the MQTT broker
 			int notGivingUp = Main_HasFastConnect() ? 11 : 1;
 			while (!g_just_connected && --notGivingUp) {
 				rtos_delay_milliseconds((notGivingUp == 5) ? 60 : 20);
@@ -2325,8 +2325,6 @@ bool MQTT_RunEverySecondUpdate()
 	// things to do in our threads on connection accepted.
 	if (g_just_connected) {
 		g_just_connected = 0;
-		// publish any queued items
-		MQTT_DoItemPublish(PUBLISHITEM_QUEUED_VALUES);
 		// publish all values on state
 		if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
 			g_wantTasmotaTeleSend = 1;
@@ -2364,7 +2362,12 @@ bool MQTT_RunEverySecondUpdate()
 	// Do it slowly in order not to overload the buffers
 	// The item indexes start at negative values for special items
 	// and then covers Channel indexes up to CHANNEL_MAX
-	if (g_bPublishAllStatesNow)
+	//Handle only queued items. Don't need to do this separately if entire state is being published.
+	if ((g_MqttPublishItemsQueued > 0) && !g_bPublishAllStatesNow)
+	{
+		PublishQueuedItems();
+	}
+	else if (g_bPublishAllStatesNow)
 	{
 		// Doing step by a step a full publish state
 		//if (g_timeSinceLastMQTTPublish > 2)
