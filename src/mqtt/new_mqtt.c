@@ -2178,6 +2178,56 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 	return OBK_PUBLISH_WAS_NOT_REQUIRED; // didnt publish
 }
 
+int g_wantTasmotaTeleSend = 0;
+void MQTT_BroadcastTasmotaTeleSENSOR() {
+#if ENABLE_TASMOTA_JSON
+	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES) == false) {
+		return;
+	}
+	bool bHasAnySensor = false;
+#ifndef OBK_DISABLE_ALL_DRIVERS
+	if (DRV_IsMeasuringPower()) {
+		bHasAnySensor = true;
+	}
+#endif
+	if (bHasAnySensor) {
+		MQTT_ProcessCommandReplyJSON("SENSOR", "", COMMAND_FLAG_SOURCE_TELESENDER);
+	}
+#endif
+}
+void MQTT_BroadcastTasmotaTeleSTATE() {
+#if ENABLE_TASMOTA_JSON
+	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES) == false) {
+		return;
+	}
+	MQTT_ProcessCommandReplyJSON("STATE", "", COMMAND_FLAG_SOURCE_TELESENDER);
+#endif
+}
+
+// fast first connect to MQTT, no previous mqtt_client, no OTA
+// run after wifi connected
+void MQTT_FastConnect() {
+	if (!mqtt_initialised || mqtt_client || (OTA_GetProgress() != -1))
+		return;
+
+	if (MQTT_Mutex_Take(100) == 0)
+		return;
+
+	LOCK_TCPIP_CORE();
+	mqtt_client = mqtt_client_new();
+	UNLOCK_TCPIP_CORE();
+
+	mqtt_connect_events++;
+	// routine should try reconnecting but might fail anyway
+	int ret = MQTT_do_connect(mqtt_client);
+	MQTT_Mutex_Free();
+	if (ret == ERR_RTE) {
+		return;
+	}
+	mqtt_loopsWithDisconnected = 0;
+	ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect, return %i", xTaskGetTickCount(), __func__, ret);
+}
+
 // clears just connected flag and processes items
 // that run just after connection either from
 // OnEverySecond or QuickTick
@@ -2209,32 +2259,6 @@ int MQTT_RunQuickTick(){
 		PublishQueuedItems();
 	}
 	return 0;
-}
-
-int g_wantTasmotaTeleSend = 0;
-void MQTT_BroadcastTasmotaTeleSENSOR() {
-#if ENABLE_TASMOTA_JSON
-	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES) == false) {
-		return;
-	}
-	bool bHasAnySensor = false;
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	if (DRV_IsMeasuringPower()) {
-		bHasAnySensor = true;
-	}
-#endif
-	if (bHasAnySensor) {
-		MQTT_ProcessCommandReplyJSON("SENSOR", "", COMMAND_FLAG_SOURCE_TELESENDER);
-	}
-#endif
-}
-void MQTT_BroadcastTasmotaTeleSTATE() {
-#if ENABLE_TASMOTA_JSON
-	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES) == false) {
-		return;
-	}
-	MQTT_ProcessCommandReplyJSON("STATE", "", COMMAND_FLAG_SOURCE_TELESENDER);
-#endif
 }
 
 // called from user timer.
@@ -2314,10 +2338,7 @@ bool MQTT_RunEverySecondUpdate()
 	if (!isReady) {
 		//ADDLOG_INFO(LOG_FEATURE_MAIN, "Timer discovers disconnected mqtt %i\n",mqtt_loopsWithDisconnected);
 		mqtt_loopsWithDisconnected++;
-		if (mqtt_loopsWithDisconnected <= LOOPS_WITH_DISCONNECTED) {
-			MQTT_Mutex_Free();
-			return false;
-		} else {
+		if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED) {
 			LOCK_TCPIP_CORE();
 			if (mqtt_client == 0) {
 				mqtt_client = mqtt_client_new();
@@ -2328,18 +2349,13 @@ bool MQTT_RunEverySecondUpdate()
 #endif
 			}
 			UNLOCK_TCPIP_CORE();
+			if (MQTT_do_connect(mqtt_client) != ERR_RTE) {
+				mqtt_loopsWithDisconnected = 0;
 			mqtt_connect_events++;
-			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
-				MQTT_Mutex_Free();
-				return false;
 			}
-			mqtt_loopsWithDisconnected = 0;
-			if (!g_just_connected || !Main_HasFastConnect()) {
-				MQTT_Mutex_Free();
-				return false;
-			}
-			ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect", xTaskGetTickCount(), __func__);
 		}
+		MQTT_Mutex_Free();
+		return false;
 	}
 
 	MQTT_Mutex_Free();

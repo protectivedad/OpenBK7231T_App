@@ -470,23 +470,6 @@ const char* CFG_GetWiFiPassX() {
 #endif
 }
 
-static int bMQTTconnected = 0;
-
-int Main_HasMQTTConnected()
-{
-	return bMQTTconnected;
-}
-
-// run MQTT every second entry if connection status changes fire event
-void Main_MQTT_EntryPoint() {
-#if ENABLE_MQTT
-	if (MQTT_RunEverySecondUpdate() != bMQTTconnected) {
-		bMQTTconnected = (bMQTTconnected == false); // toggle connection status
-		EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, bMQTTconnected);
-	}
-#endif
-}
-
 void Main_OnWiFiStatusChange(int code)
 {
 	// careful what you do in here.
@@ -551,7 +534,7 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
 			if (Main_HasFastConnect())
-				Main_MQTT_EntryPoint();
+				MQTT_FastConnect();
 
 #if ENABLE_TASMOTADEVICEGROUPS
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
@@ -609,8 +592,17 @@ void Main_OnPingCheckerReply(int ms)
 int g_doHomeAssistantDiscoveryIn = 0;
 int g_bBootMarkedOK = 0;
 int g_rebootReason = 0;
+static int bMQTTconnected = 0;
 
-// returns g_bHasWiFiConnected
+// if not fast connect
+// returns bMQTTconnected updated every second
+// if fast connect
+// returns MQTT_IsReady() for sub second processing of messages
+int Main_HasMQTTConnected()
+{
+	return Main_HasFastConnect() ? MQTT_IsReady() : bMQTTconnected;
+}
+
 int Main_HasWiFiConnected()
 {
 	return g_bHasWiFiConnected;
@@ -780,7 +772,11 @@ void Main_OnEverySecond()
 	}
 
 #if ENABLE_MQTT
-	Main_MQTT_EntryPoint();
+	// run_adc_test();
+	if (MQTT_RunEverySecondUpdate() != bMQTTconnected) {
+		bMQTTconnected = !bMQTTconnected;
+		EventHandlers_FireEvent(CMD_EVENT_MQTT_STATE, bMQTTconnected);
+	}
 	// Update time with no MQTT
 	if (bMQTTconnected) {
 		i = 0;
@@ -1157,6 +1153,7 @@ void QuickTick(void* param)
 	CMD_RunUartCmndIfRequired();
 
 	// process received messages here..
+	// process MQTT fast connect..
 #if ENABLE_MQTT
 	MQTT_RunQuickTick();
 #endif
