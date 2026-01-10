@@ -2210,8 +2210,8 @@ void MQTT_FastConnect() {
 	mqtt_connect_events++;
 	// routine should try reconnecting but might fail anyway
 	int ret = MQTT_do_connect(mqtt_client);
+	MQTT_Mutex_Free();
 	if (ret == ERR_RTE) {
-		MQTT_Mutex_Free();
 		return;
 	}
 	mqtt_loopsWithDisconnected = 0;
