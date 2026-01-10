@@ -2168,39 +2168,6 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 	return OBK_PUBLISH_WAS_NOT_REQUIRED; // didnt publish
 }
 
-// clears just connected flag and processes items
-// that run just after connection either from
-// OnEverySecond or QuickTick
-void MQTT_JustConnected() {
-	g_just_connected = 0;
-	// publish all values on state
-	if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
-		g_wantTasmotaTeleSend = 1;
-		MQTT_PublishWholeDeviceState();
-	}
-	else {
-		//MQTT_PublishOnlyDeviceChannelsIfPossible();
-	}
-}
-
-// from 5ms quicktick
-int MQTT_RunQuickTick(){
-#ifndef PLATFORM_BEKEN
-	// on Beken, we use a one-shot timer for this.
-	MQTT_process_received();
-#endif
-	// only run from here if fast connect is enabled even if
-	// fast connect is enabled the OnEverySecond function may
-	// run this first
-	if (g_just_connected && Main_HasFastConnect()) {
-		// do just connected logic
-		MQTT_JustConnected();
-		// publish queued items
-		PublishQueuedItems();
-	}
-	return 0;
-}
-
 int g_wantTasmotaTeleSend = 0;
 void MQTT_BroadcastTasmotaTeleSENSOR() {
 #if ENABLE_TASMOTA_JSON
@@ -2249,6 +2216,39 @@ void MQTT_FastConnect() {
 	}
 	mqtt_loopsWithDisconnected = 0;
 	ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect, return %i", xTaskGetTickCount(), __func__, ret);
+}
+
+// clears just connected flag and processes items
+// that run just after connection either from
+// OnEverySecond or QuickTick
+void MQTT_JustConnected() {
+	g_just_connected = 0;
+	// publish all values on state
+	if (CFG_HasFlag(OBK_FLAG_MQTT_BROADCASTSELFSTATEONCONNECT)) {
+		g_wantTasmotaTeleSend = 1;
+		MQTT_PublishWholeDeviceState();
+	}
+	else {
+		//MQTT_PublishOnlyDeviceChannelsIfPossible();
+	}
+}
+
+// from 5ms quicktick
+int MQTT_RunQuickTick(){
+#ifndef PLATFORM_BEKEN
+	// on Beken, we use a one-shot timer for this.
+	MQTT_process_received();
+#endif
+	// only run from here if fast connect is enabled even if
+	// fast connect is enabled the OnEverySecond function may
+	// run this first
+	if (g_just_connected && Main_HasFastConnect()) {
+		// do just connected logic
+		MQTT_JustConnected();
+		// publish queued items
+		PublishQueuedItems();
+	}
+	return 0;
 }
 
 // called from user timer.
