@@ -2387,7 +2387,7 @@ bool TuyaMCU_RunBattery() {
 					wifi_state = true;
 					wifi_state_timer = false;
 					return true;
-				} else if (Main_HasMQTTConnected()) {\
+				} else if (MQTT_IsReady()) { // us MQTT function, main function isn't updated soon enough
 					if (!wifi_state_timer) {
 						ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
 						Tuya_SetWifiState(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
