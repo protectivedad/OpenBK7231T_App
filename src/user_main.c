@@ -529,6 +529,8 @@ void Main_OnWiFiStatusChange(int code)
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
+			if (Main_HasFastConnect())
+				MQTT_FastConnect();
 
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
 				ScheduleDriverStart("DGR", 5);
@@ -582,9 +584,13 @@ int g_bBootMarkedOK = 0;
 int g_rebootReason = 0;
 static int bMQTTconnected = 0;
 
+// if not fast connect
+// returns bMQTTconnected updated every second
+// if fast connect
+// returns MQTT_IsReady() for sub second processing of messages
 int Main_HasMQTTConnected()
 {
-	return bMQTTconnected;
+	return Main_HasFastConnect() ? MQTT_IsReady() : bMQTTconnected;
 }
 
 int Main_HasWiFiConnected()
@@ -1121,6 +1127,7 @@ void QuickTick(void* param)
 	CMD_RunUartCmndIfRequired();
 
 	// process received messages here..
+	// process MQTT fast connect..
 #if ENABLE_MQTT
 	MQTT_RunQuickTick();
 #endif

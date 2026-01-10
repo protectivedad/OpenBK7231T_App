@@ -2227,6 +2227,30 @@ void MQTT_BroadcastTasmotaTeleSTATE() {
 #endif
 }
 
+// fast first connect to MQTT, no previous mqtt_client, no OTA
+// run after wifi connected
+void MQTT_FastConnect() {
+	if (!mqtt_initialised || mqtt_client || (OTA_GetProgress() != -1))
+		return;
+
+	if (MQTT_Mutex_Take(100) == 0)
+		return;
+
+	LOCK_TCPIP_CORE();
+	mqtt_client = mqtt_client_new();
+	UNLOCK_TCPIP_CORE();
+
+	mqtt_connect_events++;
+	// routine should try reconnecting but might fail anyway
+	int ret = MQTT_do_connect(mqtt_client);
+	if (ret == ERR_RTE) {
+		MQTT_Mutex_Free();
+		return;
+	}
+	mqtt_loopsWithDisconnected = 0;
+	ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect, return %i", xTaskGetTickCount(), __func__, ret);
+}
+
 // called from user timer.
 // return true/false on connected/disconnected
 bool MQTT_RunEverySecondUpdate()
@@ -2318,6 +2342,8 @@ bool MQTT_RunEverySecondUpdate()
 #endif
 			}
 			UNLOCK_TCPIP_CORE();
+// TODO: probably not needed should always be taken car of after connect
+// put back to previous behaviour
 			mqtt_connect_events++;
 			if (MQTT_do_connect(mqtt_client) == ERR_RTE) {
 				MQTT_Mutex_Free();
