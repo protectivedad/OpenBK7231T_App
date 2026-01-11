@@ -103,7 +103,9 @@ static int g_noMQTTTime = 0;
 
 uint8_t g_StartupDelayOver = 0;
 
+#ifndef ENABLE_QUITE_MODE
 uint32_t idleCount = 0;
+#endif
 
 int DRV_SSDP_Active = 0;
 
@@ -922,6 +924,7 @@ void Main_OnEverySecond()
 		safe = "";
 	}
 
+#ifndef ENABLE_QUITE_MODE
 	{
 		//int mqtt_max, mqtt_cur, mqtt_mem;
 		//MQTT_GetStats(&mqtt_cur, &mqtt_max, &mqtt_mem);
@@ -939,7 +942,7 @@ void Main_OnEverySecond()
 		// reset so it's a per-second counter.
 		idleCount = 0;
 	}
-
+#endif
 #ifdef OBK_MCU_SLEEP_METRICS_ENABLE
 	if (g_powersave && CFG_HasLoggerFlag(LOGGER_FLAG_POWER_SAVE)) {
 		Main_LogPowerSave();
@@ -1251,11 +1254,13 @@ int Main_IsOpenAccessPointMode()
 	return g_bOpenAccessPointMode;
 }
 
+#ifndef ENABLE_QUITE_MODE
 // called from idle thread each loop.
 // - just so we know it is running.
 void isidle() {
 	idleCount++;
 }
+#endif
 
 bool g_unsafeInitDone = false;
 
@@ -1490,6 +1495,7 @@ void Main_Init_Before_Delay()
 	// read or initialise the boot count flash area
 	HAL_FlashVars_IncreaseBootCount();
 
+#ifndef ENABLE_QUITE_MODE
 #if defined(PLATFORM_BEKEN)
 	// this just increments our idle counter variable.
 	// it registers a cllback from RTOS IDLE function.
@@ -1497,6 +1503,7 @@ void Main_Init_Before_Delay()
 	bg_register_irda_check_func(isidle);
 #elif PLATFORM_TR6260
 	system_register_idle_callback(isidle);
+#endif
 #endif
 
 	g_bootFailures = HAL_FlashVars_GetBootFailures();
@@ -1663,7 +1670,9 @@ void Main_Init()
 
 void vApplicationIdleHook(void)
 {
+#ifndef ENABLE_QUITE_MODE
 	isidle();
+#endif
 #if PLATFORM_BL602
 	// sleep
 	__asm volatile(

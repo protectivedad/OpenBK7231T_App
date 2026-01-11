@@ -46,6 +46,9 @@
 #define ENABLE_REPEATING_EVENTS					1
 #define ENABLE_EVENT_HANDLERS					1
 
+// stops idle counter and every second status logging
+//#define ENABLE_QUITE_MODE
+
 #if PLATFORM_XRADIO
 
 // #define ENABLE_SEND_POSTANDGET				1
