@@ -1,8 +1,12 @@
+#include "../obk_config.h"
+
+#include "cmd_local.h"
+#include "../logging/logging.h"
+
+#if ENABLE_REPEATING_EVENTS
 
 #include "../new_common.h"
-#include "cmd_local.h"
 #include "../httpserver/new_http.h"
-#include "../logging/logging.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
 
@@ -290,4 +294,28 @@ void RepeatingEvents_Init() {
 
 }
 
+#else
+
+commandResult_t RepeatingEvents_Cmd_ClearRepeatingEvents(const void *context, const char *cmd, const char *args, int cmdFlags) {
+	ADDLOG_ERROR(LOG_FEATURE_CMD, "%s - Not included in build", __func__);
+	return CMD_RES_UNKNOWN_COMMAND;
+}
+int RepeatingEvents_GetActiveCount() {
+	ADDLOG_ERROR(LOG_FEATURE_CMD, "%s - Not included in build", __func__);
+	return 0;
+}
+void RepeatingEvents_Init() {
+	ADDLOG_ERROR(LOG_FEATURE_CMD, "%s - Not included in build", __func__);
+}
+void RepeatingEvents_RunUpdate(float deltaTimeSeconds) {
+	ADDLOG_ERROR(LOG_FEATURE_CMD, "%s - Not included in build", __func__);
+}
+void SIM_GenerateRepeatingEventsDesc(char *o, int outLen) {
+	ADDLOG_ERROR(LOG_FEATURE_CMD, "%s - Not included in build", __func__);
+}
+void SIM_GeneratePowerStateDesc(char *o, int outLen) {
+	ADDLOG_ERROR(LOG_FEATURE_CMD, "%s - Not included in build", __func__);
+}
+
+#endif // ENABLE_REPEATING_EVENTS
 

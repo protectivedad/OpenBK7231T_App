@@ -42,6 +42,9 @@
 #define ENABLE_DEEPSLEEP						1 // adds +656 bytes 
 #define ENABLE_CMD_CHANNEL						1 // adds +1872
 
+//#define ENABLE_PING_WATCHDOG					1 // adds +640
+#define ENABLE_REPEATING_EVENTS					1
+
 #if PLATFORM_XRADIO
 
 // #define ENABLE_SEND_POSTANDGET				1
