@@ -282,6 +282,7 @@ void LOG_SetCommandHTTPRedirectReply(http_request_t* request) {
 // if head collides with either tail, move the tails on.
 void addLogAdv(int level, int feature, const char* fmt, ...)
 {
+	static bool addPrefix = false;
 	char* tmp;
 	char* t;
 	int len;
@@ -319,6 +320,12 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		// raw means no prefixes
 	}
 	else {
+		if (addPrefix) {
+			addPrefix = false;
+			t[0] = '\r';
+			t[1] = '\n';
+			t += 2;
+		}
 		strncpy(t, loglevelnames[level], (LOGGING_BUFFER_SIZE - (3 + t - tmp)));
 		t += strlen(t);
 		if (feature < sizeof(logfeaturenames) / sizeof(*logfeaturenames))
@@ -336,6 +343,7 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	// allows printing one character in raw mode without a new line
 	len = strlen(tmp);
 	if (len == 1) {
+		addPrefix = true;
 		tmp[len] = '\0';
 	} else	{
 		// this seems somehow inefficient
