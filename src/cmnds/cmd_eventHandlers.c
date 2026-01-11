@@ -646,44 +646,33 @@ void EventHandlers_Init() {
 #else
 
 commandResult_t CMD_ClearAllHandlers(const void *context, const char *cmd, const char *args, int cmdFlags){
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 	return CMD_RES_UNKNOWN_COMMAND;
 }
 void EventHandlers_Init() {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 }
 // This is useful to fire an event when a certain UART string command is received.
 // For example, you can fire an event while getting 55 AA 01 02 00 03 FF 01 01 06  on UART..
 void EventHandlers_FireEvent_String(byte eventCode, const char* argument) {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 }
 // This is useful to fire an event when, for example, a button is pressed.
 // Then eventCode is a BUTTON_PRESS and argument is a button index.
 void EventHandlers_FireEvent(byte eventCode, int argument) {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 }
 int EventHandlers_FireEvent2(byte eventCode, int argument, int argument2) {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 	return 0;
 }
 const char *EventHandlers_GetHandlerCommand2(byte eventCode, int argument, int argument2) {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 	return NULL;
 }
 int EventHandlers_FireEvent3(byte eventCode, int argument, int argument2, int argument3) {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 	return 0;
 }
 // This is more advanced event handler. It will only fire handlers when a variable state changes from one to another.
 // For example, you can watch for Voltage from BL0942 to change below 230, and it will fire event only when it becomes below 230.
 void EventHandlers_ProcessVariableChange_Integer(byte eventCode, int oldValue, int newValue) {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 }
 int EventHandlers_GetActiveCount() {
-	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
-	return 0;
+	return -1;
 }
 
 #endif // ENABLE_EVENT_HANDLERS
-
-
