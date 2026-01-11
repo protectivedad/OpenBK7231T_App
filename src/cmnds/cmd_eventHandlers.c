@@ -1,11 +1,11 @@
 #include "../obk_config.h"
 
 #include "../new_common.h"
+#include "cmd_local.h"
 #include "../logging/logging.h"
 
 #if ENABLE_EVENT_HANDLERS
 
-#include "cmd_local.h"
 #include "../httpserver/new_http.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
