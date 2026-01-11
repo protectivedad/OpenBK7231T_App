@@ -472,6 +472,7 @@ const char* CFG_GetWiFiPassX() {
 
 void Main_OnWiFiStatusChange(int code)
 {
+	ADDLOGF_TIMING("%i - %s - Code: %i", xTaskGetTickCount(), __func__, code);
 	// careful what you do in here.
 	// e.g. creata socket?  probably not....
 	switch (code)
@@ -572,7 +573,6 @@ void Main_OnWiFiStatusChange(int code)
 	default:
 		break;
 	}
-	ADDLOGF_TIMING("%i - %s - Code: %i", xTaskGetTickCount(), __func__, code);
 	g_newWiFiStatus = code;
 }
 
