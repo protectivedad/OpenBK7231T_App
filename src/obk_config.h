@@ -44,6 +44,7 @@
 
 //#define ENABLE_PING_WATCHDOG					1 // adds +640
 #define ENABLE_REPEATING_EVENTS					1
+#define ENABLE_EVENT_HANDLERS					1
 
 #if PLATFORM_XRADIO
 
