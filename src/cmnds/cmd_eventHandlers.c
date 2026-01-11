@@ -645,6 +645,10 @@ void EventHandlers_Init() {
 
 #else
 
+commandResult_t CMD_ClearAllHandlers(const void *context, const char *cmd, const char *args, int cmdFlags){
+	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
+	return CMD_RES_UNKNOWN_COMMAND;
+}
 void EventHandlers_Init() {
 	ADDLOG_ERROR(LOG_FEATURE_EVENT, "%s - Not included in build", __func__);
 }
