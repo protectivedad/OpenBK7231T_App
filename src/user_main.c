@@ -1143,7 +1143,9 @@ void QuickTick(void* param)
 	extern void Berry_RunThreads(int deltaMS);
 	Berry_RunThreads(g_deltaTimeMS);
 #endif
+#if ENABLE_REPEATING_EVENTS
 	RepeatingEvents_RunUpdate(g_deltaTimeMS * 0.001f);
+#endif
 #ifndef OBK_DISABLE_ALL_DRIVERS
 	DRV_RunQuickTick();
 #endif
