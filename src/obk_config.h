@@ -707,5 +707,8 @@
 #undef ENABLE_PING_WATCHDOG // saves +640
 #undef ENABLE_HTTP_PING // saves +816
 
+#undef ENABLE_REPEATING_EVENTS
+#undef ENABLE_EVENT_HANDLERS
+
 // closing OBK_CONFIG_H
 #endif
