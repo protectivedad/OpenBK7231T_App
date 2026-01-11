@@ -47,7 +47,7 @@
 #define ENABLE_EVENT_HANDLERS					1
 
 // stops idle counter and every second status logging
-//#define ENABLE_QUITE_MODE
+#define ENABLE_QUIET_MODE						1
 
 #if PLATFORM_XRADIO
 

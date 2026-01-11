@@ -103,7 +103,7 @@ static int g_noMQTTTime = 0;
 
 uint8_t g_StartupDelayOver = 0;
 
-#ifndef ENABLE_QUITE_MODE
+#ifndef ENABLE_QUIET_MODE
 uint32_t idleCount = 0;
 #endif
 
@@ -924,7 +924,7 @@ void Main_OnEverySecond()
 		safe = "";
 	}
 
-#ifndef ENABLE_QUITE_MODE
+#ifndef ENABLE_QUIET_MODE
 	{
 		//int mqtt_max, mqtt_cur, mqtt_mem;
 		//MQTT_GetStats(&mqtt_cur, &mqtt_max, &mqtt_mem);
@@ -942,7 +942,9 @@ void Main_OnEverySecond()
 		// reset so it's a per-second counter.
 		idleCount = 0;
 	}
-#endif
+#else
+	ADDLOG_INFO(LOG_FEATURE_RAW, ".");
+#endif // ENABLE_QUIET_MODE
 #ifdef OBK_MCU_SLEEP_METRICS_ENABLE
 	if (g_powersave && CFG_HasLoggerFlag(LOGGER_FLAG_POWER_SAVE)) {
 		Main_LogPowerSave();
@@ -1254,7 +1256,7 @@ int Main_IsOpenAccessPointMode()
 	return g_bOpenAccessPointMode;
 }
 
-#ifndef ENABLE_QUITE_MODE
+#ifndef ENABLE_QUIET_MODE
 // called from idle thread each loop.
 // - just so we know it is running.
 void isidle() {
@@ -1495,7 +1497,7 @@ void Main_Init_Before_Delay()
 	// read or initialise the boot count flash area
 	HAL_FlashVars_IncreaseBootCount();
 
-#ifndef ENABLE_QUITE_MODE
+#ifndef ENABLE_QUIET_MODE
 #if defined(PLATFORM_BEKEN)
 	// this just increments our idle counter variable.
 	// it registers a cllback from RTOS IDLE function.
@@ -1670,7 +1672,7 @@ void Main_Init()
 
 void vApplicationIdleHook(void)
 {
-#ifndef ENABLE_QUITE_MODE
+#ifndef ENABLE_QUIET_MODE
 	isidle();
 #endif
 #if PLATFORM_BL602

@@ -333,13 +333,18 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	//vsnprintf2(t, (LOGGING_BUFFER_SIZE - (3 + t - tmp)), fmt, argList);
 	vsnprintf(t, (LOGGING_BUFFER_SIZE - (3 + t - tmp)), fmt, argList);
 	va_end(argList);
-	if (tmp[strlen(tmp) - 1] == '\n') tmp[strlen(tmp) - 1] = '\0';
-	if (tmp[strlen(tmp) - 1] == '\r') tmp[strlen(tmp) - 1] = '\0';
-
-	len = strlen(tmp); // save 3 bytes at end for /r/n/0
-	tmp[len++] = '\r';
-	tmp[len++] = '\n';
-	tmp[len] = '\0';
+	// allows printing one character in raw mode without a new line
+	len = strlen(tmp);
+	if (len == 1) {
+		tmp[len] = '\0';
+	} else	{
+		// this seems somehow inefficient
+		if (tmp[len - 1] == '\n') len--;
+		if (tmp[len - 1] == '\r') len--;
+		tmp[len++] = '\r';
+		tmp[len++] = '\n';
+		tmp[len] = '\0';
+	}
 #if WINDOWS
 	printf(tmp);
 #endif
