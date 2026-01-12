@@ -99,10 +99,6 @@ volatile int direct_serial_log = DEFAULT_DIRECT_SERIAL_LOG;
 static int g_extraSocketToSendLOG = 0;
 static char g_loggingBuffer[LOGGING_BUFFER_SIZE];
 
-#define MAX_TCP_LOG_PORTS 2
-int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1, -1};
-
-
 void LOG_SetRawSocketCallback(int newFD)
 {
 	g_extraSocketToSendLOG = newFD;
@@ -111,12 +107,17 @@ void LOG_SetRawSocketCallback(int newFD)
 static int http_getlog(http_request_t* request);
 static int http_getlograw(http_request_t* request);
 
-static void log_server_thread(beken_thread_arg_t arg);
-static void log_client_thread(beken_thread_arg_t arg);
 static void log_serial_thread(beken_thread_arg_t arg);
 
 static void startSerialLog();
+#ifndef ENABLE_REDUCED_ACCESS
+#define MAX_TCP_LOG_PORTS 2
+int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1, -1};
+
+static void log_server_thread(beken_thread_arg_t arg);
+static void log_client_thread(beken_thread_arg_t arg);
 static void startLogServer();
+#endif
 
 #define LOGSIZE 4096
 #define LOGPORT 9000
@@ -224,10 +225,12 @@ static void initLog(void)
 	bk_printf("initLog() done!\r\n");
 }
 
+#ifndef ENABLE_REDUCED_ACCESS
 static void inittcplog(){
 	startLogServer();
 	tcpLogStarted = 1;
 }
+#endif
 http_request_t *g_log_alsoPrintToHTTP = 0;
 bool b_guard_recursivePrint = false;
 
@@ -304,10 +307,11 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	if (!initialised) {
 		initLog();
 	}
+#ifndef ENABLE_REDUCED_ACCESS
 	if (g_StartupDelayOver && !tcpLogStarted){
 		inittcplog();
 	}
-
+#endif
 
 	taken = xSemaphoreTake(logMemory.mutex, 100);
 	tmp = g_loggingBuffer;
@@ -512,34 +516,10 @@ static int getSerial(char* buff, int buffsize) {
 #endif
 
 
-static int getTcp(char* buff, int buffsize) {
-	int len = getData(buff, buffsize, &logMemory.tailtcp);
-	//bk_printf("got tcp: %d:%s\r\n", len,buff);
-	return len;
-}
-
 static int getHttp(char* buff, int buffsize) {
 	int len = getData(buff, buffsize, &logMemory.tailhttp);
 	//printf("got tcp: %d:%s\r\n", len,buff);
 	return len;
-}
-
-void startLogServer() {
-#if WINDOWS
-
-#else
-	OSStatus err = kNoErr;
-
-	err = rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,
-		"Log_server",
-		(beken_thread_function_t)log_server_thread,
-		0x800,
-		(beken_thread_arg_t)0);
-	if (err != kNoErr)
-	{
-		bk_printf("startLogServer: create \"TCP_server\" thread failed!\r\n");
-	}
-#endif
 }
 
 void startSerialLog() {
@@ -563,6 +543,30 @@ void startSerialLog() {
 #endif
 }
 
+#ifndef ENABLE_REDUCED_ACCESS
+static int getTcp(char* buff, int buffsize) {
+	int len = getData(buff, buffsize, &logMemory.tailtcp);
+	//bk_printf("got tcp: %d:%s\r\n", len,buff);
+	return len;
+}
+
+void startLogServer() {
+#if WINDOWS
+
+#else
+	OSStatus err = kNoErr;
+
+	err = rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,
+		"Log_server",
+		(beken_thread_function_t)log_server_thread,
+		0x800,
+		(beken_thread_arg_t)0);
+	if (err != kNoErr)
+	{
+		bk_printf("startLogServer: create \"TCP_server\" thread failed!\r\n");
+	}
+#endif
+}
 
 /* TCP server listener thread */
 void log_server_thread(beken_thread_arg_t arg)
@@ -672,10 +676,15 @@ static void send_to_tcp(){
 	} while(count);
 }
 #endif
+#else // ENABLE_REDUCED_ACCESS
+static void send_to_tcp(){
+}
+#endif // ENABLE_REDUCED_ACCESS
 
 // on beken, we trigger log send from timer thread
 #ifndef PLATFORM_BEKEN
 
+#ifndef ENABLE_REDUCED_ACCESS
 // non-beken
 static void log_client_thread(beken_thread_arg_t arg)
 {
@@ -697,7 +706,7 @@ static void log_client_thread(beken_thread_arg_t arg)
 	close(fd);
 	rtos_delete_thread(NULL);
 }
-
+#endif
 
 
 #define SERIALLOGBUFSIZE 128

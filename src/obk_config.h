@@ -49,6 +49,9 @@
 // stops idle counter and every second status logging
 #define ENABLE_QUIET_MODE						1
 
+// reduces network exposure
+#define ENABLE_REDUCED_ACCESS					1
+
 #if PLATFORM_XRADIO
 
 // #define ENABLE_SEND_POSTANDGET				1
