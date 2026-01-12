@@ -140,7 +140,6 @@ static int tcpLogStarted = 0;
 commandResult_t log_command(const void* context, const char* cmd, const char* args, int cmdFlags);
 
 #if PLATFORM_BEKEN
-
 int UART_PORT = UART2_PORT;
 int UART_PORT_INDEX = 1;
 
@@ -286,8 +285,7 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 {
 	static bool addPrefix = false;
 	char* tmp;
-	char* t;
-	int len;
+	int len = 0;
 	va_list argList;
 	BaseType_t taken;
 	int i;
@@ -316,7 +314,6 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	taken = xSemaphoreTake(logMemory.mutex, 100);
 	tmp = g_loggingBuffer;
 	memset(tmp, 0, LOGGING_BUFFER_SIZE);
-	t = tmp;
 
 	if (feature == LOG_FEATURE_RAW)
 	{
@@ -325,37 +322,36 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	else {
 		if (addPrefix) {
 			addPrefix = false;
-			t[0] = '\r';
-			t[1] = '\n';
-			t += 2;
+			tmp[0] = '\r';
+			tmp[1] = '\n';
+			len = 2;
 		}
-		strncpy(t, loglevelnames[level], (LOGGING_BUFFER_SIZE - (3 + t - tmp)));
-		t += strlen(t);
+		strncpy(tmp + len, loglevelnames[level], LOGGING_BUFFER_SIZE - 3 - len);
+		len = strlen(tmp);
 		if (feature < sizeof(logfeaturenames) / sizeof(*logfeaturenames))
 		{
-			strncpy(t, logfeaturenames[feature], (LOGGING_BUFFER_SIZE - (3 + t - tmp)));
-			t += strlen(t);
+			strncpy(tmp + len, logfeaturenames[feature], LOGGING_BUFFER_SIZE - 3 - len);
+			len = strlen(tmp);
 		}
 	}
 
 	va_start(argList, fmt);
 	//vsnprintf3(t, (LOGGING_BUFFER_SIZE - (3 + t - tmp)), fmt, argList);
 	//vsnprintf2(t, (LOGGING_BUFFER_SIZE - (3 + t - tmp)), fmt, argList);
-	vsnprintf(t, (LOGGING_BUFFER_SIZE - (3 + t - tmp)), fmt, argList);
+	vsnprintf(tmp + len, LOGGING_BUFFER_SIZE - 3 - len, fmt, argList);
 	va_end(argList);
 	// allows printing one character in raw mode without a new line
 	len = strlen(tmp);
 	if (len == 1) {
 		addPrefix = true;
-		tmp[len] = '\0';
 	} else	{
 		// this seems somehow inefficient
 		if (tmp[len - 1] == '\n') len--;
 		if (tmp[len - 1] == '\r') len--;
 		tmp[len++] = '\r';
 		tmp[len++] = '\n';
-		tmp[len] = '\0';
 	}
+	tmp[len] = '\0';
 #if WINDOWS
 	printf(tmp);
 #endif
@@ -371,7 +367,7 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	}
 	if (g_extraSocketToSendLOG)
 	{
-		send(g_extraSocketToSendLOG, tmp, strlen(tmp), 0);
+		send(g_extraSocketToSendLOG, tmp, len, 0);
 	}
 
 	if (direct_serial_log == LOGTYPE_DIRECT) {
