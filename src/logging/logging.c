@@ -1,4 +1,6 @@
 
+#include "../obk_config.h"
+
 // Trying to narrow down Boozeman crash.
 // Is the code with this define enabled crashing/freezing BK after few minutes for anybody?
 
@@ -8,10 +10,9 @@
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
 
-#if PLATFORM_BEKEN_NEW
+#if PLATFORM_BEKEN
 #include "uart.h"
 #include "arm_arch.h"
-#undef PLATFORM_BEKEN
 #endif
 
 extern uint8_t g_StartupDelayOver;
@@ -99,7 +100,7 @@ static int g_extraSocketToSendLOG = 0;
 static char g_loggingBuffer[LOGGING_BUFFER_SIZE];
 
 #define MAX_TCP_LOG_PORTS 2
-int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1};
+int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1, -1};
 
 
 void LOG_SetRawSocketCallback(int newFD)
@@ -138,8 +139,6 @@ static int tcpLogStarted = 0;
 commandResult_t log_command(const void* context, const char* cmd, const char* args, int cmdFlags);
 
 #if PLATFORM_BEKEN
-// to get uart.h
-#include "command_line.h"
 
 int UART_PORT = UART2_PORT;
 int UART_PORT_INDEX = 1;
