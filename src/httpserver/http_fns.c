@@ -17,7 +17,9 @@
 #include "../devicegroups/deviceGroups_public.h"
 #include "../mqtt/new_mqtt.h"
 #include "hass.h"
+#if ENABLE_TASMOTA_JSON
 #include "../cJSON/cJSON.h"
+#endif
 #include <time.h>
 #include "../driver/drv_ntp.h"
 #include "../driver/drv_deviceclock.h"		// to set clock via Javascript in pmntp

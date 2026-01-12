@@ -1,3 +1,4 @@
+#include "../obk_config.h"
 
 #include "../logging/logging.h"
 #include "../new_pins.h"
@@ -6,7 +7,6 @@
 #include "cmd_local.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
-#include "../cJSON/cJSON.h"
 #if ENABLE_LITTLEFS
 	#include "../littlefs/our_lfs.h"
 #endif
@@ -21,7 +21,8 @@ int parsePowerArgument(const char *s) {
 	return atoi(s);
 }
 
-
+#if ENABLE_TASMOTA_JSON
+#include "../cJSON/cJSON.h"
 static commandResult_t cmnd_JsonCommand(const void *context, const char *cmd, const char *args, int cmdFlags) {
     cJSON *root = cJSON_Parse(args);
     if(!root) {
@@ -51,6 +52,7 @@ static commandResult_t cmnd_JsonCommand(const void *context, const char *cmd, co
     cJSON_Delete(root);
     return CMD_RES_OK;
 }
+#endif
 
 static commandResult_t power(const void *context, const char *cmd, const char *args, int cmdFlags){
 	//if (!wal_strnicmp(cmd, "POWER", 5)){
@@ -534,10 +536,12 @@ int taslike_commands_init(){
 	//cmddetail:"fn":"cmnd_stub","file":"cmnds/cmd_tasmota.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("Result", cmnd_stub, NULL);
+#if ENABLE_TASMOTA_JSON
 	//cmddetail:{"name":"Json","args":"json array of commands",
 	//cmddetail:"descr":"A stub for Tasmota",
 	//cmddetail:"fn":"cmnd_JsonCommand","file":"cmnds/cmd_tasmota.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("Json", cmnd_JsonCommand, NULL);
+#endif
     return 0;
 }
