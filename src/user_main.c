@@ -952,11 +952,14 @@ void Main_OnEverySecond()
 #endif
 
 
+#ifndef ENABLE_QUIET_MODE
 	// print network info
 	if (!(g_secondsElapsed % 10))
+#else
+	if (!(g_secondsElapsed % 60))
+#endif // ENABLE_QUIET_MODE
 	{
 		HAL_PrintNetworkInfo();
-
 	}
 	// IR TESTING ONLY!!!!
 #ifdef PLATFORM_BK7231T
