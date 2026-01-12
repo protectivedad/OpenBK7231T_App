@@ -1170,7 +1170,9 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 						ADDLOGF_INFO("mqtt_subscribe to %s return: %d\n", callbacks[i]->subscriptionTopic, err);
 					}
 					else {
+#ifndef ENABLE_QUIET_MODE
 						ADDLOGF_INFO("mqtt_subscribed to %s\n", callbacks[i]->subscriptionTopic);
+#endif
 					}
 				}
 			}
@@ -1256,6 +1258,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 	mqtt_verify_tls_cert = CFG_GetMQTTVerifyTlsCert();
 #endif
 
+#ifndef ENABLE_QUIET_MODE
 	if (dns_in_progress_time <= 0 && !dns_resolved) {
 		ADDLOGF_INFO("mqtt_userName %s\r\nmqtt_pass %s\r\nmqtt_clientID %s\r\nmqtt_host %s:%d\r\n",
 			mqtt_userName,
@@ -1267,6 +1270,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 			mqtt_port
 		);
 	}
+#endif
 
 	// set pointer, there are no buffers to strcpy
 	// empty field for us means "no password", etc,
