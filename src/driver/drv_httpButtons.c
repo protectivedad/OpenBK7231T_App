@@ -1,3 +1,8 @@
+
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_HTTPBUTTONS
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -267,10 +272,4 @@ void DRV_InitHTTPButtons() {
 	CMD_RegisterCommand("setButtonEnabled", CMD_setButtonEnabled, NULL);
 }
 
-
-
-
-
-
-
-
+#endif // ENABLE_DRIVER_HTTPBUTTONS

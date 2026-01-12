@@ -123,9 +123,11 @@ void DRV_Widget_Init();
 void DRV_OpenWeatherMap_Init();
 void OWM_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 
+#if ENABLE_DRIVER_HTTPBUTTONS
 void DRV_HTTPButtons_ProcessChanges(http_request_t *request);
 void DRV_HTTPButtons_AddToHtmlPage(http_request_t *request);
 void DRV_InitHTTPButtons();
+#endif
 
 void CHT83XX_Init();
 void CHT83XX_OnEverySecond();
