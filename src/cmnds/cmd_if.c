@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_OBK_IF
+
 #include "../new_common.h"
 #include "cmd_local.h"
 #include "../httpserver/new_http.h"
@@ -280,6 +284,7 @@ float getFailedBoots(const char *s) {
 float getUpTime(const char *s) {
 	return g_secondsElapsed;
 }
+#if ENABLE_DRIVER_DEVICECLOCK
 float getWeekDay(const char *s) {
 	return TIME_GetWeekDay();
 }
@@ -301,8 +306,8 @@ float getMonth(const char *s) {
 float getMDay(const char *s) {
 	return TIME_GetMDay();
 }
+#endif
 #ifdef ENABLE_NTP
-
 float getNTPOn(const char *s) {
 	return NTP_IsTimeSynced();
 }
@@ -1068,3 +1073,4 @@ commandResult_t CMD_If(const void *context, const char *cmd, const char *args, i
 	return CMD_RES_OK;
 }
 
+#endif // ENABLE_OBK_IF
