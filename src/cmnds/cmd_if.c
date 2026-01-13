@@ -1,9 +1,9 @@
 #include "../obk_config.h"
 #include "../new_common.h"
+#include "cmd_local.h"
 
 #if ENABLE_OBK_IF
 
-#include "cmd_local.h"
 #include "../httpserver/new_http.h"
 #include "../logging/logging.h"
 #include "../new_pins.h"
