@@ -1371,7 +1371,9 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 	}
 
 	if (bAutoRunScripts) {
+#if ENABLE_LITTLEFS
 		CMD_ExecuteCommand("exec early.bat", COMMAND_FLAG_SOURCE_SCRIPT);
+#endif
 #ifndef OBK_DISABLE_ALL_DRIVERS
 		if (!CFG_HasFlag(OBK_FLAG_DRV_DISABLE_AUTOSTART)) {
 			// autostart drivers

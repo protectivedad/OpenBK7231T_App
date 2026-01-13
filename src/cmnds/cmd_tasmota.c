@@ -324,8 +324,8 @@ int LFS_WriteFile(const char *fname, const byte *data, int len, bool bAppend) {
 	return 1;
 }
 
-static commandResult_t cmnd_lfsexec(const void * context, const char *cmd, const char *args, int cmdFlags){
 #if ENABLE_LITTLEFS
+static commandResult_t cmnd_lfsexec(const void * context, const char *cmd, const char *args, int cmdFlags){
 	ADDLOG_DEBUG(LOG_FEATURE_CMD, "exec %s", args);
 	if (lfs_present()){
 		lfs_file_t *file = os_malloc(sizeof(lfs_file_t));
@@ -372,9 +372,9 @@ static commandResult_t cmnd_lfsexec(const void * context, const char *cmd, const
 	} else {
 		ADDLOG_ERROR(LOG_FEATURE_CMD, "lfs is absent");
 	}
-#endif
 	return CMD_RES_OK;
 }
+#endif // ENABLE_LITTLEFS
 
 static commandResult_t cmnd_SSID1(const void * context, const char *cmd, const char *args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES);
@@ -473,11 +473,13 @@ int taslike_commands_init(){
 	//cmddetail:"fn":"cmnd_backlog","file":"cmnds/cmd_tasmota.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("backlog", cmnd_backlog, NULL);
+#if ENABLE_LITTLEFS
 	//cmddetail:{"name":"exec","args":"[Filename]",
 	//cmddetail:"descr":"exec <file> - run autoexec.bat or other file from LFS if present",
 	//cmddetail:"fn":"cmnd_lfsexec","file":"cmnds/cmd_tasmota.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("exec", cmnd_lfsexec, NULL);
+#endif // ENABLE_LITTLEFS
 	//cmddetail:{"name":"SSID1","args":"[ValueString]",
 	//cmddetail:"descr":"Sets the SSID of target WiFi. Command keeps Tasmota syntax.",
 	//cmddetail:"fn":"cmnd_SSID1","file":"cmnds/cmd_tasmota.c","requires":"",
