@@ -121,55 +121,6 @@ const char *CMD_FindOperator(const char *s, const char *stop, byte *oCode) {
 	}
 	return retVal;
 }
-const char *strCompareBound(const char *s, const char *templ, const char *stopper, int bAllowWildCard) {
-	const char *s_start;
-
-	s_start = s;
-
-	while (true) {
-		if (stopper == 0) {
-			// allow early end
-			// template ended and reached stopper
-			if (*templ == 0) {
-				return s;
-			}
-		}
-		else {
-			// template ended and reached stopper
-			if (s == stopper && *templ == 0) {
-				return s;
-			}
-		}
-		// template ended and reached end of string
-		if (*s == 0 && *templ == 0) {
-			return s;
-		}
-		// reached end of string but template still has smth
-		if (*s == 0)
-		{
-			return 0;
-		}
-		// are the chars the same?
-		if (bAllowWildCard && *templ == '*') {
-			if (isdigit((int)(*s))) {
-
-			}
-			else {
-				return 0;
-			}
-		}
-		else {
-			char c1 = tolower((unsigned char)*s);
-			char c2 = tolower((unsigned char)*templ);
-			if (c1 != c2) {
-				return 0;
-			}
-		}
-		s++;
-		templ++;
-	}
-	return 0;
-}
 char *g_expDebugBuffer = 0;
 #define EXPRESSION_DEBUG_BUFFER_SIZE 128
 typedef struct {
@@ -610,17 +561,6 @@ void SIM_GenerateChannelStatesDesc(char *o, int outLen) {
 }
 #endif
 
-int CMD_CountVarsInString(const char *in) {
-	const char *p = in;
-	int varCount = 0;
-	while (*p) {
-		if (*p == '$') {
-			varCount++;
-		}
-		p++;
-	}
-	return varCount;
-}
 const char *CMD_FindMatchingBrace(const char *s) {
 	if (*s != '(')
 		return s;
@@ -835,6 +775,67 @@ commandResult_t CMD_If(const void *context, const char *cmd, const char *args, i
 }
 
 #endif // ENABLE_OBK_IF
+const char *strCompareBound(const char *s, const char *templ, const char *stopper, int bAllowWildCard) {
+	const char *s_start;
+
+	s_start = s;
+
+	while (true) {
+		if (stopper == 0) {
+			// allow early end
+			// template ended and reached stopper
+			if (*templ == 0) {
+				return s;
+			}
+		}
+		else {
+			// template ended and reached stopper
+			if (s == stopper && *templ == 0) {
+				return s;
+			}
+		}
+		// template ended and reached end of string
+		if (*s == 0 && *templ == 0) {
+			return s;
+		}
+		// reached end of string but template still has smth
+		if (*s == 0)
+		{
+			return 0;
+		}
+		// are the chars the same?
+		if (bAllowWildCard && *templ == '*') {
+			if (isdigit((int)(*s))) {
+
+			}
+			else {
+				return 0;
+			}
+		}
+		else {
+			char c1 = tolower((unsigned char)*s);
+			char c2 = tolower((unsigned char)*templ);
+			if (c1 != c2) {
+				return 0;
+			}
+		}
+		s++;
+		templ++;
+	}
+	return 0;
+}
+
+int CMD_CountVarsInString(const char *in) {
+	const char *p = in;
+	int varCount = 0;
+	while (*p) {
+		if (*p == '$') {
+			varCount++;
+		}
+		p++;
+	}
+	return varCount;
+}
 
 const char *CMD_ExpandConstantString(const char *s, const char *stop, char *out, int outLen) {
 	int idx;
