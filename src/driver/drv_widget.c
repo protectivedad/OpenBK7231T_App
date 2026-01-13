@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_WIDGET
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -135,3 +139,4 @@ void DRV_Widget_Init() {
 
 }
 
+#endif // ENABLE_DRIVER_WIDGET

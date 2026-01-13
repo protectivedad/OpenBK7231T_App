@@ -332,9 +332,11 @@ void SVM_StartBacklog(const char *command);
 void SVM_RunThreads(int deltaMS);
 void CMD_InitScripting();
 void SVM_RunStartupCommandAsScript();
+#if ENABLE_LITTLEFS
 byte* LFS_ReadFile(const char* fname);
 byte* LFS_ReadFileExpanding(const char* fname);
 int LFS_WriteFile(const char *fname, const byte *data, int len, bool bAppend);
+#endif
 
 commandResult_t CMD_ClearAllHandlers(const void* context, const char* cmd, const char* args, int cmdFlags);
 commandResult_t RepeatingEvents_Cmd_ClearRepeatingEvents(const void* context, const char* cmd, const char* args, int cmdFlags);

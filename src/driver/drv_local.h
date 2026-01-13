@@ -117,8 +117,10 @@ void DRV_Toggler_AppendInformationToHTTPIndexPage(http_request_t *request, int b
 void DRV_Toggler_QuickTick();
 void DRV_InitPWMToggler();
 
+#if ENABLE_DRIVER_WIDGET
 void DRV_Widget_AddToHtmlPage(http_request_t *request, int bPreState);
 void DRV_Widget_Init();
+#endif
 
 void DRV_OpenWeatherMap_Init();
 void OWM_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);

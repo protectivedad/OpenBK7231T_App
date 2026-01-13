@@ -1191,10 +1191,11 @@ int HTTPClient_CB_Data(struct httprequest_t_tag *request) {
 			CMD_ExecuteCommand(request->client_data.response_buf, 0);
 		}
 		else {
+#if ENABLE_LITTLEFS
 			LFS_WriteFile(request->targetFile,
 				(const byte *)request->client_data.response_buf, request->client_data.response_buf_filled,
 				request->client_data.userCounter!= 0);
-
+#endif
 			request->client_data.userCounter++;
 		}
 		if (request->cmdToRun && *request->cmdToRun) {

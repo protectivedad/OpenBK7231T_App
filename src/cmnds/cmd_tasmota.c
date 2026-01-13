@@ -191,11 +191,11 @@ static commandResult_t cmnd_backlog(const void * context, const char *cmd, const
 	return res;
 }
 
+#if ENABLE_LITTLEFS
 // Our wrapper for LFS.
 // Returns a buffer created with malloc.
 // You must free it later.
 byte *LFS_ReadFile(const char *fname) {
-#if ENABLE_LITTLEFS
 	if (lfs_present()){
 		lfs_file_t file;
 		int lfsres;
@@ -269,7 +269,6 @@ byte *LFS_ReadFile(const char *fname) {
 		ADDLOG_ERROR(LOG_FEATURE_CMD, "LFS_ReadFile: lfs is absent");
 #endif
 	}
-#endif
 	return 0;
 }
 byte* LFS_ReadFileExpanding(const char* fname) {
@@ -286,7 +285,6 @@ byte* LFS_ReadFileExpanding(const char* fname) {
 	return (byte*)r;
 }
 int LFS_WriteFile(const char *fname, const byte *data, int len, bool bAppend) {
-#if ENABLE_LITTLEFS
 	init_lfs(1);
 	if (lfs_present()) {
 		lfs_file_t file;
@@ -320,11 +318,9 @@ int LFS_WriteFile(const char *fname, const byte *data, int len, bool bAppend) {
 		ADDLOG_ERROR(LOG_FEATURE_CMD, "LFS_WriteFile: lfs is absent");
 #endif
 	}
-#endif
 	return 1;
 }
 
-#if ENABLE_LITTLEFS
 static commandResult_t cmnd_lfsexec(const void * context, const char *cmd, const char *args, int cmdFlags){
 	ADDLOG_DEBUG(LOG_FEATURE_CMD, "exec %s", args);
 	if (lfs_present()){
