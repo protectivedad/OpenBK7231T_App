@@ -1,8 +1,8 @@
 #include "../obk_config.h"
+#include "../new_common.h"
 
 #if ENABLE_OBK_IF
 
-#include "../new_common.h"
 #include "cmd_local.h"
 #include "../httpserver/new_http.h"
 #include "../logging/logging.h"
@@ -578,62 +578,6 @@ const constant_t g_constants[] = {
 
 static int g_totalConstants = sizeof(g_constants) / sizeof(g_constants[0]);
 
-// tries to expand a given string into a constant
-// So, for $CH1 it will set out to given channel value
-// For $led_dimmer it will set out to current led_dimmer value
-// Etc etc
-// Returns true if constant matches
-// Returns false if no constants found
-const char *CMD_ExpandConstantFloat(const char *s, const char *stop, float *out) {
-#if ENABLE_EXPAND_CONSTANT
-	const constant_t *var;
-	int i;
-	var = g_constants;
-	for (i = 0; i < g_totalConstants; i++, var++) {
-		bool bAllowWildCard = strstr(var->constantName, "*") != 0;
-		const char *ret = strCompareBound(s, var->constantName, stop, bAllowWildCard);
-		if (ret) {
-			*out = var->getValue(s);
-			ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstantFloat: %s", var->name);
-			return ret;
-		}
-	}
-#endif
-	return false;
-}
-
-byte CMD_ParseOrExpandHexByte(const char **p) {
-	int val;
-	float fv = 0; // silence warning
-	while (isWhiteSpace(*(*p))) {
-		(*p)++;
-	}
-	if (*(*p) == '$') {
-		const char *stop = (*p) + 1;
-		while (*stop && *stop != '$') {
-			stop++;
-		}
-		CMD_ExpandConstantFloat(*p, stop, &fv);
-		val = fv;
-
-		*p = stop;
-		if (**p != 0)
-			(*p)++;
-	}
-	else {
-		val = hexbyte(*p);
-		if (**p) {
-			(*p)++;
-			if (**p) {
-				(*p)++;
-			}
-		}
-	}
-	while (isWhiteSpace(*(*p))) {
-		(*p)++;
-	}
-	return val;
-}
 #if WINDOWS
 
 void SIM_GenerateChannelStatesDesc(char *o, int outLen) {
@@ -665,160 +609,7 @@ void SIM_GenerateChannelStatesDesc(char *o, int outLen) {
 	}
 }
 #endif
-const char *CMD_ExpandConstantString(const char *s, const char *stop, char *out, int outLen) {
-	int idx;
-	const char *ret;
-	char tmp[32];
 
-#if WINDOWS
-	ret = strCompareBound(s, "$autoexec.bat", stop, false);
-	if (ret) {
-		byte* data = LFS_ReadFile("autoexec.bat");
-		if (data == 0) {
-#if 1
-			strcpy_safe(out, "No autoexec.bat for this sample", outLen);
-			return ret;
-#else
-			return false;
-#endif
-		}
-		strcpy_safe(out, (char*)data, outLen);
-		free(data);
-		return ret;
-	}
-	ret = strCompareBound(s, "$readfile(", stop, false);
-	if (ret) {
-		const char *opening = ret;
-		const char *closingBrace = ret;
-		while (1) {
-			if (*closingBrace == 0)
-				return false; // fail
-			if (*closingBrace == ')') {
-				break;
-			}
-			closingBrace++;
-		}
-		ret = closingBrace + 1;
-		idx = closingBrace - opening;
-		if (idx >= sizeof(tmp) - 1)
-			idx = sizeof(tmp) - 2;
-		strncpy(tmp, opening, idx);
-		tmp[idx] = 0;
-		byte* data = LFS_ReadFile(tmp);
-		if (data == 0)
-			return false;
-		strcpy_safe(out, (char*)data, outLen);
-		free(data);
-		return ret;
-	}
-	ret = strCompareBound(s, "$pinstates", stop, false);
-	if (ret) {
-		SIM_GeneratePinStatesDesc(out, outLen);
-		return ret;
-	}
-	ret = strCompareBound(s, "$channelstates", stop, false);
-	if (ret) {
-		SIM_GenerateChannelStatesDesc(out, outLen);
-		return ret;
-	}
-	ret = strCompareBound(s, "$repeatingevents", stop, false);
-	if (ret) {
-		SIM_GenerateRepeatingEventsDesc(out, outLen);
-		return ret;
-	}
-	ret = strCompareBound(s, "$simPowerState", stop, false);
-	if (ret) {
-		SIM_GeneratePowerStateDesc(out, outLen);
-		return ret;
-	}
-#endif
-	ret = strCompareBound(s, "$mqtt_client", stop, false);
-	if (ret) {
-		const char *res = CFG_GetMQTTClientId();
-		strcpy_safe(out, res, outLen);
-		return ret;
-	}
-	ret = strCompareBound(s, "$shortName", stop, false);
-	if (ret) {
-		const char *res = CFG_GetShortDeviceName();
-		strcpy_safe(out, res, outLen);
-		return ret;
-	}
-	ret = strCompareBound(s, "$name", stop, false);
-	if (ret) {
-		const char *res = CFG_GetDeviceName();
-		strcpy_safe(out, res, outLen);
-		return ret;
-	}
-	return false;
-}
-
-const char* CMD_ExpandConstantToString(const char* constant, char* out, char* stop)
-{
-	int outLen;
-	float value = 0;
-	int valueInt;
-	const char* after;
-	float delta;
-
-	outLen = (stop - out) - 1;
-
-	after = CMD_ExpandConstantFloat(constant, 0, &value);
-	if(after == 0)
-	{
-		after = CMD_ExpandConstantString(constant, 0, out, outLen);
-		return after;
-	}
-	if(after == 0)
-		return 0;
-
-	valueInt = (int)value;
-	delta = valueInt - value;
-	if(delta < 0)
-		delta = -delta;
-	if(delta < 0.001f)
-	{
-		snprintf(out, outLen, "%i", valueInt);
-	}
-	else
-	{
-		snprintf(out, outLen, "%f", value);
-	}
-	return after;
-}
-
-void CMD_ExpandConstantsWithinString(const char *in, char *out, int outLen) {
-	char *outStop;
-	const char *tmp;
-	// just let us be on the safe side, someone else might forget about that -1
-	outStop = out + outLen - 1;
-
-	while (*in) {
-		if (out >= outStop) {
-			break;
-		}
-		if (*in == '$') {
-			*out = 0;
-			tmp = CMD_ExpandConstantToString(in, out, outStop);
-			while (*out)
-				out++;
-			if (tmp != 0) {
-				in = tmp;
-			}
-			else {
-				*out = *in;
-				out++;
-				in++;
-			}
-		}
-		else {
-			*out = *in;
-			out++;
-			in++;
-		}
-	}
-	*out = 0;
-}
 int CMD_CountVarsInString(const char *in) {
 	const char *p = in;
 	int varCount = 0;
@@ -829,36 +620,6 @@ int CMD_CountVarsInString(const char *in) {
 		p++;
 	}
 	return varCount;
-}
-// like a strdup, but will expand constants.
-// Please remember to free the returned string
-char *CMD_ExpandingStrdup(const char *in) {
-	const char *p;
-	char *ret;
-	int varCount;
-	int realLen;
-
-	// I am not sure which approach should I take
-	// It could be easily done with external buffer, but it would have to be on stack or a global one...
-	// Maybe let's just assume that variables cannot grow string way too big
-	realLen = strlen(in);
-	varCount = CMD_CountVarsInString(in);
-	
-	// not all var names are short, some are long...
-	// but $CH1 is short and could expand to something longer like, idk, 123456?
-	// just to be on safe side....
-	realLen += varCount * 10;
-
-	// space for NULL and also space to be sure
-	realLen += 2;
-
-	ret = (char*)malloc(realLen);
-	if (ret == 0) {
-		// malloc failed
-		return ret;
-	}
-	CMD_ExpandConstantsWithinString(in, ret, realLen);
-	return ret;
 }
 const char *CMD_FindMatchingBrace(const char *s) {
 	if (*s != '(')
@@ -1074,3 +835,246 @@ commandResult_t CMD_If(const void *context, const char *cmd, const char *args, i
 }
 
 #endif // ENABLE_OBK_IF
+
+const char *CMD_ExpandConstantString(const char *s, const char *stop, char *out, int outLen) {
+	int idx;
+	const char *ret;
+	char tmp[32];
+
+#if WINDOWS
+	ret = strCompareBound(s, "$autoexec.bat", stop, false);
+	if (ret) {
+		byte* data = LFS_ReadFile("autoexec.bat");
+		if (data == 0) {
+#if 1
+			strcpy_safe(out, "No autoexec.bat for this sample", outLen);
+			return ret;
+#else
+			return false;
+#endif
+		}
+		strcpy_safe(out, (char*)data, outLen);
+		free(data);
+		return ret;
+	}
+	ret = strCompareBound(s, "$readfile(", stop, false);
+	if (ret) {
+		const char *opening = ret;
+		const char *closingBrace = ret;
+		while (1) {
+			if (*closingBrace == 0)
+				return false; // fail
+			if (*closingBrace == ')') {
+				break;
+			}
+			closingBrace++;
+		}
+		ret = closingBrace + 1;
+		idx = closingBrace - opening;
+		if (idx >= sizeof(tmp) - 1)
+			idx = sizeof(tmp) - 2;
+		strncpy(tmp, opening, idx);
+		tmp[idx] = 0;
+		byte* data = LFS_ReadFile(tmp);
+		if (data == 0)
+			return false;
+		strcpy_safe(out, (char*)data, outLen);
+		free(data);
+		return ret;
+	}
+	ret = strCompareBound(s, "$pinstates", stop, false);
+	if (ret) {
+		SIM_GeneratePinStatesDesc(out, outLen);
+		return ret;
+	}
+	ret = strCompareBound(s, "$channelstates", stop, false);
+	if (ret) {
+		SIM_GenerateChannelStatesDesc(out, outLen);
+		return ret;
+	}
+	ret = strCompareBound(s, "$repeatingevents", stop, false);
+	if (ret) {
+		SIM_GenerateRepeatingEventsDesc(out, outLen);
+		return ret;
+	}
+	ret = strCompareBound(s, "$simPowerState", stop, false);
+	if (ret) {
+		SIM_GeneratePowerStateDesc(out, outLen);
+		return ret;
+	}
+#endif
+	ret = strCompareBound(s, "$mqtt_client", stop, false);
+	if (ret) {
+		const char *res = CFG_GetMQTTClientId();
+		strcpy_safe(out, res, outLen);
+		return ret;
+	}
+	ret = strCompareBound(s, "$shortName", stop, false);
+	if (ret) {
+		const char *res = CFG_GetShortDeviceName();
+		strcpy_safe(out, res, outLen);
+		return ret;
+	}
+	ret = strCompareBound(s, "$name", stop, false);
+	if (ret) {
+		const char *res = CFG_GetDeviceName();
+		strcpy_safe(out, res, outLen);
+		return ret;
+	}
+	return false;
+}
+
+const char* CMD_ExpandConstantToString(const char* constant, char* out, char* stop)
+{
+	int outLen;
+	float value = 0;
+	int valueInt;
+	const char* after;
+	float delta;
+
+	outLen = (stop - out) - 1;
+
+	after = CMD_ExpandConstantFloat(constant, 0, &value);
+	if(after == 0)
+	{
+		after = CMD_ExpandConstantString(constant, 0, out, outLen);
+		return after;
+	}
+	if(after == 0)
+		return 0;
+
+	valueInt = (int)value;
+	delta = valueInt - value;
+	if(delta < 0)
+		delta = -delta;
+	if(delta < 0.001f)
+	{
+		snprintf(out, outLen, "%i", valueInt);
+	}
+	else
+	{
+		snprintf(out, outLen, "%f", value);
+	}
+	return after;
+}
+
+void CMD_ExpandConstantsWithinString(const char *in, char *out, int outLen) {
+	char *outStop;
+	const char *tmp;
+	// just let us be on the safe side, someone else might forget about that -1
+	outStop = out + outLen - 1;
+
+	while (*in) {
+		if (out >= outStop) {
+			break;
+		}
+		if (*in == '$') {
+			*out = 0;
+			tmp = CMD_ExpandConstantToString(in, out, outStop);
+			while (*out)
+				out++;
+			if (tmp != 0) {
+				in = tmp;
+			}
+			else {
+				*out = *in;
+				out++;
+				in++;
+			}
+		}
+		else {
+			*out = *in;
+			out++;
+			in++;
+		}
+	}
+	*out = 0;
+}
+
+// like a strdup, but will expand constants.
+// Please remember to free the returned string
+char *CMD_ExpandingStrdup(const char *in) {
+	const char *p;
+	char *ret;
+	int varCount;
+	int realLen;
+
+	// I am not sure which approach should I take
+	// It could be easily done with external buffer, but it would have to be on stack or a global one...
+	// Maybe let's just assume that variables cannot grow string way too big
+	realLen = strlen(in);
+	varCount = CMD_CountVarsInString(in);
+	
+	// not all var names are short, some are long...
+	// but $CH1 is short and could expand to something longer like, idk, 123456?
+	// just to be on safe side....
+	realLen += varCount * 10;
+
+	// space for NULL and also space to be sure
+	realLen += 2;
+
+	ret = (char*)malloc(realLen);
+	if (ret == 0) {
+		// malloc failed
+		return ret;
+	}
+	CMD_ExpandConstantsWithinString(in, ret, realLen);
+	return ret;
+}
+
+// tries to expand a given string into a constant
+// So, for $CH1 it will set out to given channel value
+// For $led_dimmer it will set out to current led_dimmer value
+// Etc etc
+// Returns true if constant matches
+// Returns false if no constants found
+const char *CMD_ExpandConstantFloat(const char *s, const char *stop, float *out) {
+#if ENABLE_EXPAND_CONSTANT
+	const constant_t *var;
+	int i;
+	var = g_constants;
+	for (i = 0; i < g_totalConstants; i++, var++) {
+		bool bAllowWildCard = strstr(var->constantName, "*") != 0;
+		const char *ret = strCompareBound(s, var->constantName, stop, bAllowWildCard);
+		if (ret) {
+			*out = var->getValue(s);
+			ADDLOG_IF_MATHEXP_DBG(LOG_FEATURE_EVENT, "CMD_ExpandConstantFloat: %s", var->name);
+			return ret;
+		}
+	}
+#endif
+	return false;
+}
+
+byte CMD_ParseOrExpandHexByte(const char **p) {
+	int val;
+	float fv = 0; // silence warning
+	while (isWhiteSpace(*(*p))) {
+		(*p)++;
+	}
+	if (*(*p) == '$') {
+		const char *stop = (*p) + 1;
+		while (*stop && *stop != '$') {
+			stop++;
+		}
+		CMD_ExpandConstantFloat(*p, stop, &fv);
+		val = fv;
+
+		*p = stop;
+		if (**p != 0)
+			(*p)++;
+	}
+	else {
+		val = hexbyte(*p);
+		if (**p) {
+			(*p)++;
+			if (**p) {
+				(*p)++;
+			}
+		}
+	}
+	while (isWhiteSpace(*(*p))) {
+		(*p)++;
+	}
+	return val;
+}
