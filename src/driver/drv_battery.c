@@ -89,7 +89,10 @@ static void Batt_Measure() {
 		g_battlevel = 100;
 
 #if ENABLE_MQTT
-	{
+	if (MQTT_IsReady()) {
+		MQTT_PublishMain_StringInt("voltage", (int)g_battvoltage, 0);
+		MQTT_PublishMain_StringInt("battery", (int)g_battlevel, 0);
+	} else 	{
 		char sValue[8];   // channel value as a string
 		sprintf(sValue, "%i", (int)g_battvoltage);
 		MQTT_QueuePublish(CFG_GetMQTTClientId(), "voltage/get", sValue, 0); // queue the publishing
