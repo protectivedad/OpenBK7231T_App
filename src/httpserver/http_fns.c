@@ -903,6 +903,7 @@ int http_fn_index(http_request_t* request) {
 			}
 		}
 		if (1) {
+#if ENABLE_REPEATING_EVENTS
 			i = RepeatingEvents_GetActiveCount();
 			if (i) {
 				if (bFirst == false) {
@@ -911,6 +912,8 @@ int http_fn_index(http_request_t* request) {
 				hprintf255(request, "%i repeating events", i);
 				bFirst = false;
 			}
+#endif
+#if ENABLE_EVENT_HANDLERS
 			i = EventHandlers_GetActiveCount();
 			if (i) {
 				if (bFirst == false) {
@@ -919,6 +922,7 @@ int http_fn_index(http_request_t* request) {
 				hprintf255(request, "%i event handlers", i);
 				bFirst = false;
 			}
+#endif
 #if defined(ENABLE_OBK_SCRIPTING) && (defined(WINDOWS) || defined(PLATFORM_BEKEN))
 			i = CMD_GetCountActiveScriptThreads();
 			if (i) {

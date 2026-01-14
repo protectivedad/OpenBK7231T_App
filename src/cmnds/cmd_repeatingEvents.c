@@ -299,9 +299,6 @@ void RepeatingEvents_Init() {
 commandResult_t RepeatingEvents_Cmd_ClearRepeatingEvents(const void *context, const char *cmd, const char *args, int cmdFlags) {
 	return CMD_RES_UNKNOWN_COMMAND;
 }
-int RepeatingEvents_GetActiveCount() {
-	return -1;
-}
 void RepeatingEvents_Init() {
 }
 void SIM_GenerateRepeatingEventsDesc(char *o, int outLen) {

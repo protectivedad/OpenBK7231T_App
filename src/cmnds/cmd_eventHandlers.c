@@ -671,8 +671,5 @@ int EventHandlers_FireEvent3(byte eventCode, int argument, int argument2, int ar
 // For example, you can watch for Voltage from BL0942 to change below 230, and it will fire event only when it becomes below 230.
 void EventHandlers_ProcessVariableChange_Integer(byte eventCode, int oldValue, int newValue) {
 }
-int EventHandlers_GetActiveCount() {
-	return -1;
-}
 
 #endif // ENABLE_EVENT_HANDLERS
