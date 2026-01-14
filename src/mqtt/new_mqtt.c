@@ -221,9 +221,6 @@ int get_received(char **topic, int *topiclen, unsigned char **data, int *datalen
 MqttPublishItem_t* g_MqttPublishQueueHead = NULL;
 int g_MqttPublishItemsQueued = 0;   //Items in the queue waiting to be published. This is not the queue length.
 
-// from mqtt.c
-extern void mqtt_disconnect(mqtt_client_t* client);
-
 static int g_my_reconnect_mqtt_after_time = -1;
 ip_addr_t mqtt_ip LWIP_MQTT_EXAMPLE_IPADDR_INIT;
 mqtt_client_t* mqtt_client;
@@ -1424,7 +1421,6 @@ static int MQTT_do_connect(mqtt_client_t* client)
 				LOCK_TCPIP_CORE();
 			}
 		} while (notGivingUp);
-		UNLOCK_TCPIP_CORE();
 		ADDLOGF_TIMING("%i - %s - Finished mqtt_client_connect, using %i of %i delays", xTaskGetTickCount(), __func__, MQTT_ROUTE_DELAYS - notGivingUp + 1, MQTT_ROUTE_DELAYS);
 		mqtt_connect_result = res;
 		if (res != ERR_OK)
@@ -1439,6 +1435,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		else {
 			mqtt_status_message[0] = '\0';
 		}
+		UNLOCK_TCPIP_CORE();
 		return res;
 	}
 	else {
@@ -2272,6 +2269,12 @@ bool MQTT_RunEverySecondUpdate()
 	if (!mqtt_initialised)
 		return false;
 
+	// check OTA right away and stop processing
+	if (OTA_GetProgress() != -1) {
+		mqtt_initialised = 0; // don't come back here until restart
+		return false;
+	}
+
 	if (Main_HasWiFiConnected() == 0)
 	{
 		mqtt_reconnect = 0;
@@ -2291,19 +2294,6 @@ bool MQTT_RunEverySecondUpdate()
 	}
 
 	bool isReady = MQTT_IsReady();
-	// check OTA right away, close connection and stop processing
-	if (OTA_GetProgress() != -1) {
-		if (isReady) {
-			ADDLOGF_INFO("OTA started MQTT will be closed\n");
-			LOCK_TCPIP_CORE();
-			mqtt_disconnect(mqtt_client);
-			UNLOCK_TCPIP_CORE();
-		}
-		MQTT_Mutex_Free();
-		mqtt_initialised = 0; // don't come back here until restart
-		return false;
-	}
-
 	if (g_mqtt_bBaseTopicDirty) {
 		ADDLOGF_INFO("MQTT base topic is dirty, will reinit callbacks and reconnect\n");
 		MQTT_InitCallbacks();
@@ -2600,12 +2590,13 @@ OBK_Publish_Result PublishQueuedItems() {
 /// @return 
 bool MQTT_IsReady() {
 	int res = 0;
-	if (mqtt_client){
+	// OTA can unintialise without disconnect
+	if (mqtt_initialised && mqtt_client){
 		LOCK_TCPIP_CORE();
 		res = mqtt_client_is_connected(mqtt_client);
 		UNLOCK_TCPIP_CORE();
 	}
-	return mqtt_client && res;
+	return mqtt_initialised && mqtt_client && res;
 }
 
 #if MQTT_USE_TLS
