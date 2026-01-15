@@ -33,6 +33,8 @@
 #define ENABLE_HTTP_PING						1
 #define ENABLE_LED_BASIC						1
 
+#define DISABLE_TCP_LOG							1
+
 #if PLATFORM_XRADIO
 
 // #define ENABLE_SEND_POSTANDGET				1

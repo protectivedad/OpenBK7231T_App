@@ -110,30 +110,36 @@ void LOG_SetRawSocketCallback(int newFD)
 static int http_getlog(http_request_t* request);
 static int http_getlograw(http_request_t* request);
 
+#ifndef DISABLE_TCP_LOG
 static void log_server_thread(beken_thread_arg_t arg);
 static void log_client_thread(beken_thread_arg_t arg);
-static void log_serial_thread(beken_thread_arg_t arg);
-
-static void startSerialLog();
 static void startLogServer();
 
-#define LOGSIZE 4096
 #define LOGPORT 9000
 
 int logTcpPort = LOGPORT;
 
+static int tcpLogStarted = 0;
+#endif
+
+static void log_serial_thread(beken_thread_arg_t arg);
+
+static void startSerialLog();
+
+#define LOGSIZE 4096
 static struct tag_logMemory {
 	char log[LOGSIZE];
 	int head;
 	int tailserial;
+#ifndef DISABLE_TCP_LOG
 	int tailtcp;
+#endif // DISABLE_TCP_LOG
 	int tailhttp;
 	SemaphoreHandle_t mutex;
 } logMemory;
 
 
 static int initialised = 0;
-static int tcpLogStarted = 0;
 
 commandResult_t log_command(const void* context, const char* cmd, const char* args, int cmdFlags);
 
@@ -186,7 +192,10 @@ logPort 1
 static void initLog(void)
 {
 	bk_printf("Entering initLog()...\r\n");
-	logMemory.head = logMemory.tailserial = logMemory.tailtcp = logMemory.tailhttp = 0;
+	logMemory.head = logMemory.tailserial = logMemory.tailhttp = 0;
+#ifndef DISABLE_TCP_LOG
+	logMemory.tailtcp = 0;
+#endif // DISABLE_TCP_LOG
 	logMemory.mutex = xSemaphoreCreateMutex();
 	initialised = 1;
 	startSerialLog();
@@ -225,10 +234,13 @@ static void initLog(void)
 	bk_printf("initLog() done!\r\n");
 }
 
+#ifndef DISABLE_TCP_LOG
 static void inittcplog(){
 	startLogServer();
 	tcpLogStarted = 1;
 }
+#endif // DISABLE_TCP_LOG
+
 http_request_t *g_log_alsoPrintToHTTP = 0;
 bool b_guard_recursivePrint = false;
 
@@ -255,7 +267,9 @@ void LOG_SetCommandHTTPRedirectReply(http_request_t* request) {
 		// so clear pended first
 		log_timer_pended = 0;
 		RunSerialLog();
+#ifndef ENABLE_REDUCED_ACCESS
 		send_to_tcp();
+#endif // ENABLE_REDUCED_ACCESS
 	}
 
 	void trigger_log_send(){
@@ -304,9 +318,11 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	if (!initialised) {
 		initLog();
 	}
+#ifndef DISABLE_TCP_LOG
 	if (g_StartupDelayOver && !tcpLogStarted){
 		inittcplog();
 	}
+#endif // DISABLE_TCP_LOG
 
 
 	taken = xSemaphoreTake(logMemory.mutex, 100);
@@ -383,10 +399,12 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		{
 			logMemory.tailserial = (logMemory.tailserial + 1) % LOGSIZE;
 		}
+#ifndef DISABLE_TCP_LOG
 		if (logMemory.tailtcp == logMemory.head)
 		{
 			logMemory.tailtcp = (logMemory.tailtcp + 1) % LOGSIZE;
 		}
+#endif // DISABLE_TCP_LOG
 		if (logMemory.tailhttp == logMemory.head)
 		{
 			logMemory.tailhttp = (logMemory.tailhttp + 1) % LOGSIZE;
@@ -500,15 +518,16 @@ static int getSerial(char* buff, int buffsize) {
 #endif
 
 
-static int getTcp(char* buff, int buffsize) {
-	int len = getData(buff, buffsize, &logMemory.tailtcp);
-	//bk_printf("got tcp: %d:%s\r\n", len,buff);
-	return len;
-}
-
 static int getHttp(char* buff, int buffsize) {
 	int len = getData(buff, buffsize, &logMemory.tailhttp);
 	//printf("got tcp: %d:%s\r\n", len,buff);
+	return len;
+}
+
+#ifndef DISABLE_TCP_LOG
+static int getTcp(char* buff, int buffsize) {
+	int len = getData(buff, buffsize, &logMemory.tailtcp);
+	//bk_printf("got tcp: %d:%s\r\n", len,buff);
 	return len;
 }
 
@@ -529,6 +548,7 @@ void startLogServer() {
 	}
 #endif
 }
+#endif // DISABLE_TCP_LOG
 
 void startSerialLog() {
 #if WINDOWS
@@ -552,6 +572,7 @@ void startSerialLog() {
 }
 
 
+#ifndef DISABLE_TCP_LOG
 /* TCP server listener thread */
 void log_server_thread(beken_thread_arg_t arg)
 {
@@ -660,10 +681,12 @@ static void send_to_tcp(){
 	} while(count);
 }
 #endif
+#endif // DISABLE_TCP_LOG
 
 // on beken, we trigger log send from timer thread
 #ifndef PLATFORM_BEKEN
 
+#ifndef DISABLE_TCP_LOG
 // non-beken
 static void log_client_thread(beken_thread_arg_t arg)
 {
@@ -685,6 +708,7 @@ static void log_client_thread(beken_thread_arg_t arg)
 	close(fd);
 	rtos_delete_thread(NULL);
 }
+#endif // DISABLE_TCP_LOG
 
 
 
