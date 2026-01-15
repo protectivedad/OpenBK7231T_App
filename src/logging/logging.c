@@ -117,6 +117,8 @@ int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1, -1};
 static void log_server_thread(beken_thread_arg_t arg);
 static void log_client_thread(beken_thread_arg_t arg);
 static void startLogServer();
+
+static int tcpLogStarted = 0;
 #endif
 
 #define LOGSIZE 4096
@@ -133,9 +135,7 @@ static struct tag_logMemory {
 	SemaphoreHandle_t mutex;
 } logMemory;
 
-
 static int initialised = 0;
-static int tcpLogStarted = 0;
 
 commandResult_t log_command(const void* context, const char* cmd, const char* args, int cmdFlags);
 
@@ -247,7 +247,9 @@ void LOG_SetCommandHTTPRedirectReply(http_request_t* request) {
 // run serial via timer thread.
 	OSStatus OBK_rtos_callback_in_timer_thread( PendedFunction_t xFunctionToPend, void *pvParameter1, uint32_t ulParameter2, uint32_t delay_ms);
 	void RunSerialLog();
+#ifndef ENABLE_REDUCED_ACCESS
 	static void send_to_tcp();
+#endif
 
 	// called from timer thread
 	volatile char log_timer_pended = 0;
@@ -256,7 +258,9 @@ void LOG_SetCommandHTTPRedirectReply(http_request_t* request) {
 		// so clear pended first
 		log_timer_pended = 0;
 		RunSerialLog();
+#ifndef ENABLE_REDUCED_ACCESS
 		send_to_tcp();
+#endif
 	}
 
 	void trigger_log_send(){
@@ -395,10 +399,12 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		{
 			logMemory.tailserial = (logMemory.tailserial + 1) % LOGSIZE;
 		}
+#ifndef ENABLE_REDUCED_ACCESS
 		if (logMemory.tailtcp == logMemory.head)
 		{
 			logMemory.tailtcp = (logMemory.tailtcp + 1) % LOGSIZE;
 		}
+#endif
 		if (logMemory.tailhttp == logMemory.head)
 		{
 			logMemory.tailhttp = (logMemory.tailhttp + 1) % LOGSIZE;
@@ -672,9 +678,6 @@ static void send_to_tcp(){
 	} while(count);
 }
 #endif
-#else // ENABLE_REDUCED_ACCESS
-static void send_to_tcp(){
-}
 #endif // ENABLE_REDUCED_ACCESS
 
 // on beken, we trigger log send from timer thread
