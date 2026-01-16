@@ -718,15 +718,6 @@ float g_wifi_temperature = 0;
 static byte g_secondsSpentInLowMemoryWarning = 0;
 void Main_OnEverySecond()
 {
-#if ENABLE_DEEPSLEEP
-	if (g_bWantPinDeepSleep) {
-//		rtos_delay_milliseconds(100);
-		g_bWantPinDeepSleep = 0;
-		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
-		return;
-	}
-#endif
-
 #if PLATFORM_W600 || PLATFORM_W800
 #define TimeOut_t xTimeOutType 
 #endif
@@ -1099,6 +1090,16 @@ void Main_OnEverySecond()
 	// else task memory doesn't get freed
 	rtos_delay_milliseconds(1);
 
+	// this is done here to ensure all processing has completed
+	// when the deep sleep flag is set this ensures pins are not
+	// in the middle of processing when deep sleep occurs
+#if ENABLE_DEEPSLEEP
+	if (g_bWantPinDeepSleep) {
+		g_bWantPinDeepSleep = 0;
+		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
+		return;
+	}
+#endif
 }
 
 
