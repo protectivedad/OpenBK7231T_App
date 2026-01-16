@@ -1089,17 +1089,6 @@ void Main_OnEverySecond()
 	// force it to sleep...  we MUST have some idle task processing
 	// else task memory doesn't get freed
 	rtos_delay_milliseconds(1);
-
-	// this is done here to ensure all processing has completed
-	// when the deep sleep flag is set this ensures pins are not
-	// in the middle of processing when deep sleep occurs
-#if ENABLE_DEEPSLEEP
-	if (g_bWantPinDeepSleep) {
-		g_bWantPinDeepSleep = 0;
-		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
-		return;
-	}
-#endif
 }
 
 
@@ -1126,6 +1115,16 @@ unsigned int g_deltaTimeMS;
 // this is what we do in a qucik tick
 void QuickTick(void* param)
 {
+	// this is done here to ensure all processing has completed
+	// when the deep sleep flag is set this ensures pins are not
+	// in the middle of processing when deep sleep occurs
+#if ENABLE_DEEPSLEEP
+	if (g_bWantPinDeepSleep) {
+		g_bWantPinDeepSleep = 0;
+		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
+		return;
+	}
+#endif
 #if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
 	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick
 #else
