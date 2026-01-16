@@ -283,6 +283,7 @@ void LOG_SetCommandHTTPRedirectReply(http_request_t* request) {
 	}
 #endif
 
+static bool done_already = false;
 // adds a log to the log memory
 // if head collides with either tail, move the tails on.
 void addLogAdv(int level, int feature, const char* fmt, ...)
@@ -314,8 +315,14 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		inittcplog();
 	}
 #endif
+	if (!done_already)
+		bk_printf("addLogAdv: run once\r\n");
 
-	taken = xSemaphoreTake(logMemory.mutex, 100);
+	taken = xSemaphoreTake(logMemory.mutex, 0);
+	if (!taken) {
+		bk_printf("addLogAdv: mutex not available\r\n");
+		return 0;
+	}
 	tmp = g_loggingBuffer;
 	memset(tmp, 0, LOGGING_BUFFER_SIZE);
 
@@ -432,18 +439,19 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		}
 		rtos_delay_milliseconds(timems);
 	}
+	if (!done_already)
+		done_already = true;
 }
 
 
 static int getData(char* buff, int buffsize, int* tail) {
-	BaseType_t taken;
 	int count;
 	char* p;
 	if (!initialised)
 		return 0;
-	taken = xSemaphoreTake(logMemory.mutex, 100);
-	if (taken == 0)
+	if (xSemaphoreTake(logMemory.mutex, 0) == pdFALSE)
 	{
+		bk_printf("getData: mutex timed out\r\n");
 		return 0;
 	}
 
@@ -461,9 +469,7 @@ static int getData(char* buff, int buffsize, int* tail) {
 	}
 	*p = 0;
 
-	if (taken == pdTRUE) {
-		xSemaphoreGive(logMemory.mutex);
-	}
+	xSemaphoreGive(logMemory.mutex);
 	return count;
 }
 
