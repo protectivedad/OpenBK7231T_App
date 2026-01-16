@@ -283,7 +283,6 @@ void LOG_SetCommandHTTPRedirectReply(http_request_t* request) {
 	}
 #endif
 
-static bool done_already = false;
 // adds a log to the log memory
 // if head collides with either tail, move the tails on.
 void addLogAdv(int level, int feature, const char* fmt, ...)
@@ -292,7 +291,6 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 	char* tmp;
 	int len = 0;
 	va_list argList;
-	BaseType_t taken;
 	int i;
 
 	if (fmt == 0)
@@ -315,12 +313,8 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		inittcplog();
 	}
 #endif
-	if (!done_already)
-		bk_printf("addLogAdv: run once\r\n");
-
-	taken = xSemaphoreTake(logMemory.mutex, 0);
-	if (!taken) {
-		bk_printf("addLogAdv: mutex not available\r\n");
+	if (xSemaphoreTake(logMemory.mutex, 100) == pdFALSE) {
+		bk_printf("%s: mutex failed\r\n",__func__);
 		return 0;
 	}
 	tmp = g_loggingBuffer;
@@ -383,18 +377,8 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 
 	if (direct_serial_log == LOGTYPE_DIRECT) {
 		bk_printf("%s", tmp);
-		if (taken == pdTRUE) {
-			xSemaphoreGive(logMemory.mutex);
-		}
-		/* no need to delay becasue bk_printf currently delays
-		if (log_delay){
-			if (log_delay < 0){
-				int cps = (115200/8);
-				timems = (1000*len)/cps;
-			}
-			rtos_delay_milliseconds(log_delay);
-		}
-		*/
+		// no need to delay becasue bk_printf currently delays
+		xSemaphoreGive(logMemory.mutex);
 		return;
 	}
 
@@ -418,9 +402,7 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		}
 	}
 
-	if (taken == pdTRUE) {
-		xSemaphoreGive(logMemory.mutex);
-	}
+	xSemaphoreGive(logMemory.mutex);
 #ifdef PLATFORM_BEKEN
 	trigger_log_send();
 #endif	
@@ -439,8 +421,6 @@ void addLogAdv(int level, int feature, const char* fmt, ...)
 		}
 		rtos_delay_milliseconds(timems);
 	}
-	if (!done_already)
-		done_already = true;
 }
 
 
@@ -449,9 +429,9 @@ static int getData(char* buff, int buffsize, int* tail) {
 	char* p;
 	if (!initialised)
 		return 0;
-	if (xSemaphoreTake(logMemory.mutex, 0) == pdFALSE)
-	{
-		bk_printf("getData: mutex timed out\r\n");
+
+	if (xSemaphoreTake(logMemory.mutex, 100) == pdFALSE) {
+		bk_printf("%s: mutex failed\r\n",__func__);
 		return 0;
 	}
 
@@ -483,9 +463,12 @@ static int getSerial2() {
 	if (!initialised) return 0;
 	int* tail = &logMemory.tailserial;
 	char c;
-	BaseType_t taken = xSemaphoreTake(logMemory.mutex, 100);
 	char overflow = 0;
 
+	if (xSemaphoreTake(logMemory.mutex, 100) == pdFALSE) {
+		bk_printf("%s: mutex failed\r\n",__func__);
+		return 0;
+	}
 	// if we hit overflow
 	if (logMemory.tailserial == (logMemory.head + 1) % LOGSIZE) {
 		overflow = 1;
@@ -507,9 +490,7 @@ static int getSerial2() {
 
 	int remains = (*tail != logMemory.head);
 
-	if (taken == pdTRUE) {
-		xSemaphoreGive(logMemory.mutex);
-	}
+	xSemaphoreGive(logMemory.mutex);
 	return remains;
 }
 

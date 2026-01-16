@@ -720,6 +720,8 @@ void Main_OnEverySecond()
 {
 #if ENABLE_DEEPSLEEP
 	if (g_bWantPinDeepSleep) {
+		ADDLOGF_WARN("%s - Entering deep sleep", __func__);
+		rtos_delay_milliseconds(100);
 		g_bWantPinDeepSleep = 0;
 		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
 		return;
