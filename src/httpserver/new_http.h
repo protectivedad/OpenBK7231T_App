@@ -64,11 +64,10 @@ typedef struct http_request_tag {
 
 int HTTP_ProcessPacket(http_request_t* request);
 void http_setup(http_request_t* request, const char* type);
-void http_setup_gz(http_request_t* request, const char* type);
 void http_html_start(http_request_t* request, const char* pagename);
 void http_html_end(http_request_t* request);
 int poststr(http_request_t* request, const char* str);
-void poststr_escaped(http_request_t* request, char* str);
+// void poststr_escaped(http_request_t* request, char* str);
 void poststr_escapedForJSON(http_request_t* request, char* str);
 int postany(http_request_t* request, const char* str, int len);
 void misc_formatUpTimeString(int totalSeconds, char* o);

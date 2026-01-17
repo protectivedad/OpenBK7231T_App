@@ -146,7 +146,7 @@ int my_strnicmp(const char* a, const char* b, int len) {
 /// @brief Write escaped data to the response.
 /// @param request
 /// @param str
-void poststr_escaped(http_request_t* request, char* str) {
+static void poststr_escaped(http_request_t* request, char* str) {
 	if (str == NULL) {
 		postany(request, NULL, 0);
 		return;
@@ -247,7 +247,7 @@ void poststr_escapedForJSON(http_request_t* request, char* str) {
 		postany(request, str, strlen(str));
 	}
 }
-bool http_startsWith(const char* base, const char* substr) {
+static bool http_startsWith(const char* base, const char* substr) {
 	while (*substr != 0) {
 		if (*base != *substr)
 			return false;
@@ -259,7 +259,7 @@ bool http_startsWith(const char* base, const char* substr) {
 	return true;
 }
 
-bool http_checkUrlBase(const char* base, const char* fileName) {
+static bool http_checkUrlBase(const char* base, const char* fileName) {
 	while (*base != 0 && *base != '?' && *base != ' ') {
 		if (*base != *fileName)
 			return false;
@@ -295,7 +295,7 @@ void http_setup(http_request_t* request, const char* type) {
 	poststr(request, "\r\n"); // end headers with double CRLF
 	poststr(request, "\r\n");
 }
-void http_setup_gz(http_request_t* request, const char* type) {
+static void http_setup_gz(http_request_t* request, const char* type) {
 	hprintf255(request, httpHeader, request->responseCode, type);
 	poststr(request, "\r\n"); // next header
 	poststr(request, httpCorsHeaders);
@@ -360,7 +360,7 @@ void http_html_end(http_request_t* request) {
 	poststr(request, pageScriptPart3);
 }
 
-const char* http_checkArg(const char* p, const char* n) {
+static const char* http_checkArg(const char* p, const char* n) {
 	while (1) {
 		if (*n == 0 && (*p == 0 || *p == '='))
 			return p;
@@ -372,7 +372,7 @@ const char* http_checkArg(const char* p, const char* n) {
 	return p;
 }
 
-int http_copyCarg(const char* atin, char* to, int maxSize) {
+static int http_copyCarg(const char* atin, char* to, int maxSize) {
 	int a, b;
 	int realSize;
 	const unsigned char* at = (unsigned char*)atin;
@@ -529,14 +529,14 @@ const char* htmlPinRoleNames[] = {
 	"BridgeREV",
 	"Btn_SmartLED",
 	"Btn_SmartLED_n",
-	"DoorSnsrWSleep",
-	"DoorSnsrWSleep_nPup",
-	"BAT_ADC",
-	"BAT_Relay",
+	"DoorSensor",
+	"DoorSensor,nPup",
+	"Battery,ADC",
+	"Battery,Relay",
 	"TM1637_DIO",
 	"TM1637_CLK",
 	"BL0937SEL_n",
-	"DoorSnsrWSleep_pd",
+	"DoorSensor,pd",
 	"SGP_CLK",
 	"SGP_DAT",
 	"ADC_Button",
@@ -546,7 +546,7 @@ const char* htmlPinRoleNames[] = {
 	"TM1638_CLK",
 	"TM1638_DAT",
 	"TM1638_STB",
-	"BAT_Relay_n",
+	"Battery,Relay_n",
 	"KP18058_CLK",
 	"KP18058_DAT",
 	"DS1820_IO",
@@ -560,7 +560,7 @@ const char* htmlPinRoleNames[] = {
 	"HLW_8112_SCSN",
 	"RCRecv",
 	"RCRecv_nPup",
-	"TuyaMCU_dummy",
+	"TuyaMCU",
 	"error",
 	"error",
 	"error",
@@ -585,29 +585,6 @@ int PIN_ParsePinRoleName(const char* name) {
 	return IOR_Total_Options;
 }
 #endif // ENABLE_CMD_CHANNEL
-
-void setupAllWB2SPinsAsButtons() {
-	PIN_SetPinRoleForPinIndex(6, IOR_Button);
-	PIN_SetPinChannelForPinIndex(6, 1);
-
-	PIN_SetPinRoleForPinIndex(7, IOR_Button);
-	PIN_SetPinChannelForPinIndex(7, 1);
-
-	PIN_SetPinRoleForPinIndex(8, IOR_Button);
-	PIN_SetPinChannelForPinIndex(8, 1);
-
-	PIN_SetPinRoleForPinIndex(23, IOR_Button);
-	PIN_SetPinChannelForPinIndex(23, 1);
-
-	PIN_SetPinRoleForPinIndex(24, IOR_Button);
-	PIN_SetPinChannelForPinIndex(24, 1);
-
-	PIN_SetPinRoleForPinIndex(26, IOR_Button);
-	PIN_SetPinChannelForPinIndex(26, 1);
-
-	PIN_SetPinRoleForPinIndex(27, IOR_Button);
-	PIN_SetPinChannelForPinIndex(27, 1);
-}
 
 // add some more output safely, sending if necessary.
 // call with str == NULL to force send. - can be binary.
