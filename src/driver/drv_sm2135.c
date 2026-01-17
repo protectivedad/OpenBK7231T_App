@@ -108,10 +108,6 @@ commandResult_t CMD_LEDDriver_WriteRGBCW(const void *context, const char *cmd, c
 			break;
 	}
 
-#if ENABLE_LED_BASIC
-	LED_I2CDriver_WriteRGBCW(col);
-#endif
-
 	return CMD_RES_OK;
 }
 // SM2135_Map is used to map the RGBCW indices to SM2135 indices

@@ -1126,21 +1126,6 @@ void TuyaMCU_ForcePublishChannelValues() {
 void TuyaMCU_ApplyMapping(tuyaMCUMapping_t* mapping, int dpID, int value) {
 	int mappedValue = value;
 
-	// hardcoded values
-#if ENABLE_LED_BASIC
-	if (dpID == g_tuyaMCUled_id_power) {
-		LED_SetEnableAll(value);
-	}
-	if (dpID == g_tuyaMCUled_id_cw_temperature) {
-		float temperatureRange01 = 1.0f - ((value - 10) / 980.0f);
-		LED_SetTemperature0to1Range(temperatureRange01);
-	}
-	if (dpID == g_tuyaMCUled_id_cw_brightness) {
-		// TuyaMCU sends in 0-1000 range, we need 0-100
-		LED_SetDimmerForDisplayOnly(value*0.1f);
-	}
-#endif
-
 	if (mapping == 0) {
 		ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ApplyMapping: id %i (val %i) not mapped\n", dpID, value);
 		return;

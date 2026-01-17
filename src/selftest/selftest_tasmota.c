@@ -651,9 +651,6 @@ void Test_Tasmota_Backlog() {
 void Test_Tasmota() {
 	Test_Tasmota_MQTT_Switch();
 	Test_Tasmota_MQTT_Switch_Double();
-#if ENABLE_LED_BASIC
-	Test_Tasmota_MQTT_RGBCW();
-#endif
 	Test_Tasmota_Backlog();
 }
 #endif

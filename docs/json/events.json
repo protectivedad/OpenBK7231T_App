@@ -80,16 +80,6 @@
     "ifdef": "ENABLE_NTP"
   },
   {
-    "name": "LEDState",
-    "CMD": "CMD_EVENT_LED_STATE",
-    "ifdef": "ENABLE_LED_BASIC"
-  },
-  {
-    "name": "LEDMode",
-    "CMD": "CMD_EVENT_LED_MODE",
-    "ifdef": "ENABLE_LED_BASIC"
-  },
-  {
     "name": "voltage",
     "CMD": "CMD_EVENT_CHANGE_VOLTAGE",
     "ifdef": "ENABLE_BL_SHARED"

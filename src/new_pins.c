@@ -418,9 +418,6 @@ void PIN_SetupPins() {
 	// TODO: better place to call?
 	DHT_OnPinsConfigChanged();
 #endif
-#if ENABLE_LED_BASIC
-	LED_SetStripStateOutputs();
-#endif
 	ADDLOG_INFO(LOG_FEATURE_GENERAL, "PIN_SetupPins pins have been set up.\r\n");
 }
 
@@ -534,35 +531,11 @@ void Button_OnInitialPressDown(int index)
 			CHANNEL_DoSpecialToggleAll();
 			return;
 		}
-#if ENABLE_LED_BASIC
-		if (g_cfg.pins.roles[index] == IOR_Button_NextColor || g_cfg.pins.roles[index] == IOR_Button_NextColor_n)
-		{
-			LED_NextColor();
-			return;
-		}
-#endif
-		if (g_cfg.pins.roles[index] == IOR_Button_NextDimmer || g_cfg.pins.roles[index] == IOR_Button_NextDimmer_n)
-		{
-
-			return;
-		}
-		if (g_cfg.pins.roles[index] == IOR_Button_NextTemperature || g_cfg.pins.roles[index] == IOR_Button_NextTemperature_n)
-		{
-
-			return;
-		}
 		if (g_cfg.pins.roles[index] == IOR_Button_ScriptOnly || g_cfg.pins.roles[index] == IOR_Button_ScriptOnly_n)
 		{
 
 			return;
 		}
-#if ENABLE_LED_BASIC
-		// is it a device with RGB/CW/single color/etc LED driver?
-		if (LED_IsLEDRunning()) {
-			LED_ToggleEnabled();
-		}
-		else 
-#endif
 		{
 			// Relays
 			CHANNEL_Toggle(g_cfg.pins.channels[index]);
@@ -586,32 +559,10 @@ void Button_OnShortClick(int index)
 			CHANNEL_DoSpecialToggleAll();
 			return;
 		}
-#if ENABLE_LED_BASIC
-		if (g_cfg.pins.roles[index] == IOR_Button_NextColor || g_cfg.pins.roles[index] == IOR_Button_NextColor_n)
-		{
-			LED_NextColor();
-			return;
-		}
-#endif
-		if (g_cfg.pins.roles[index] == IOR_Button_NextDimmer || g_cfg.pins.roles[index] == IOR_Button_NextDimmer_n)
-		{
-			return;
-		}
-		if (g_cfg.pins.roles[index] == IOR_Button_NextTemperature || g_cfg.pins.roles[index] == IOR_Button_NextTemperature_n)
-		{
-			return;
-		}
 		if (g_cfg.pins.roles[index] == IOR_Button_ScriptOnly || g_cfg.pins.roles[index] == IOR_Button_ScriptOnly_n)
 		{
 			return;
 		}
-#if ENABLE_LED_BASIC
-		// is it a device with RGB/CW/single color/etc LED driver?
-		if (LED_IsLEDRunning()) {
-			LED_ToggleEnabled();
-		}
-		else 
-#endif
 		{
 			// Relays
 			CHANNEL_Toggle(g_cfg.pins.channels[index]);
@@ -638,13 +589,6 @@ void Button_OnDoubleClick(int index)
 		// double click toggles SECOND CHANNEL linked to this button
 		CHANNEL_Toggle(g_cfg.pins.channels2[index]);
 	}
-#if ENABLE_LED_BASIC
-	if (g_cfg.pins.roles[index] == IOR_SmartButtonForLEDs || g_cfg.pins.roles[index] == IOR_SmartButtonForLEDs_n) {
-		LED_NextColor();
-		// make it easier for users, enable LED by default
-		LED_SetEnableAll(true);
-	}
-#endif
 	if (g_doubleClickCallback != 0) {
 		g_doubleClickCallback(index);
 	}
@@ -658,13 +602,6 @@ void Button_OnTripleClick(int index)
 	}
 	// fire event - button on pin <index> was 3clicked
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ON3CLICK, index);
-#if ENABLE_LED_BASIC
-	if (g_cfg.pins.roles[index] == IOR_SmartButtonForLEDs || g_cfg.pins.roles[index] == IOR_SmartButtonForLEDs_n) {
-		LED_NextTemperature();
-		// make it easier for users, enable LED by default
-		LED_SetEnableAll(true);
-	}
-#endif
 }
 void Button_OnQuadrupleClick(int index)
 {
@@ -694,20 +631,6 @@ void Button_OnLongPressHold(int index) {
 	}
 	// fire event - button on pin <index> was held
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ONHOLD, index);
-
-#if ENABLE_LED_BASIC
-	if (g_cfg.pins.roles[index] == IOR_Button_NextDimmer || g_cfg.pins.roles[index] == IOR_Button_NextDimmer_n) {
-		LED_NextDimmerHold();
-	}
-	if (g_cfg.pins.roles[index] == IOR_Button_NextTemperature || g_cfg.pins.roles[index] == IOR_Button_NextTemperature_n) {
-		LED_NextTemperatureHold();
-	}
-	if (g_cfg.pins.roles[index] == IOR_SmartButtonForLEDs || g_cfg.pins.roles[index] == IOR_SmartButtonForLEDs_n) {
-		LED_NextDimmerHold();
-		// make it easier for users, enable LED by default
-		LED_SetEnableAll(true);
-	}
-#endif
 }
 void Button_OnLongPressHoldStart(int index) {
 	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHoldStart\r\n", index);
@@ -728,8 +651,7 @@ bool BTN_ShouldInvert(int index) {
 	role = g_cfg.pins.roles[index];
 	if (role == IOR_Button_n || role == IOR_Button_ToggleAll_n ||
 		role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup_n
-		|| role == IOR_Button_NextColor_n || role == IOR_Button_NextDimmer_n
-		|| role == IOR_Button_NextTemperature_n || role == IOR_Button_ScriptOnly_n
+		|| role == IOR_Button_ScriptOnly_n
 		|| role == IOR_SmartButtonForLEDs_n) {
 		return true;
 	}
@@ -898,12 +820,6 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		case IOR_Button_n:
 		case IOR_Button_ToggleAll:
 		case IOR_Button_ToggleAll_n:
-		case IOR_Button_NextColor:
-		case IOR_Button_NextColor_n:
-		case IOR_Button_NextDimmer:
-		case IOR_Button_NextDimmer_n:
-		case IOR_Button_NextTemperature:
-		case IOR_Button_NextTemperature_n:
 		case IOR_Button_ScriptOnly:
 		case IOR_Button_ScriptOnly_n:
 		case IOR_SmartButtonForLEDs:
@@ -971,17 +887,11 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		{
 		case IOR_Button:
 		case IOR_Button_ToggleAll:
-		case IOR_Button_NextColor:
-		case IOR_Button_NextDimmer:
-		case IOR_Button_NextTemperature:
 		case IOR_Button_ScriptOnly:
 		case IOR_SmartButtonForLEDs:
 			falling = 1;
 		case IOR_Button_n:
 		case IOR_Button_ToggleAll_n:
-		case IOR_Button_NextColor_n:
-		case IOR_Button_NextDimmer_n:
-		case IOR_Button_NextTemperature_n:
 		case IOR_Button_ScriptOnly_n:
 		case IOR_SmartButtonForLEDs_n:
 		{
@@ -1093,20 +1003,6 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			}
 		}
 		break;
-#if ENABLE_LED_BASIC
-		case IOR_StripState:
-		case IOR_StripState_n:
-		{
-			HAL_PIN_Setup_Output(index);
-			if (role == IOR_StripState) {
-				HAL_PIN_SetOutputValue(index, LED_GetEnableAll());
-			}
-			else {
-				HAL_PIN_SetOutputValue(index, !LED_GetEnableAll());
-			}
-		}
-		break;
-#endif
 		case IOR_BridgeForward:
 		case IOR_BridgeReverse:
 		{
@@ -1490,21 +1386,6 @@ float CHANNEL_GetFloat(int ch) {
 	return g_channelValuesFloats[ch];
 }
 int CHANNEL_Get(int ch) {
-#if ENABLE_LED_BASIC
-	// special channels
-	if (ch == SPECIAL_CHANNEL_LEDPOWER) {
-		return LED_GetEnableAll();
-	}
-	if (ch == SPECIAL_CHANNEL_BRIGHTNESS) {
-		return LED_GetDimmer();
-	}
-	if (ch == SPECIAL_CHANNEL_TEMPERATURE) {
-		return LED_GetTemperature();
-	}
-#endif
-	if (ch >= SPECIAL_CHANNEL_BASECOLOR_FIRST && ch <= SPECIAL_CHANNEL_BASECOLOR_LAST) {
-		return 0; // TODO
-	}
 	if (ch >= SPECIAL_CHANNEL_FLASHVARS_FIRST && ch <= SPECIAL_CHANNEL_FLASHVARS_LAST) {
 		return HAL_FlashVars_GetChannelValue(ch - SPECIAL_CHANNEL_FLASHVARS_FIRST);
 	}
@@ -1558,25 +1439,6 @@ void CHANNEL_Set_Ex(int ch, int iVal, int iFlags, int ausemovingaverage) {
 	bForce = iFlags & CHANNEL_SET_FLAG_FORCE;
 	bSilent = iFlags & CHANNEL_SET_FLAG_SILENT;
 
-#if ENABLE_LED_BASIC
-	// special channels
-	if (ch == SPECIAL_CHANNEL_LEDPOWER) {
-		LED_SetEnableAll(iVal);
-		return;
-	}
-	if (ch == SPECIAL_CHANNEL_BRIGHTNESS) {
-		LED_SetDimmer(iVal);
-		return;
-	}
-	if (ch == SPECIAL_CHANNEL_TEMPERATURE) {
-		LED_SetTemperature(iVal, 1);
-		return;
-	}
-	if (ch >= SPECIAL_CHANNEL_BASECOLOR_FIRST && ch <= SPECIAL_CHANNEL_BASECOLOR_LAST) {
-		LED_SetBaseColorByIndex(ch - SPECIAL_CHANNEL_BASECOLOR_FIRST, iVal, 1);
-		return;
-	}
-#endif
 	if (ch >= SPECIAL_CHANNEL_FLASHVARS_FIRST && ch <= SPECIAL_CHANNEL_FLASHVARS_LAST) {
 		HAL_FlashVars_SaveChannel(ch - SPECIAL_CHANNEL_FLASHVARS_FIRST, iVal);
 		return;
@@ -1714,13 +1576,6 @@ int CHANNEL_FindMaxValueForChannel(int ch) {
 void CHANNEL_Toggle(int ch) {
 	int prev;
 
-#if ENABLE_LED_BASIC
-	// special channels
-	if (ch == SPECIAL_CHANNEL_LEDPOWER) {
-		LED_SetEnableAll(!LED_GetEnableAll());
-		return;
-	}
-#endif
 	if (ch < 0 || ch >= CHANNEL_MAX) {
 		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Toggle: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return;
@@ -1766,11 +1621,6 @@ int CHANNEL_HasChannelPinWithRole(int ch, int iorType) {
 	return 0;
 }
 bool CHANNEL_Check(int ch) {
-#if ENABLE_LED_BASIC
-	if (ch == SPECIAL_CHANNEL_LEDPOWER) {
-		return LED_GetEnableAll();
-	}
-#endif
 	if (ch < 0 || ch >= CHANNEL_MAX) {
 		ADDLOG_ERROR(LOG_FEATURE_GENERAL, "CHANNEL_Check: Channel index %i is out of range <0,%i)\n\r", ch, CHANNEL_MAX);
 		return 0;
@@ -2164,9 +2014,6 @@ void PIN_ticks(void* param)
 #endif
 			if (g_cfg.pins.roles[i] == IOR_Button || g_cfg.pins.roles[i] == IOR_Button_n
 				|| g_cfg.pins.roles[i] == IOR_Button_ToggleAll || g_cfg.pins.roles[i] == IOR_Button_ToggleAll_n
-				|| g_cfg.pins.roles[i] == IOR_Button_NextColor || g_cfg.pins.roles[i] == IOR_Button_NextColor_n
-				|| g_cfg.pins.roles[i] == IOR_Button_NextDimmer || g_cfg.pins.roles[i] == IOR_Button_NextDimmer_n
-				|| g_cfg.pins.roles[i] == IOR_Button_NextTemperature || g_cfg.pins.roles[i] == IOR_Button_NextTemperature_n
 				|| g_cfg.pins.roles[i] == IOR_Button_ScriptOnly || g_cfg.pins.roles[i] == IOR_Button_ScriptOnly_n
 				|| g_cfg.pins.roles[i] == IOR_SmartButtonForLEDs || g_cfg.pins.roles[i] == IOR_SmartButtonForLEDs_n) {
 				//ADDLOG_INFO(LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);

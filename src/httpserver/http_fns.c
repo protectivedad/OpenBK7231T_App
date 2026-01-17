@@ -294,12 +294,7 @@ int http_fn_index(http_request_t* request) {
 #endif
 		if (http_getArg(request->url, "tgl", tmpA, sizeof(tmpA))) {
 			j = atoi(tmpA);
-			if (j == SPECIAL_CHANNEL_LEDPOWER) {
-				hprintf255(request, "<h3>Toggled LED power!</h3>", j);
-			}
-			else {
-				hprintf255(request, "<h3>Toggled %s!</h3>", CHANNEL_GetLabel(j));
-			}
+			hprintf255(request, "<h3>Toggled %s!</h3>", CHANNEL_GetLabel(j));
 			CHANNEL_Toggle(j);
 		}
 		if (http_getArg(request->url, "on", tmpA, sizeof(tmpA))) {
@@ -307,17 +302,6 @@ int http_fn_index(http_request_t* request) {
 			hprintf255(request, "<h3>Enabled %s!</h3>", CHANNEL_GetLabel(j));
 			CHANNEL_Set(j, 255, 1);
 		}
-#if ENABLE_LED_BASIC
-		if (http_getArg(request->url, "rgb", tmpA, sizeof(tmpA))) {
-			hprintf255(request, "<h3>Set RGB to %s!</h3>", tmpA);
-			LED_SetBaseColor(0, "led_basecolor", tmpA, 0);
-			// auto enable - but only for changes made from WWW panel
-			// This happens when users changes COLOR
-			if (CFG_HasFlag(OBK_FLAG_LED_AUTOENABLE_ON_WWW_ACTION)) {
-				LED_SetEnableAll(true);
-			}
-		}
-#endif
 		if (http_getArg(request->url, "off", tmpA, sizeof(tmpA))) {
 			j = atoi(tmpA);
 			hprintf255(request, "<h3>Disabled %s!</h3>", CHANNEL_GetLabel(j));
@@ -327,45 +311,15 @@ int http_fn_index(http_request_t* request) {
 			int newPWMValue = atoi(tmpA);
 			http_getArg(request->url, "pwmIndex", tmpA, sizeof(tmpA));
 			j = atoi(tmpA);
-			if (j == SPECIAL_CHANNEL_TEMPERATURE) {
-				hprintf255(request, "<h3>Changed Temperature to %i!</h3>", newPWMValue);
-			}
-			else {
-				hprintf255(request, "<h3>Changed pwm %i to %i!</h3>", j, newPWMValue);
-			}
+			hprintf255(request, "<h3>Changed pwm %i to %i!</h3>", j, newPWMValue);
 			CHANNEL_Set(j, newPWMValue, 1);
-
-#if ENABLE_LED_BASIC
-			if (j == SPECIAL_CHANNEL_TEMPERATURE) {
-				// auto enable - but only for changes made from WWW panel
-				// This happens when users changes TEMPERATURE
-				if (CFG_HasFlag(OBK_FLAG_LED_AUTOENABLE_ON_WWW_ACTION)) {
-					LED_SetEnableAll(true);
-				}
-			}
-#endif
 		}
 		if (http_getArg(request->url, "dim", tmpA, sizeof(tmpA))) {
 			int newDimmerValue = atoi(tmpA);
 			http_getArg(request->url, "dimIndex", tmpA, sizeof(tmpA));
 			j = atoi(tmpA);
-			if (j == SPECIAL_CHANNEL_BRIGHTNESS) {
-				hprintf255(request, "<h3>Changed LED brightness to %i!</h3>", newDimmerValue);
-			}
-			else {
-				hprintf255(request, "<h3>Changed dimmer %i to %i!</h3>", j, newDimmerValue);
-			}
+			hprintf255(request, "<h3>Changed dimmer %i to %i!</h3>", j, newDimmerValue);
 			CHANNEL_Set(j, newDimmerValue, 1);
-
-#if ENABLE_LED_BASIC
-			if (j == SPECIAL_CHANNEL_BRIGHTNESS) {
-				// auto enable - but only for changes made from WWW panel
-				// This happens when users changes DIMMER
-				if (CFG_HasFlag(OBK_FLAG_LED_AUTOENABLE_ON_WWW_ACTION)) {
-					LED_SetEnableAll(true);
-				}
-			}
-#endif
 		}
 		if (http_getArg(request->url, "set", tmpA, sizeof(tmpA))) {
 			int newSetValue = atoi(tmpA);
@@ -755,122 +709,6 @@ int http_fn_index(http_request_t* request) {
 #if	ENABLE_DRIVER_GOSUNDSW2
 	if (DRV_IsRunning("GosundSW2")) {
 		bForceShowSingleDimmer = 1;
-	}
-#endif
-#if ENABLE_LED_BASIC
-	if (bRawPWMs == 0 || bForceShowRGBCW || bForceShowRGB
-		|| bForceShowSingleDimmer || LED_IsLedDriverChipRunning()) {
-		int c_pwms;
-		int lm;
-		int c_realPwms = 0;
-
-		lm = LED_GetMode();
-
-		//c_pwms = PIN_CountPinsWithRoleOrRole(IOR_PWM, IOR_PWM_n);
-		// This will treat multiple PWMs on a single channel as one.
-		// Thanks to this users can turn for example RGB LED controller
-		// into high power 3-outputs single colors LED controller
-		PIN_get_Relay_PWM_Count(0, &c_pwms, 0);
-		c_realPwms = c_pwms;
-		if (LED_IsLedDriverChipRunning()) {
-			c_pwms = CFG_CountLEDRemapChannels();
-		}
-		if (bForceShowSingleDimmer) {
-			c_pwms = 1;
-		} 
-		else if (bForceShowRGBCW) {
-			c_pwms = 5;
-		}
-		else if (bForceShowRGB) {
-			c_pwms = 3;
-		}
-
-		if (c_pwms > 0) {
-			const char* c;
-			if (CHANNEL_Check(SPECIAL_CHANNEL_LEDPOWER)) {
-				c = "bgrn";
-			}
-			else {
-				c = "bred";
-			}
-			poststr(request, "<tr><td>");
-			poststr(request, "<form action=\"index\">");
-			hprintf255(request, "<input type=\"hidden\" name=\"tgl\" value=\"%i\">", SPECIAL_CHANNEL_LEDPOWER);
-			hprintf255(request, "<input class=\"%s\" type=\"submit\" value=\"Toggle Light\"/></form>", c);
-			poststr(request, "</td></tr>");
-		}
-
-		if (c_pwms > 0) {
-			int pwmValue;
-
-			inputName = "dim";
-
-			pwmValue = LED_GetDimmer();
-
-			poststr(request, "<tr><td>");
-			hprintf255(request, "<h5>LED Dimmer/Brightness</h5>");
-			hprintf255(request, "<form action=\"index\" id=\"form%i\">", SPECIAL_CHANNEL_BRIGHTNESS);
-			hprintf255(request, "<input type=\"range\" min=\"0\" max=\"100\" name=\"%s\" id=\"slider%i\" value=\"%i\" onchange=\"this.form.submit()\">", inputName, SPECIAL_CHANNEL_BRIGHTNESS, pwmValue);
-			hprintf255(request, "<input type=\"hidden\" name=\"%sIndex\" value=\"%i\">", inputName, SPECIAL_CHANNEL_BRIGHTNESS);
-			hprintf255(request, "<input  type=\"submit\" class='disp-none' value=\"Toggle %i\"/></form>", SPECIAL_CHANNEL_BRIGHTNESS);
-			poststr(request, "</td></tr>");
-		}
-		if (c_pwms >= 3) {
-			char colorValue[16];
-			inputName = "rgb";
-			const char* activeStr = "";
-			if (lm == Light_RGB) {
-				activeStr = "[ACTIVE]";
-			}
-
-			LED_GetBaseColorString(colorValue);
-			poststr(request, "<tr><td>");
-			hprintf255(request, "<h5>LED RGB Color %s</h5>", activeStr);
-			hprintf255(request, "<form action=\"index\" id=\"form%i\">", SPECIAL_CHANNEL_BASECOLOR);
-			// onchange would fire only if colour was changed
-			// onblur will fire every time
-			hprintf255(request, "<input type=\"color\" name=\"%s\" id=\"color%i\" value=\"#%s\"  oninput=\"this.form.submit()\" >", inputName, SPECIAL_CHANNEL_BASECOLOR, colorValue);
-			hprintf255(request, "<input type=\"hidden\" name=\"%sIndex\" value=\"%i\">", inputName, SPECIAL_CHANNEL_BASECOLOR);
-			hprintf255(request, "<input  type=\"submit\" class='disp-none' value=\"Toggle Light\"/></form>");
-			poststr(request, "</td></tr>");
-		}
-		bool bShowCWForPixelAnim = false;
-#if ENABLE_DRIVER_PIXELANIM
-		if (DRV_IsRunning("PixelAnim")) {
-			if (c_realPwms == 2)
-				bShowCWForPixelAnim = true;
-			PixelAnim_CreatePanel(request);
-		}
-#endif
-		if (c_pwms == 2 || c_pwms >= 4 || bShowCWForPixelAnim) {
-			// TODO: temperature slider
-			int pwmValue;
-			const char* activeStr = "";
-			if (lm == Light_Temperature) {
-				activeStr = "[ACTIVE]";
-			}
-
-			inputName = "pwm";
-
-			pwmValue = LED_GetTemperature();
-			long pwmKelvin = HASS_TO_KELVIN(pwmValue);
-			long pwmKelvinMax = HASS_TO_KELVIN(led_temperature_min);
-			long pwmKelvinMin = HASS_TO_KELVIN(led_temperature_max);
-
-			poststr(request, "<tr><td>");
-			hprintf255(request, "<h5>LED Temperature Slider %s (%ld K) (Warm <--- ---> Cool)</h5>", activeStr, pwmKelvin);
-			hprintf255(request, "<form class='r' action=\"index\" id=\"form%i\">", SPECIAL_CHANNEL_TEMPERATURE);
-
-			//(KELVIN_TEMPERATURE_MAX - KELVIN_TEMPERATURE_MIN) / (HASS_TEMPERATURE_MAX - HASS_TEMPERATURE_MIN) = 13
-			hprintf255(request, "<input type=\"range\" step='13' min=\"%ld\" max=\"%ld\" ", pwmKelvinMin, pwmKelvinMax);
-			hprintf255(request, "value=\"%ld\" onchange=\"submitTemperature(this);\"/>", pwmKelvin);
-
-			hprintf255(request, "<input type=\"hidden\" name=\"%sIndex\" value=\"%i\"/>", inputName, SPECIAL_CHANNEL_TEMPERATURE);
-			hprintf255(request, "<input id=\"kelvin%i\" type=\"hidden\" name=\"%s\" />", SPECIAL_CHANNEL_TEMPERATURE, inputName);
-
-			poststr(request, "</form></td></tr>");
-		}
-
 	}
 #endif
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
@@ -1935,7 +1773,6 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	int pwmCount;
 	int dInputCount;
 	int excludedCount = 0;
-	bool ledDriverChipRunning;
 	HassDeviceInfo* dev_info = NULL;
 	bool measuringPower = false;
 	bool measuringBattery = false;
@@ -1970,12 +1807,6 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 
 	PIN_get_Relay_PWM_Count(&relayCount, &pwmCount, &dInputCount);
 	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", relayCount, pwmCount, dInputCount, excludedCount);
-
-#if ENABLE_LED_BASIC
-	ledDriverChipRunning = LED_IsLedDriverChipRunning();
-#else
-	ledDriverChipRunning = 0;
-#endif
 
 #if PLATFORM_TXW81X
 	hooks.malloc_fn = _os_malloc;
@@ -2040,46 +1871,6 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 			dev_info = hass_init_light_singleColor_onChannels(toggle, dimmer, brightness_scale);
 			MQTT_QueuePublish(topic, dev_info->channel, hass_build_discovery_json(dev_info), OBK_PUBLISH_FLAG_RETAIN);
 			hass_free_device_info(dev_info);
-			discoveryQueued = true;
-		}
-	}
-#endif
-
-
-#if ENABLE_LED_BASIC
-	if (ledDriverChipRunning) {
-		pwmCount = CFG_CountLEDRemapChannels();
-	}
-	if (pwmCount == 5 || (pwmCount == 4 && CFG_HasFlag(OBK_FLAG_LED_EMULATE_COOL_WITH_RGB))) {
-		if (dev_info == NULL) {
-			dev_info = hass_init_light_device_info(LIGHT_RGBCW);
-		}
-		// Enable + RGB control + CW control
-		MQTT_QueuePublish(topic, dev_info->channel, hass_build_discovery_json(dev_info), OBK_PUBLISH_FLAG_RETAIN);
-		hass_free_device_info(dev_info);
-		dev_info = NULL;
-		discoveryQueued = true;
-	}
-	else if (pwmCount > 0) {
-		if (pwmCount == 4) {
-			ADDLOG_ERROR(LOG_FEATURE_HTTP, "4 PWM device not yet handled\r\n");
-		}
-		else if (pwmCount == 3) {
-			// Enable + RGB control
-			dev_info = hass_init_light_device_info(LIGHT_RGB);
-		}
-		else if (pwmCount == 2) {
-			// PWM + Temperature (https://github.com/openshwprojects/OpenBK7231T_App/issues/279)
-			dev_info = hass_init_light_device_info(LIGHT_PWMCW);
-		}
-		else {
-			dev_info = hass_init_light_device_info(LIGHT_PWM);
-		}
-
-		if (dev_info != NULL) {
-			MQTT_QueuePublish(topic, dev_info->channel, hass_build_discovery_json(dev_info), OBK_PUBLISH_FLAG_RETAIN);
-			hass_free_device_info(dev_info);
-			dev_info = NULL;
 			discoveryQueued = true;
 		}
 	}
@@ -2642,104 +2433,6 @@ int http_fn_ha_cfg(http_request_t* request) {
 			}
 		}
 	}
-#if ENABLE_LED_BASIC
-	if (pwmCount == 5 || LED_IsLedDriverChipRunning()) {
-		// Enable + RGB control + CW control
-		if (mqttAdded == 0) {
-			poststr(request, "mqtt:\n");
-			mqttAdded = 1;
-		}
-		if (switchAdded == 0) {
-			poststr(request, "  light:\n");
-			switchAdded = 1;
-		}
-
-		hass_print_unique_id(request, "  - unique_id: \"%s\"\n", LIGHT_RGBCW, i, 0);
-		hprintf255(request, "    name: %i\n", i);
-		http_generate_rgb_cfg(request, clientId);
-		//hprintf255(request, "    #brightness_value_template: \"{{ value }}\"\n");
-		hprintf255(request, "    color_temp_command_topic: \"cmnd/%s/led_temperature\"\n", clientId);
-		hprintf255(request, "    color_temp_state_topic: \"%s/led_temperature/get\"\n", clientId);
-		//hprintf255(request, "    #color_temp_value_template: \"{{ value }}\"\n");
-	}
-	else
-		if (pwmCount == 3) {
-			// Enable + RGB control
-			if (mqttAdded == 0) {
-				poststr(request, "mqtt:\n");
-				mqttAdded = 1;
-			}
-			if (switchAdded == 0) {
-				poststr(request, "  light:\n");
-				switchAdded = 1;
-			}
-
-			hass_print_unique_id(request, "  - unique_id: \"%s\"\n", LIGHT_RGB, i, 0);
-			hprintf255(request, "    name: Light\n");
-			http_generate_rgb_cfg(request, clientId);
-		}
-		else if (pwmCount == 1) {
-			// single color
-			if (mqttAdded == 0) {
-				poststr(request, "mqtt:\n");
-				mqttAdded = 1;
-			}
-			if (switchAdded == 0) {
-				poststr(request, "  light:\n");
-				switchAdded = 1;
-			}
-
-			hass_print_unique_id(request, "  - unique_id: \"%s\"\n", LIGHT_PWM, i, 0);
-			hprintf255(request, "    name: Light\n");
-			http_generate_singleColor_cfg(request, clientId);
-		}
-		else if (pwmCount == 2) {
-			// CW
-			if (mqttAdded == 0) {
-				poststr(request, "mqtt:\n");
-				mqttAdded = 1;
-			}
-			if (switchAdded == 0) {
-				poststr(request, "  light:\n");
-				switchAdded = 1;
-			}
-
-			hass_print_unique_id(request, "  - unique_id: \"%s\"\n", LIGHT_PWMCW, i, 0);
-			hprintf255(request, "    name: Light\n");
-			http_generate_cw_cfg(request, clientId);
-		}
-		else if (pwmCount > 0) {
-
-			for (i = 0; i < CHANNEL_MAX; i++) {
-				if (h_isChannelPWM(i)) {
-					if (mqttAdded == 0) {
-						poststr(request, "mqtt:\n");
-						mqttAdded = 1;
-					}
-					if (lightAdded == 0) {
-						poststr(request, "  light:\n");
-						lightAdded = 1;
-					}
-
-					hass_print_unique_id(request, "  - unique_id: \"%s\"\n", LIGHT_PWM, i, 0);
-					hprintf255(request, "    name: %i\n", i);
-					hprintf255(request, "    state_topic: \"%s/%i/get\"\n", clientId, i);
-					hprintf255(request, "    command_topic: \"%s/%i/set\"\n", clientId, i);
-					hprintf255(request, "    brightness_command_topic: \"%s/%i/set\"\n", clientId, i);
-					poststr(request, "    on_command_type: \"brightness\"\n");
-					poststr(request, "    brightness_scale: 99\n");
-					poststr(request, "    qos: 1\n");
-					poststr(request, "    payload_on: 99\n");
-					poststr(request, "    payload_off: 0\n");
-					poststr(request, "    retain: true\n");
-					poststr(request, "    optimistic: true\n");
-					hprintf255(request, "    availability:\n");
-					hprintf255(request, "      - topic: \"%s/connected\"\n", clientId);
-				}
-			}
-		}
-#endif
-
 	poststr(request, "</textarea>");
 #endif
 	poststr(request, "<br/><div><label for=\"ha_disc_topic\">Discovery topic:</label><input id=\"ha_disc_topic\" value=\"homeassistant\"><button onclick=\"send_ha_disc();\">Start Home Assistant Discovery</button>&nbsp;<form action=\"cfg_mqtt\" class='disp-inline'><button type=\"submit\">Configure MQTT</button></form></div><br/>");

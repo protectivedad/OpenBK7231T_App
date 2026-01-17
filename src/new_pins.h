@@ -217,34 +217,34 @@ typedef enum ioRole_e {
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":""}
 	IOR_IRSend,
-	//iodetail:{"name":"Button_NextColor",
+	//iodetail:{"name":"Removed_Button_NextColor",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"for RGB strip with buttons; sets next predefined color. For a LED strip that has separate POWER and COLOR buttons.",
-	//iodetail:"enum":"IOR_Button_NextColor",
+	//iodetail:"enum":"IOR_LED_NextColor",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
-	IOR_Button_NextColor,
-	//iodetail:{"name":"Button_NextColor_n",
+	//iodetail:"driver":"LED"}
+	IOR_LED_NextColor,
+	//iodetail:{"name":"Removed_Button_NextColor_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As NextColor, but inversed button logic",
-	//iodetail:"enum":"IOR_Button_NextColor_n",
+	//iodetail:"enum":"IOR_LED_NextColor_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
-	IOR_Button_NextColor_n,
-	//iodetail:{"name":"Button_NextDimmer",
+	//iodetail:"driver":"LED"}
+	IOR_LED_NextColor_n,
+	//iodetail:{"name":"Removed_Button_NextDimmer",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"for RGB strip with buttons; when hold, adjusts the brightness",
-	//iodetail:"enum":"IOR_Button_NextDimmer",
+	//iodetail:"enum":"IOR_LED_NextDimmer",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
-	IOR_Button_NextDimmer,
-	//iodetail:{"name":"Button_NextDimmer_n",
+	//iodetail:"driver":"LED"}
+	IOR_LED_NextDimmer,
+	//iodetail:{"name":"Removed_Button_NextDimmer_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As NextDimmer, but inversed button logic",
-	//iodetail:"enum":"IOR_Button_NextDimmer_n",
+	//iodetail:"enum":"IOR_LED_NextDimmer_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
-	IOR_Button_NextDimmer_n,
+	//iodetail:"driver":"LED"}
+	IOR_LED_NextDimmer_n,
 	//iodetail:{"name":"AlwaysHigh",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"always outputs 1",
@@ -273,20 +273,20 @@ typedef enum ioRole_e {
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":""}
 	IOR_SM16703P_DIN,
-	//iodetail:{"name":"Button_NextTemperature",
+	//iodetail:{"name":"Removed_Button_NextTemperature",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Button that automatically allows you to control temperature of your LED device",
-	//iodetail:"enum":"IOR_Button_NextTemperature",
+	//iodetail:"enum":"IOR_LED_NextTemperature",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
-	IOR_Button_NextTemperature,
-	//iodetail:{"name":"Button_NextTemperature_n",
+	//iodetail:"driver":"LED"}
+	IOR_LED_NextTemperature,
+	//iodetail:{"name":"Removed_Button_NextTemperature_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Like Button_NextTemperature, but inversed button logic",
-	//iodetail:"enum":"IOR_Button_NextTemperature_n",
+	//iodetail:"enum":"IOR_LED_NextTemperature_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
-	IOR_Button_NextTemperature_n,
+	//iodetail:"driver":"LED"}
+	IOR_LED_NextTemperature_n,
 	//iodetail:{"name":"Button_ScriptOnly",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"This button does nothing automatically, even the linked channel is not changed. Useful for scripts, but you can still also use any buttons for scripting.",
@@ -1198,18 +1198,6 @@ typedef enum channelType_e {
 // access to special variables internally.
 // Futhermore, they can be very useful for scripting,
 // because they can be plugged into "setChannel" command
-#define SPECIAL_CHANNEL_BRIGHTNESS		129
-#define SPECIAL_CHANNEL_LEDPOWER		130
-#define SPECIAL_CHANNEL_BASECOLOR		131
-#define SPECIAL_CHANNEL_TEMPERATURE		132
-// RGBCW access (well, in reality, we just use RGB access and CW is derived from temp)
-#define SPECIAL_CHANNEL_BASECOLOR_FIRST 133
-#define SPECIAL_CHANNEL_BASECOLOR_RED	133
-#define SPECIAL_CHANNEL_BASECOLOR_GREEN	134
-#define SPECIAL_CHANNEL_BASECOLOR_BLUE	135
-#define SPECIAL_CHANNEL_BASECOLOR_COOL	136
-#define SPECIAL_CHANNEL_BASECOLOR_WARM	137
-#define SPECIAL_CHANNEL_BASECOLOR_LAST	137
 #define SPECIAL_CHANNEL_OBK_FREQUENCY	138
 
 // note: real limit here is MAX_RETAIN_CHANNELS

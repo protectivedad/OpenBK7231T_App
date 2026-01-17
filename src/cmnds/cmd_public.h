@@ -248,67 +248,6 @@ void EventHandlers_ProcessVariableChange_Integer(byte eventCode, int oldValue, i
 int EventHandlers_GetActiveCount();
 // cmd_tasmota.c
 int taslike_commands_init();
-// cmd_newLEDDriver.c
-#if ENABLE_LED_BASIC
-void NewLED_InitCommands();
-void NewLED_RestoreSavedStateIfNeeded();
-float LED_GetDimmer();
-void LED_AddDimmer(int iVal, int addMode, int minValue);
-void LED_AddTemperature(int iVal, int wrapAroundInsteadOfClamp);
-void LED_NextDimmerHold();
-void LED_NextTemperatureHold();
-void LED_NextTemperature();
-float LED_GetTemperature();
-void LED_SetTemperature(int tmpInteger, bool bApply);
-float LED_GetTemperature0to1Range();
-void LED_SetTemperature0to1Range(float f);
-void LED_SetDimmer(int iVal);
-void LED_SetDimmerIfChanged(int iVal);
-void LED_SetDimmerForDisplayOnly(int iVal);
-commandResult_t LED_SetBaseColor(const void* context, const char* cmd, const char* args, int bAll);
-void LED_SetFinalCW(byte c, byte w);
-void LED_SetFinalRGB(byte r, byte g, byte b);
-void LED_SetFinalRGBW(byte r, byte g, byte b, byte w);
-void LED_SetFinalRGBCW(byte* rgbcw);
-void LED_GetFinalChannels100(byte* rgbcw);
-void LED_GetTasmotaHSV(int* hsv);
-void LED_GetFinalRGBCW(byte* rgbcw);
-// color indices are as in Tasmota
-void LED_SetColorByIndex(int index);
-void LED_NextColor();
-void LED_NextColorTemperature();
-void LED_ToggleEnabled();
-bool LED_IsLedDriverChipRunning();
-bool LED_IsLEDRunning();
-void LED_SetEnableAll(int bEnable);
-void LED_SetStripStateOutputs();
-int LED_GetEnableAll();
-void LED_SaveStateToFlashVarsNow();
-void LED_GetBaseColorString(char* s);
-void LED_SetBaseColorByIndex(int i, float f, bool bApply);
-int LED_GetMode();
-float LED_GetHue();
-float LED_GetSaturation();
-float LED_GetGreen255();
-float LED_GetRed255();
-float LED_GetBlue255();
-extern float led_baseColors[5];
-extern byte g_lightEnableAll;
-extern byte g_lightMode;
-void LED_RunQuickColorLerp(int deltaMS);
-void LED_RunOnEverySecond();
-OBK_Publish_Result sendFinalColor();
-OBK_Publish_Result sendColorChange();
-OBK_Publish_Result LED_SendEnableAllState();
-OBK_Publish_Result LED_SendDimmerChange();
-OBK_Publish_Result sendTemperatureChange();
-OBK_Publish_Result LED_SendCurrentLightModeParam_TempOrColor();
-void LED_ResetGlobalVariablesToDefaults();
-extern float led_temperature_min;
-extern float led_temperature_max;
-void LED_ResendCurrentColors();
-#endif
-
 // cmd_test.c
 int CMD_InitTestCommands();
 // cmd_channels.c

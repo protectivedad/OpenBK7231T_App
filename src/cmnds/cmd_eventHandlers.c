@@ -177,12 +177,6 @@ int EVENT_ParseEventName(const char *s) {
 	if (!stricmp(s, "NTPState"))
 		return CMD_EVENT_NTP_STATE;
 #endif
-#if ENABLE_LED_BASIC
-	if (!stricmp(s, "LEDState"))
-		return CMD_EVENT_LED_STATE;
-	if (!stricmp(s, "LEDMode"))
-		return CMD_EVENT_LED_MODE;
-#endif
 #if ENABLE_BL_SHARED
     if(!stricmp(s, "voltage"))
         return CMD_EVENT_CHANGE_VOLTAGE;

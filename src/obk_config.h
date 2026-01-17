@@ -26,7 +26,6 @@
 // NOTE:
 // Defines for HTTP/HTMP (UI) pages: ENABLE_HTTP_*
 // Defines for drivers from drv_main.c: ENABLE_DRIVER_*
-// Other defines: ENABLE_* , for example: ENABLE_LED_BASIC
 
 #define ENABLE_HTTP_MQTT						1
 #define ENABLE_HTTP_IP							1
@@ -36,7 +35,6 @@
 #define ENABLE_HTTP_FLAGS						1
 #define ENABLE_HTTP_STARTUP						1
 #define ENABLE_HTTP_PING						1 // adds +816
-#define ENABLE_LED_BASIC						1
 #define ENABLE_DRIVER_DOORSENSOR				1 // adds +1k12 for BK7238
 #define ENABLE_DRIVER_DEVICECLOCK				1
 #define ENABLE_DEEPSLEEP						1 // adds +656 bytes 
@@ -611,7 +609,6 @@
 #define ENABLE_LITTLEFS							1
 #define ENABLE_NTP 								1
 #undef ENABLE_HTTP_MAC
-#undef ENABLE_LED_BASIC
 
 #elif PLATFORM_RDA5981
 
@@ -714,7 +711,6 @@
 #undef ENABLE_DRIVER_DRAWERS
 #undef ENABLE_DRIVER_TMGN
 #undef ENABLE_DRIVER_HTTPBUTTONS
-#undef ENABLE_LED_BASIC
 #undef ENABLE_EXPAND_CONSTANT
 
 #undef ENABLE_TASMOTA_JSON // saves +5328

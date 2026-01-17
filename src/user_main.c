@@ -784,9 +784,6 @@ void Main_OnEverySecond()
 
 	MQTT_Dedup_Tick();
 #endif
-#if ENABLE_LED_BASIC
-	LED_RunOnEverySecond();
-#endif
 #ifndef OBK_DISABLE_ALL_DRIVERS
 	DRV_OnEverySecond();
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS) || defined(PLATFORM_BL602) || defined(PLATFORM_ESPIDF) \
@@ -1169,12 +1166,6 @@ void QuickTick(void* param)
 	MQTT_RunQuickTick();
 #endif
 
-#if ENABLE_LED_BASIC
-	if (CFG_HasFlag(OBK_FLAG_LED_SMOOTH_TRANSITIONS) == true) {
-		LED_RunQuickColorLerp(g_deltaTimeMS);
-	}
-#endif
-
 	// WiFi LED
 	// In Open Access point mode, fast blink
 	if (Main_IsOpenAccessPointMode()) {
@@ -1347,9 +1338,6 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 #if ENABLE_TEST_COMMANDS
 	CMD_InitTestCommands();
 #endif
-#if ENABLE_LED_BASIC
-	NewLED_InitCommands();
-#endif
 #if ENABLE_SEND_POSTANDGET
 	CMD_InitSendCommands();
 #endif
@@ -1475,10 +1463,6 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 	// this actually sets the pins, moved out so we could avoid if necessary
 	PIN_SetupPins();
 	QuickTick_StartThread();
-
-#if ENABLE_LED_BASIC
-	NewLED_RestoreSavedStateIfNeeded();
-#endif
 }
 void Main_ForceUnsafeInit() {
 	if (g_unsafeInitDone) {
@@ -1657,10 +1641,6 @@ void Main_Init()
 	bk_printf("%s, version %s\r\n", DEVICENAME_PREFIX_FULL, USER_SW_VER);
 
 #ifdef WINDOWS
-#if ENABLE_LED_BASIC
-	// on windows, Main_Init may happen multiple time so we need to reset variables
-	LED_ResetGlobalVariablesToDefaults();
-#endif
 	// on windows, we don't want to remember commands from previous session
 	CMD_FreeAllCommands();
 #endif

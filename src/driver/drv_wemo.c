@@ -202,18 +202,10 @@ void WEMO_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreStat
 
 bool Main_GetFirstPowerState() {
 	int i;
-#if ENABLE_LED_BASIC
-	if (LED_IsLEDRunning()) {
-		return LED_GetEnableAll();
-	}
-	else 
-#endif
-	{
-		// relays driver
-		for (i = 0; i < CHANNEL_MAX; i++) {
-			if (h_isChannelRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
-				return CHANNEL_Get(i);
-			}
+	// relays driver
+	for (i = 0; i < CHANNEL_MAX; i++) {
+		if (h_isChannelRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
+			return CHANNEL_Get(i);
 		}
 	}
 	return 0;

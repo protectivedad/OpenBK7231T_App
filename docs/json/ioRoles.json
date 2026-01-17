@@ -240,34 +240,34 @@
     "driver": ""
   },
   {
-    "name": "Button_NextColor",
+    "name": "Removed_Button_NextColor",
     "title": "TODO",
     "descr": "for RGB strip with buttons; sets next predefined color. For a LED strip that has separate POWER and COLOR buttons.",
-    "enum": "IOR_Button_NextColor",
+    "enum": "IOR_LED_NextColor",
     "file": "new_pins.h",
     "driver": ""
   },
   {
-    "name": "Button_NextColor_n",
+    "name": "Removed_Button_NextColor_n",
     "title": "TODO",
     "descr": "As NextColor, but inversed button logic",
-    "enum": "IOR_Button_NextColor_n",
+    "enum": "IOR_LED_NextColor_n",
     "file": "new_pins.h",
     "driver": ""
   },
   {
-    "name": "Button_NextDimmer",
+    "name": "Removed_Button_NextDimmer",
     "title": "TODO",
     "descr": "for RGB strip with buttons; when hold, adjusts the brightness",
-    "enum": "IOR_Button_NextDimmer",
+    "enum": "IOR_LED_NextDimmer",
     "file": "new_pins.h",
     "driver": ""
   },
   {
-    "name": "Button_NextDimmer_n",
+    "name": "Removed_Button_NextDimmer_n",
     "title": "TODO",
     "descr": "As NextDimmer, but inversed button logic",
-    "enum": "IOR_Button_NextDimmer_n",
+    "enum": "IOR_LED_NextDimmer_n",
     "file": "new_pins.h",
     "driver": ""
   },
@@ -304,18 +304,18 @@
     "driver": ""
   },
   {
-    "name": "Button_NextTemperature",
+    "name": "Removed_Button_NextTemperature",
     "title": "TODO",
     "descr": "Button that automatically allows you to control temperature of your LED device",
-    "enum": "IOR_Button_NextTemperature",
+    "enum": "IOR_LED_NextTemperature",
     "file": "new_pins.h",
     "driver": ""
   },
   {
-    "name": "Button_NextTemperature_n",
+    "name": "Removed_Button_NextTemperature_n",
     "title": "TODO",
     "descr": "Like Button_NextTemperature, but inversed button logic",
-    "enum": "IOR_Button_NextTemperature_n",
+    "enum": "IOR_LED_NextTemperature_n",
     "file": "new_pins.h",
     "driver": ""
   },

@@ -183,8 +183,10 @@
     <ClCompile Include="src\cmnds\cmd_eventHandlers.c" />
     <ClCompile Include="src\cmnds\cmd_if.c" />
     <ClCompile Include="src\cmnds\cmd_main.c" />
+<!-- 
     <ClCompile Include="src\cmnds\cmd_newLEDDriver.c" />
     <ClCompile Include="src\cmnds\cmd_newLEDDriver_colors.c" />
+-->
     <ClCompile Include="src\cmnds\cmd_repeatingEvents.c" />
     <ClCompile Include="src\cmnds\cmd_script.c" />
     <ClCompile Include="src\cmnds\cmd_send.c" />

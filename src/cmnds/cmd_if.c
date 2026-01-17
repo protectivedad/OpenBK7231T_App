@@ -145,40 +145,6 @@ float getFlagValue(const char *s) {
 	return CFG_HasFlag(idx);
 }
 
-#if ENABLE_LED_BASIC
-float getLedDimmer(const char *s) {
-	return LED_GetDimmer();
-}
-
-float getLedEnableAll(const char *s) {
-	return LED_GetEnableAll();
-}
-
-float getLedHue(const char *s) {
-	return LED_GetHue();
-}
-
-float getLedRed(const char *s) {
-	return LED_GetRed255();
-}
-
-float getLedGreen(const char *s) {
-	return LED_GetGreen255();
-}
-
-float getLedBlue(const char *s) {
-	return LED_GetBlue255();
-}
-
-float getLedSaturation(const char *s) {
-	return LED_GetSaturation();
-}
-
-float getLedTemperature(const char *s) {
-	return LED_GetTemperature();
-}
-#endif
-
 float getActiveRepeatingEvents(const char *s) {
 	return RepeatingEvents_GetActiveCount();
 }
@@ -329,48 +295,6 @@ const constant_t g_constants[] = {
 	//cnstdetail:"descr":"Provides flag access, as above.",
 	//cnstdetail:"requires":""}
 	{"$FLAG*", &getFlagValue},
-#if ENABLE_LED_BASIC
-	//cnstdetail:{"name":"$led_dimmer",
-	//cnstdetail:"title":"$led_dimmer",
-	//cnstdetail:"descr":"Current value of LED dimmer, 0-100 range",
-	//cnstdetail:"requires":""}
-	{"$led_dimmer", &getLedDimmer},
-	//cnstdetail:{"name":"$led_enableAll",
-	//cnstdetail:"title":"$led_enableAll",
-	//cnstdetail:"descr":"Returns 1 if LED is enabled, otherwise 0.",
-	//cnstdetail:"requires":""}
-	{"$led_enableAll", &getLedEnableAll},
-	//cnstdetail:{"name":"$led_hue",
-	//cnstdetail:"title":"$led_hue",
-	//cnstdetail:"descr":"Current LED Hue value",
-	//cnstdetail:"requires":""}
-	{"$led_hue", &getLedHue},
-	//cnstdetail:{"name":"$led_red",
-	//cnstdetail:"title":"$led_red",
-	//cnstdetail:"descr":"Current LED red value",
-	//cnstdetail:"requires":""}
-	{"$led_red", &getLedRed},
-	//cnstdetail:{"name":"$led_green",
-	//cnstdetail:"title":"$led_green",
-	//cnstdetail:"descr":"Current LED green value",
-	//cnstdetail:"requires":""}
-	{"$led_green", &getLedGreen},
-	//cnstdetail:{"name":"$led_blue",
-	//cnstdetail:"title":"$led_blue",
-	//cnstdetail:"descr":"Current LED blue value",
-	//cnstdetail:"requires":""}
-	{"$led_blue", &getLedBlue},
-	//cnstdetail:{"name":"$led_saturation",
-	//cnstdetail:"title":"$led_saturation",
-	//cnstdetail:"descr":"Current LED saturation value",
-	//cnstdetail:"requires":""}
-	{"$led_saturation", &getLedSaturation},
-	//cnstdetail:{"name":"$led_temperature",
-	//cnstdetail:"title":"$led_temperature",
-	//cnstdetail:"descr":"Current LED temperature value",
-	//cnstdetail:"requires":""}
-	{"$led_temperature", &getLedTemperature},
-#endif
 	//cnstdetail:{"name":"$activeRepeatingEvents",
 	//cnstdetail:"title":"$activeRepeatingEvents",
 	//cnstdetail:"descr":"Current number of active repeating events",

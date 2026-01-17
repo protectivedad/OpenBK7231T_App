@@ -145,15 +145,6 @@ void DDP_Parse(byte *data, int len) {
 
 			//ADDLOG_INFO(LOG_FEATURE_DDP, "DDP_Parse: bulb path");
 
-#if ENABLE_LED_BASIC
-			LED_SetDimmerIfChanged(100);
-			if (data[9] == 4) {
-				LED_SetFinalRGBW(r, g, b, data[13]);
-			}
-			else {
-				LED_SetFinalRGB(r, g, b);
-			}
-#endif
 		}
 	}
 }

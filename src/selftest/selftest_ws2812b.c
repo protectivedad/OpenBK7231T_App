@@ -545,44 +545,6 @@ void Test_WS2812B() {
 	SELFTEST_ASSERT_PIXEL(2, 0x00, 0x00, 0x23);
 
 	
-#if ENABLE_LED_BASIC
-	CMD_ExecuteCommand("startDriver PixelAnim", 0);
-	CMD_ExecuteCommand("led_enableAll 1", 0);
-	CMD_ExecuteCommand("led_dimmer 100", 0);
-	CMD_ExecuteCommand("led_basecolor_rgb FF0000", 0);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 255, 0, 0);
-	}
-	CMD_ExecuteCommand("led_basecolor_rgb FFFF00", 0);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 255, 255, 0);
-	}
-	CMD_ExecuteCommand("led_enableAll 0", 0);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 0, 0, 0);
-	}
-	CMD_ExecuteCommand("led_enableAll 1", 0);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 255, 255, 0);
-	}
-	CMD_ExecuteCommand("led_basecolor_rgb FF00FF", 0);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 255, 0, 255);
-	}
-	CMD_ExecuteCommand("led_dimmer 50", 0);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 55, 0, 55);
-	}
-	CMD_ExecuteCommand("led_dimmer 100", 0);
-	Sim_RunFrames(5, false);
-	CMD_ExecuteCommand("Anim 1", 0);
-	Sim_RunFrames(5, false);
-	CMD_ExecuteCommand("led_enableAll 0", 0);
-	Sim_RunFrames(5, false);
-	for (int i = 0; i < 6; i++) {
-		SELFTEST_ASSERT_PIXEL(i, 0, 0, 0);
-	}
-#endif
 }
 
 void Test_WS2812B_misc() {

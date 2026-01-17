@@ -594,28 +594,6 @@ int channelGet(obk_mqtt_request_t* request) {
 	}
 
 	ADDLOGF_INFO("channelGet part topic %s", p);
-#if ENABLE_LED_BASIC
-	if (stribegins(p, "led_enableAll")) {
-		LED_SendEnableAllState();
-		return 1;
-	}
-	if (stribegins(p, "led_dimmer")) {
-		LED_SendDimmerChange();
-		return 1;
-	}
-	if (stribegins(p, "led_temperature")) {
-		sendTemperatureChange();
-		return 1;
-	}
-	if (stribegins(p, "led_finalcolor_rgb")) {
-		sendFinalColor();
-		return 1;
-	}
-	if (stribegins(p, "led_basecolor_rgb")) {
-		sendColorChange();
-		return 1;
-	}
-#endif
 
 	// atoi won't parse any non-decimal chars, so it should skip over the rest of the topic.
 	channel = atoi(p);
@@ -2066,29 +2044,14 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 
 	case PUBLISHITEM_SELF_DYNAMIC_LIGHTSTATE:
 	{
-#if ENABLE_LED_BASIC
-		if (LED_IsLEDRunning()) {
-			return LED_SendEnableAllState();
-		}
-#endif
 		return OBK_PUBLISH_WAS_NOT_REQUIRED;
 	}
 	case PUBLISHITEM_SELF_DYNAMIC_LIGHTMODE:
 	{
-#if ENABLE_LED_BASIC
-		if (LED_IsLEDRunning()) {
-			return LED_SendCurrentLightModeParam_TempOrColor();
-		}
-#endif
 		return OBK_PUBLISH_WAS_NOT_REQUIRED;
 	}
 	case PUBLISHITEM_SELF_DYNAMIC_DIMMER:
 	{
-#if ENABLE_LED_BASIC
-		if (LED_IsLEDRunning()) {
-			return LED_SendDimmerChange();
-		}
-#endif
 		return OBK_PUBLISH_WAS_NOT_REQUIRED;
 	}
 

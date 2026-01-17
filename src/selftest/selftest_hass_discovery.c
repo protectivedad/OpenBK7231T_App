@@ -534,13 +534,6 @@ void Test_HassDiscovery() {
 	Test_HassDiscovery_Battery();
 	Test_HassDiscovery_Relay_1x();
 	Test_HassDiscovery_Relay_2x();
-#if ENABLE_LED_BASIC
-	Test_HassDiscovery_LED_CW();
-	Test_HassDiscovery_LED_RGB();
-	Test_HassDiscovery_LED_RGBCW();
-	Test_HassDiscovery_LED_SingleColor();
-	Test_HassDiscovery_LED_RGBW();
-#endif
 	Test_HassDiscovery_DHT11();
 	Test_HassDiscovery_digitalInput();
 	Test_HassDiscovery_digitalInputNoAVTY();

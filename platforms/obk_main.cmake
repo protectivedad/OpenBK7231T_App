@@ -10,8 +10,8 @@ set(OBKM_SRC
 	${OBK_SRCS}cmnds/cmd_eventHandlers.c
 	${OBK_SRCS}cmnds/cmd_if.c
 	${OBK_SRCS}cmnds/cmd_main.c
-	${OBK_SRCS}cmnds/cmd_newLEDDriver_colors.c
-	${OBK_SRCS}cmnds/cmd_newLEDDriver.c
+	# ${OBK_SRCS}cmnds/cmd_newLEDDriver_colors.c
+	# ${OBK_SRCS}cmnds/cmd_newLEDDriver.c
 	${OBK_SRCS}cmnds/cmd_repeatingEvents.c
 	${OBK_SRCS}cmnds/cmd_send.c
 	${OBK_SRCS}cmnds/cmd_script.c

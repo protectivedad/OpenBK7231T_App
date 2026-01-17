@@ -137,13 +137,6 @@ void Strip_setMultiplePixel(uint32_t pixel, uint8_t *data, bool push) {
 extern float g_brightness0to100;//TODO
 void Strip_setPixelWithBrig(int pixel, int r, int g, int b, int c, int w) {
 	// scale brightness
-#if ENABLE_LED_BASIC
-	r = (int)(r * g_brightness0to100*0.01f);
-	g = (int)(g * g_brightness0to100*0.01f);
-	b = (int)(b * g_brightness0to100*0.01f);
-	c = (int)(c * g_brightness0to100*0.01f);
-	w = (int)(w * g_brightness0to100*0.01f);
-#endif
 	Strip_setPixel(pixel, r, g, b, c, w);
 }
 #define SCALE8_PIXEL(x, scale) (uint8_t)(((uint32_t)x * (uint32_t)scale) / 256)
