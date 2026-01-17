@@ -1233,6 +1233,12 @@ typedef struct pinsState_s {
 #error "MAX_PIN_ROLES < PLATFORM_GPIO_MAX, undefined behaviour"
 #endif
 
+typedef struct pinDetails_s {
+	int driverIndex;
+	int pinIndex;
+	int pinIORole;
+} pinDetails_t;
+
 // bit indexes (not values), so 0 1 2 3 4
 #define OBK_FLAG_MQTT_BROADCASTLEDPARAMSTOGETHER	0
 #define OBK_FLAG_MQTT_BROADCASTLEDFINALCOLOR		1

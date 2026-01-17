@@ -58,6 +58,8 @@ int BTN_HOLD_REPEAT_MS;
 byte *g_defaultWakeEdge = 0;
 int g_initialPinStates = 0;
 
+pinDetails_t registeredPinDetails[PLATFORM_GPIO_MAX];
+
 #if ALLOW_SSID2
 //20241125 XJIKKA SSID retain - last used SSID will be preserved
 // To enable this feature, the channel that will be used to store the last SSID 
