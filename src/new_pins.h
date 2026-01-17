@@ -18,112 +18,112 @@ typedef enum ioRole_e {
 	//iodetail:"descr":"an active-high relay. This relay is closed when a logical 1 value is on linked channel",
 	//iodetail:"enum":"IOR_Relay",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_Relay,
 	//iodetail:{"name":"Relay_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"(as Relay but pin logical value is inversed)",
 	//iodetail:"enum":"IOR_Relay_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_Relay_n,
 	//iodetail:{"name":"Button",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"a typical button of Tuya device with active-low state (a button that connects IO pin to ground when pressed and also has a 10k or so pull up resistor)",
 	//iodetail:"enum":"IOR_Button",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_Button,
 	//iodetail:{"name":"Button_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"as Button but pin logical value is inversed",
 	//iodetail:"enum":"IOR_Button_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_Button_n,
 	//iodetail:{"name":"LED",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"an active-high LED. The internals of 'LED' are the same as of 'Relay'. Names are just separate to make it easier for users.",
 	//iodetail:"enum":"IOR_LED",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_LED,
 	//iodetail:{"name":"LED_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"(as Led but pin logical value is inversed)",
 	//iodetail:"enum":"IOR_LED_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_LED_n,
 	//iodetail:{"name":"PWM",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Pulse width modulation output for LED dimmers (with MQTT dimming support from Home Assistant). Remember to set related channel to correct color index, in the RGBCW order. For CW only lights, set only CW indices.",
 	//iodetail:"enum":"IOR_PWM",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_PWM,
 	//iodetail:{"name":"LED_WIFI",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"special LED to indicate WLan connection state. LED states are following: LED on = client mode successfully connected to your Router. Half a second blink - connecting to your router, please wait (or connection problem). Fast blink (200ms) - open access point mode. In safe mode (after failed boots), LED might not work.",
 	//iodetail:"enum":"IOR_LED_WIFI",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_LED_WIFI,
 	//iodetail:{"name":"LED_WIFI_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As LED_WIFI, but with inversed logic.",
 	//iodetail:"enum":"IOR_LED_WIFI_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"output"}
 	IOR_LED_WIFI_n,
 	//iodetail:{"name":"Button_ToggleAll",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"this button toggles all channels at once",
 	//iodetail:"enum":"IOR_Button_ToggleAll",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_Button_ToggleAll,
 	//iodetail:{"name":"Button_ToggleAll_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Button_ToggleAll as, but inversed logic of button",
 	//iodetail:"enum":"IOR_Button_ToggleAll_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_Button_ToggleAll_n,
 	//iodetail:{"name":"DigitalInput",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"this is a simple digital input pin, it sets the linked channel to current logical value on it, just like digitalRead( ) from Arduino. This input has a internal pull up resistor.",
 	//iodetail:"enum":"IOR_DigitalInput",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_DigitalInput,
 	//iodetail:{"name":"DigitalInput_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As DigitalInput as above, but inverted",
 	//iodetail:"enum":"IOR_DigitalInput_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_DigitalInput_n,
 	//iodetail:{"name":"ToggleChannelOnToggle",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"this pin will toggle target channel when a value on this pin changes (with debouncing). you can connect simple two position switch here and swapping the switch will toggle target channel relay on or off",
 	//iodetail:"enum":"IOR_ToggleChannelOnToggle",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_ToggleChannelOnToggle,
 	//iodetail:{"name":"DigitalInput_NoPup",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As DigitalInput, but without internal programmable pullup resistor. This is used for, for example, XR809 water sensor and door sensor.",
 	//iodetail:"enum":"IOR_DigitalInput_NoPup",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_DigitalInput_NoPup,
 	//iodetail:{"name":"DigitalInput_NoPup_n",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As DigitalInput_n, but without internal programmable pullup resistor",
 	//iodetail:"enum":"IOR_DigitalInput_NoPup_n",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":""}
+	//iodetail:"driver":"input"}
 	IOR_DigitalInput_NoPup_n,
 	// energy sensor
 		//iodetail:{"name":"BL0937_SEL",
@@ -1614,6 +1614,9 @@ const char* PIN_RoleToString(int role);
 int PIN_IOR_NofChan(int test);
 
 extern const char* g_channelTypeNames[];
+
+// for drivers to register their use of a pin role
+extern int g_pinDriver[];
 
 #if ALLOW_SSID2
 int FV_GetStartupSSID_StoredValue(int adefault);

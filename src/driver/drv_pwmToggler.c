@@ -380,7 +380,7 @@ void DRV_Toggler_AppendInformationToHTTPIndexPage(http_request_t* request, int b
 	hprintf255(request, "</h4>");
 
 }
-void DRV_InitPWMToggler() {
+void DRV_InitPWMToggler(int driverIndex) {
 	int i;
 
 	for (i = 0; i < MAX_ONOFF_SLOTS; i++) {

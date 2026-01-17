@@ -2737,7 +2737,7 @@ void TuyaMCU_Shutdown() {
 		g_mutex = NULL;
 	}
 }
-void TuyaMCU_Init()
+void TuyaMCU_Init(int driverIndex)
 {
 	g_resetWiFiEvents = 0;
 	g_tuyaNextRequestDelay = 1;

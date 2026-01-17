@@ -19,7 +19,7 @@
 //static byte g_hello[] =  { 0x55, 0xAA, 0x00, 0x01, 0x00, 0x00, 0x00 };
 //static byte g_request_state[] =  { 0x55, 0xAA, 0x00, 0x02, 0x00, 0x01, 0x04, 0x06 };
 
-void TuyaMCU_Sensor_Init() {
+void TuyaMCU_Sensor_Init(int driverIndex) {
 	//g_elapsedTime = 0;
 }
 void TuyaMCU_Sensor_RunEverySecond() {

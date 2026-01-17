@@ -25,7 +25,7 @@
 
 typedef struct driver_s {
 	const char* name;
-	void(*initFunc)();
+	void(*initFunc)(int driverIndex);
 	void(*onEverySecond)();
 	void(*appendInformationToHTTPIndexPage)(http_request_t* request, int bPreState);
 	void(*runQuickTick)();
@@ -1541,7 +1541,7 @@ void DRV_StartDriver(const char* name) {
 			}
 			else {
 				if (g_drivers[i].initFunc) {
-					g_drivers[i].initFunc();
+					g_drivers[i].initFunc(i);
 				}
 				g_drivers[i].bLoaded = true;
 				ADDLOG_INFO(LOG_FEATURE_MAIN, "Started %s.\n", name);

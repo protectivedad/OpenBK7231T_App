@@ -58,6 +58,8 @@ int BTN_HOLD_REPEAT_MS;
 byte *g_defaultWakeEdge = 0;
 int g_initialPinStates = 0;
 
+int g_pinDriver[IOR_Total_Options];
+int g_usedpins_index;
 pinDetails_t registeredPinDetails[PLATFORM_GPIO_MAX];
 
 #if ALLOW_SSID2
@@ -1107,8 +1109,44 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		DHT_OnPinsConfigChanged();
 #endif
 	}
+	
+	// if the pin index is found as used
+	//   and there is a role, break no change
+	//   and there is no role, overwrite with next entries
+	// 
+	bool pullFromNext = false;
+	int i;
+	for (i = 0; i < g_usedpins_index; i++) {
+		// previously marked used pin index
+		if (registeredPinDetails[i].pinIndex == index) {
+			if (role) { // still has same role, break with no change
+				break;
+			} else { // no longer has role, compress one entry
+				pullFromNext = true;
+			}
+		}
+		if (pullFromNext && ((i + 1) < g_usedpins_index)) { // pin index is no longer used
+			registeredPinDetails[i].driverIndex = registeredPinDetails[i + 1].driverIndex;
+			registeredPinDetails[i].pinIORole = registeredPinDetails[i + 1].pinIORole;
+			registeredPinDetails[i].pinIndex = registeredPinDetails[i + 1].pinIndex;
+		}
+	}
+	if (pullFromNext) { // compressed previous used pin
+		registeredPinDetails[i].pinIndex = 0;
+		registeredPinDetails[i].pinIORole = 0;
+		registeredPinDetails[i].driverIndex = 0;
+		g_usedpins_index--;
+	} else if (i == g_usedpins_index) { // never found pin
+		registeredPinDetails[i].pinIndex = index;
+		registeredPinDetails[i].pinIORole = role;
+		registeredPinDetails[i].driverIndex = 0; // TODO
+		g_usedpins_index++;
+	}
 }
 
+void PIN_AssignDriver(int index) {
+
+}
 void PIN_SetGenericDoubleClickCallback(void (*cb)(int pinIndex)) {
 	g_doubleClickCallback = cb;
 }

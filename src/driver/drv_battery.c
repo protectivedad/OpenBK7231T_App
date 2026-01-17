@@ -167,7 +167,7 @@ commandResult_t Battery_cycle(const void* context, const char* cmd, const char* 
 }
 
 // startDriver Battery
-void Batt_Init() {
+void Batt_Init(int driverIndex) {
 
 	//cmddetail:{"name":"Battery_Setup","args":"[minbatt][maxbatt][V_divider][Vref][AD Bits]",
 	//cmddetail:"descr":"measure battery based on ADC. <br />req. args: minbatt in mv, maxbatt in mv. <br />optional: V_divider(2), Vref(default 2400), ADC bits(4096)",
@@ -181,6 +181,8 @@ void Batt_Init() {
 	//cmddetail:"examples":"Battery_cycle 60"}
 	CMD_RegisterCommand("Battery_cycle", Battery_cycle, NULL);
 
+	g_pinDriver[IOR_BAT_ADC] = g_pinDriver[IOR_BAT_Relay] = g_pinDriver[IOR_BAT_Relay_n] = driverIndex;
+	
 	// do a quick and dirty to make the first reading valid
 	if ((Batt_Load() != -1) && (g_pin_rel != -1)) {
 		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
