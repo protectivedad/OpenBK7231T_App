@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_OBK_BERRY
+
 #include "be_bindings.h"
 #include "../driver/drv_local.h"
 #include "../hal/hal_generic.h"
@@ -91,7 +95,9 @@ int be_SetChannelLabel(bvm *vm) {
 		if (top == 3 && be_isbool(vm, 3)) {
 			bHideTogglePrefix = be_tobool(vm, 3);
 		}
+#if ENABLE_CMD_CHANNEL
 		CHANNEL_SetLabel(ch, label, bHideTogglePrefix);
+#endif // ENABLE_CMD_CHANNEL
 	}
 	be_return_nil(vm);
 }
@@ -127,3 +133,5 @@ int be_CancelThread(bvm *vm) {
 	be_pushbool(vm, false);
 	be_return(vm);
 }
+
+#endif // ENABLE_OBK_BERRY
