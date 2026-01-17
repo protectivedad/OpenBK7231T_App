@@ -154,11 +154,6 @@ void SGP_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState
 void SGP_OnEverySecond();
 void SGP_StopDriver();
 
-void Batt_Init();
-void Batt_OnEverySecond();
-void Batt_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
-void Batt_StopDriver();
-
 void BKPartitions_Init();
 void BKPartitions_QuickFrame();
  

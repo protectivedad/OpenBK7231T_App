@@ -74,7 +74,7 @@ int DoorDeepSleep_Load() {
 	return g_registeredPin;
 }
 
-void DoorDeepSleep_Init(int driverIndex) {
+void DoorDeepSleep_Init() {
 	// 0 seconds since last change
 	g_noChangeTimePassed = 0;
 

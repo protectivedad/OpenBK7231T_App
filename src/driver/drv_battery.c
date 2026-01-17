@@ -20,20 +20,21 @@ static int g_pin_adc = -1, g_pin_rel = -1, g_val_rel = -1, g_battcycle = 1, g_ba
 static float g_battvoltage = 0.0, g_battlevel = 0.0;
 static int g_lastbattvoltage = 0, g_lastbattlevel = 0;
 static float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
+static int g_driverIndex = 0;
 
 static int Batt_Load() {
-	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		switch (g_cfg.pins.roles[i])
+	for (int i = 0; i < g_usedpins_index; i++) {
+		switch (PIN_registeredPinDetails()[i].pinIORole)
 		{
 		case IOR_BAT_ADC:
-			g_pin_adc = i;
+			g_pin_adc = PIN_registeredPinDetails()[i].pinIndex;
 			break;
 		case IOR_BAT_Relay:
-			g_pin_rel = i;
+			g_pin_rel = PIN_registeredPinDetails()[i].pinIndex;
 			g_val_rel = 1;
 			break;
 		case IOR_BAT_Relay_n:
-			g_pin_rel = i;
+			g_pin_rel = PIN_registeredPinDetails()[i].pinIndex;
 			g_val_rel = 0;
 			break;
 		default:
@@ -166,8 +167,14 @@ commandResult_t Battery_cycle(const void* context, const char* cmd, const char* 
 	return CMD_RES_OK;
 }
 
+// run on startup to populate dropdowns
+void Battery_reserveIORoles(int driverIndex) {
+	// register IORoles for this driver
+	g_driverIndex = PIN_pinIORoleDriver()[IOR_BAT_ADC] = PIN_pinIORoleDriver()[IOR_BAT_Relay] = PIN_pinIORoleDriver()[IOR_BAT_Relay_n] = driverIndex;
+}
+
 // startDriver Battery
-void Batt_Init(int driverIndex) {
+void Batt_Init() {
 
 	//cmddetail:{"name":"Battery_Setup","args":"[minbatt][maxbatt][V_divider][Vref][AD Bits]",
 	//cmddetail:"descr":"measure battery based on ADC. <br />req. args: minbatt in mv, maxbatt in mv. <br />optional: V_divider(2), Vref(default 2400), ADC bits(4096)",
@@ -181,8 +188,7 @@ void Batt_Init(int driverIndex) {
 	//cmddetail:"examples":"Battery_cycle 60"}
 	CMD_RegisterCommand("Battery_cycle", Battery_cycle, NULL);
 
-	g_pinDriver[IOR_BAT_ADC] = g_pinDriver[IOR_BAT_Relay] = g_pinDriver[IOR_BAT_Relay_n] = driverIndex;
-	
+	// after loading the battery assigned pins
 	// do a quick and dirty to make the first reading valid
 	if ((Batt_Load() != -1) && (g_pin_rel != -1)) {
 		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);

@@ -1616,7 +1616,9 @@ int PIN_IOR_NofChan(int test);
 extern const char* g_channelTypeNames[];
 
 // for drivers to register their use of a pin role
-extern int g_pinDriver[];
+int* PIN_pinIORoleDriver();
+const pinDetails_t* PIN_registeredPinDetails();
+extern int g_usedpins_index;
 
 #if ALLOW_SSID2
 int FV_GetStartupSSID_StoredValue(int adefault);

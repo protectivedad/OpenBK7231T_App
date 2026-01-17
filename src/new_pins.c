@@ -58,7 +58,7 @@ int BTN_HOLD_REPEAT_MS;
 byte *g_defaultWakeEdge = 0;
 int g_initialPinStates = 0;
 
-int g_pinDriver[IOR_Total_Options];
+int g_pinIORoleDriver[IOR_Total_Options];
 int g_usedpins_index;
 pinDetails_t registeredPinDetails[PLATFORM_GPIO_MAX];
 
@@ -1110,18 +1110,20 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 #endif
 	}
 	
-	// if the pin index is found as used
-	//   and there is a role, break no change
-	//   and there is no role, overwrite with next entries
-	// 
 	bool pullFromNext = false;
 	int i;
 	for (i = 0; i < g_usedpins_index; i++) {
 		// previously marked used pin index
 		if (registeredPinDetails[i].pinIndex == index) {
-			if (role) { // still has same role, break with no change
+			if (registeredPinDetails[i].pinIORole == role) { // still has same role, break with no change
 				break;
-			} else { // no longer has role, compress one entry
+			} else if (role) { // different role, update driver/role
+				ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Switched entry for pin %i role %i to role %i", __func__, index, registeredPinDetails[i].pinIORole, role);
+				registeredPinDetails[i].pinIORole = role;
+				registeredPinDetails[i].driverIndex = g_pinIORoleDriver[role];
+				break;
+			} else { // no longer has role, compress entry
+				ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin %i and role %i", __func__, index, registeredPinDetails[i].pinIORole);
 				pullFromNext = true;
 			}
 		}
@@ -1137,15 +1139,18 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		registeredPinDetails[i].driverIndex = 0;
 		g_usedpins_index--;
 	} else if (i == g_usedpins_index) { // never found pin
+		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, index, g_pinIORoleDriver[role], role);
 		registeredPinDetails[i].pinIndex = index;
 		registeredPinDetails[i].pinIORole = role;
-		registeredPinDetails[i].driverIndex = 0; // TODO
+		registeredPinDetails[i].driverIndex = g_pinIORoleDriver[role];
 		g_usedpins_index++;
 	}
 }
-
-void PIN_AssignDriver(int index) {
-
+const pinDetails_t* PIN_registeredPinDetails() {
+	return registeredPinDetails;
+}
+int* PIN_pinIORoleDriver() {
+	return g_pinIORoleDriver;
 }
 void PIN_SetGenericDoubleClickCallback(void (*cb)(int pinIndex)) {
 	g_doubleClickCallback = cb;

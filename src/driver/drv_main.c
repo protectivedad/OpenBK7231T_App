@@ -21,17 +21,18 @@
 #include "drv_ds1820_common.h"
 #include "drv_ds3231.h"
 #include "drv_hlw8112.h"
-
+#include "drv_battery.h"
 
 typedef struct driver_s {
 	const char* name;
-	void(*initFunc)(int driverIndex);
+	void(*initFunc)();
 	void(*onEverySecond)();
 	void(*appendInformationToHTTPIndexPage)(http_request_t* request, int bPreState);
 	void(*runQuickTick)();
 	void(*stopFunc)();
 	void(*onChannelChanged)(int ch, int val);
 	void(*onHassDiscovery)(const char *topic);
+	void(*reserveIORoles)(int driverIndex);
 	bool bLoaded;
 } driver_t;
 
@@ -54,6 +55,7 @@ static driver_t g_drivers[] = {
 	TuyaMCU_Shutdown,                        // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
+	NULL,                                    // reserveIORoles
 	false,                                   // loaded
 	},
 	//drvdetail:{"name":"tmSensor",
@@ -68,6 +70,7 @@ static driver_t g_drivers[] = {
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
+	NULL,                                    // reserveIORoles
 	false,                                   // loaded
 	},
 #endif
@@ -888,6 +891,7 @@ static driver_t g_drivers[] = {
 	},
 #endif
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
+#if (0)
 	//drvdetail:{"name":"PWMToggler",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"PWMToggler is a custom abstraction layer that can run on top of raw PWM channels. It provides ability to turn off/on the PWM while keeping it's value, which is not possible by direct channel operations. It can be used for some custom devices with extra lights/lasers. See example [here](https://www.elektroda.com/rtvforum/topic3939064.html).",
@@ -900,8 +904,10 @@ static driver_t g_drivers[] = {
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
+	NULL,                                    // reserveIORoles
 	false,                                   // loaded
 	},
+#endif
 #if ENABLE_DRIVER_DOORSENSOR
 	//drvdetail:{"name":"DoorSensor",
 	//drvdetail:"title":"TODO",
@@ -915,6 +921,7 @@ static driver_t g_drivers[] = {
 	DoorDeepSleep_StopDriver,                // stopFunction
 	DoorDeepSleep_OnChannelChanged,          // onChannelChanged
 	NULL,                                    // onHassDiscovery
+	NULL,                                    // reserveIORoles
 	false,                                   // loaded
 	},
 #endif
@@ -1305,6 +1312,7 @@ static driver_t g_drivers[] = {
 	Batt_StopDriver,                         // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
+	Battery_reserveIORoles,					 // reserveIORoles
 	false,                                   // loaded
 	},
 #endif
@@ -1507,6 +1515,9 @@ void DRV_StopDriver(const char* name) {
 	}
 	DRV_Mutex_Free();
 }
+void DRV_StartDriverIndex(int driverIndex) {
+
+}
 void DRV_StartDriver(const char* name) {
 	int i;
 	int bStarted;
@@ -1537,9 +1548,7 @@ void DRV_StartDriver(const char* name) {
 				ADDLOG_INFO(LOG_FEATURE_MAIN, "Drv %s is already loaded.\n", name);
 				bStarted = 1;
 				break;
-
-			}
-			else {
+			} else {
 				if (g_drivers[i].initFunc) {
 					g_drivers[i].initFunc(i);
 				}
@@ -1607,10 +1616,34 @@ void DRV_Generic_Init() {
 	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopDriver", DRV_Stop, NULL);
+	int i;
+	for (i = 0; i < g_numDrivers; i++) {
+		if (g_drivers[i].reserveIORoles) {
+			g_drivers[i].reserveIORoles(i);
+		}
+	}
 #if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
 	// init TIME unconditionally on start unless explicitly disabled
 	TIME_Init();
 #endif
+}
+
+// interate through used pins and autostart any drivers associated
+// with the IORole assigned to the pin
+void DRV_Autostart() {
+	if (!DRV_Mutex_Take(100)) 
+		return;
+	for (int i = 0; i < g_usedpins_index; i++)
+	{
+		int driverIndex = PIN_pinIORoleDriver()[PIN_registeredPinDetails()[i].pinIORole];
+		if (driverIndex && !g_drivers[driverIndex].bLoaded) {
+			if (g_drivers[driverIndex].initFunc) {
+				g_drivers[driverIndex].initFunc(i);
+			}
+			g_drivers[driverIndex].bLoaded = true;
+		}
+	}
+	DRV_Mutex_Free();
 }
 
 void DRV_OnHassDiscovery(const char *topic) {

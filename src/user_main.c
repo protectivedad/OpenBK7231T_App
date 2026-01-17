@@ -1359,6 +1359,11 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 		CFG_SetFlag(OBK_FLAG_HTTP_PINMONITOR, false);
 	}
 
+	g_enable_pins = 1;
+	// this actually sets the pins, moved out so we could avoid if necessary
+	// need to setup pins before loading drivers
+	PIN_SetupPins();
+
 	if (bAutoRunScripts) {
 #if ENABLE_LITTLEFS
 		CMD_ExecuteCommand("exec early.bat", COMMAND_FLAG_SOURCE_SCRIPT);
@@ -1366,6 +1371,7 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 #ifndef OBK_DISABLE_ALL_DRIVERS
 		if (!CFG_HasFlag(OBK_FLAG_DRV_DISABLE_AUTOSTART)) {
 			// autostart drivers
+			DRV_Autostart();
 #if ENABLE_DRIVER_LED
 			if (PIN_FindPinIndexForRole(IOR_SM2135_CLK, -1) != -1 && PIN_FindPinIndexForRole(IOR_SM2135_DAT, -1) != -1)
 			{
@@ -1434,11 +1440,11 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 				DRV_StartDriver("DoorSensor");
 			}
 #endif // ENABLE_DRIVER_DOORSENSOR
-#if ENABLE_DRIVER_BATTERY
-			if (PIN_FindPinIndexForRole(IOR_BAT_ADC, -1) != -1) {
-				DRV_StartDriver("Battery");
-			}
-#endif
+// #if ENABLE_DRIVER_BATTERY
+// 			if (PIN_FindPinIndexForRole(IOR_BAT_ADC, -1) != -1) {
+// 				DRV_StartDriver("Battery");
+// 			}
+// #endif
 #if ENABLE_DRIVER_HLW8112SPI
 			if (PIN_FindPinIndexForRole(IOR_HLW8112_SCSN, -1) != -1) {
 				DRV_StartDriver("HLW8112SPI");
@@ -1458,10 +1464,6 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 		}
 #endif
 	}
-
-	g_enable_pins = 1;
-	// this actually sets the pins, moved out so we could avoid if necessary
-	PIN_SetupPins();
 	QuickTick_StartThread();
 }
 void Main_ForceUnsafeInit() {
