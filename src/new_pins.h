@@ -1581,10 +1581,11 @@ int CHANNEL_FindIndexForPinType2(int requiredType, int requiredType2);
 // cmd_channels.c
 bool CHANNEL_HasLabel(int ch);
 const char* CHANNEL_GetLabel(int ch);
-void CHANNEL_SetLabel(int ch, const char *s, int bHideTogglePrefix);
 bool CHANNEL_ShouldAddTogglePrefixToUI(int ch);
 #if ENABLE_CMD_CHANNEL
+void CHANNEL_SetLabel(int ch, const char *s, int bHideTogglePrefix);
 bool CHANNEL_HasNeverPublishFlag(int ch);
+int PIN_ParsePinRoleName(const char* name);
 #endif
 //ledRemap_t *CFG_GetLEDRemap();
 
@@ -1601,7 +1602,6 @@ int ChannelType_GetDecimalPlaces(int type);
 
 int PIN_GetPWMIndexForPinIndex(int pin);
 
-int PIN_ParsePinRoleName(const char* name);
 const char* PIN_RoleToString(int role);
 // return number of channels used for a role
 // taken from code in http_fnc.c

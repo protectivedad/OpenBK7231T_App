@@ -570,6 +570,7 @@ const char* PIN_RoleToString(int role) {
 	return htmlPinRoleNames[(role < IOR_Total_Options) ? role : IOR_Total_Options];
 }
 
+#if ENABLE_CMD_CHANNEL
 int PIN_ParsePinRoleName(const char* name) {
 	int i;
 
@@ -583,6 +584,7 @@ int PIN_ParsePinRoleName(const char* name) {
 	}
 	return IOR_Total_Options;
 }
+#endif // ENABLE_CMD_CHANNEL
 
 void setupAllWB2SPinsAsButtons() {
 	PIN_SetPinRoleForPinIndex(6, IOR_Button);
