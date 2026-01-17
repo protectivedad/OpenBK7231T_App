@@ -123,21 +123,6 @@ static commandResult_t power(const void *context, const char *cmd, const char *a
 	//return 0;
 }
 
-static commandResult_t powerAll(const void *context, const char *cmd, const char *args, int cmdFlags){
-	//if (!wal_strnicmp(cmd, "POWERALL", 8)){
-		int iVal = 0;
-
-        ADDLOG_INFO(LOG_FEATURE_CMD, "tasCmnd POWERALL (%s) received with args %s",cmd,args);
-
-		iVal = parsePowerArgument(args);
-
-		CHANNEL_SetAll(iVal, false);
-		return CMD_RES_OK;
-	//}
-	//return 0;
-}
-
-
 static commandResult_t cmnd_backlog_old(const void * context, const char *cmd, const char *args, int cmdFlags) {
 
 	const char *subcmd;
@@ -459,11 +444,6 @@ int taslike_commands_init(){
 	//cmddetail:"fn":"power","file":"cmnds/cmd_tasmota.c","requires":"",
 	//cmddetail:"examples":""}
     CMD_RegisterCommand("power", power, NULL);
-	//cmddetail:{"name":"powerAll","args":"",
-	//cmddetail:"descr":"set all outputs",
-	//cmddetail:"fn":"powerAll","file":"cmnds/cmd_tasmota.c","requires":"",
-	//cmddetail:"examples":""}
-    CMD_RegisterCommand("powerAll", powerAll, NULL);
 	//cmddetail:{"name":"backlog","args":"[string of commands separated with ;]",
 	//cmddetail:"descr":"run a sequence of ; separated commands",
 	//cmddetail:"fn":"cmnd_backlog","file":"cmnds/cmd_tasmota.c","requires":"",
