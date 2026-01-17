@@ -650,7 +650,7 @@
 
 // select one of the following
 //#define PRODUCT_MODE_TIMING 1
-#define PRODUCT_MODE_PRODUCTION 1
+//#define PRODUCT_MODE_PRODUCTION 1
 
 #ifdef PRODUCT_MODE_TIMING
 #undef OBK_INFO_LOGGING_ENABLED
