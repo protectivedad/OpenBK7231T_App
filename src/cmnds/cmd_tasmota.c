@@ -98,15 +98,6 @@ static commandResult_t power(const void *context, const char *cmd, const char *a
 				}
 			}
 		}
-#if 0
-		// it seems that my Home Assistant expects RGB etc light bulbs to be turned off entirely
-		// with this commands with no arguments, so... no arguments = set all channels?
-		else
-		{
-			CHANNEL_SetAll(iVal, false);
-			return 1;
-		}
-#endif
 		if(args == 0 || *args == 0) {
 			// this should only check status
 		}
