@@ -25,14 +25,12 @@
 
 typedef struct driver_s {
 	const char* name;
-	void(*initFunc)();
 	void(*onEverySecond)();
 	void(*appendInformationToHTTPIndexPage)(http_request_t* request, int bPreState);
 	void(*runQuickTick)();
-	void(*stopFunc)();
 	void(*onChannelChanged)(int ch, int val);
 	void(*onHassDiscovery)(const char *topic);
-	void(*reserveIORoles)(int driverIndex);
+	void(*frameworkRequest)(int obkfRequest, int arg);
 	bool bLoaded;
 } driver_t;
 
@@ -47,14 +45,12 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"General input/output controls",
 	//drvdetail:"requires":""}
 	{ "IODriver",                            // Driver Name
-	NULL,                                    // Init
 	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
-	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // reserveIORoles
+	NULL,                                    // frameworkRequest
 	false,                                   // loaded
 	},
 #if ENABLE_DRIVER_TUYAMCU
@@ -63,14 +59,12 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"TuyaMCU is a protocol used for communication between WiFI module and external MCU. This protocol is using usually RX1/TX1 port of BK chips. See [TuyaMCU dimmer example](https://www.elektroda.com/rtvforum/topic3929151.html), see [TH06 LCD humidity/temperature sensor example](https://www.elektroda.com/rtvforum/topic3942730.html), see [fan controller example](https://www.elektroda.com/rtvforum/topic3908093.html), see [simple switch example](https://www.elektroda.com/rtvforum/topic3906443.html)",
 	//drvdetail:"requires":""}
 	{ "TuyaMCU",                             // Driver Name
-	TuyaMCU_Init,                            // Init
 	TuyaMCU_RunEverySecond,                  // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
 	TuyaMCU_RunFrame,                        // runQuickTick
-	TuyaMCU_Shutdown,                        // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // reserveIORoles
+	NULL,                                    // frameworkRequest
 	false,                                   // loaded
 	},
 	//drvdetail:{"name":"tmSensor",
@@ -78,14 +72,12 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"The tmSensor must be used only when TuyaMCU is already started. tmSensor is a TuyaMcu Sensor, it's used for Low Power TuyaMCU communication on devices like TuyaMCU door sensor, or TuyaMCU humidity sensor. After device reboots, tmSensor uses TuyaMCU to request data update from the sensor and reports it on MQTT. Then MCU turns off WiFi module again and goes back to sleep. See an [example door sensor here](https://www.elektroda.com/rtvforum/topic3914412.html).",
 	//drvdetail:"requires":""}
 	{ "tmSensor",                            // Driver Name
-	TuyaMCU_Sensor_Init,                     // Init
 	TuyaMCU_Sensor_RunEverySecond,           // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
-	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // reserveIORoles
+	NULL,                                    // frameworkRequest
 	false,                                   // loaded
 	},
 #endif
@@ -919,7 +911,7 @@ static driver_t g_drivers[] = {
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // reserveIORoles
+	NULL,                                    // frameworkRequest
 	false,                                   // loaded
 	},
 #endif
@@ -929,14 +921,12 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"DoorSensor is using deep sleep to preserve battery. This is used for devices without TuyaMCU, where BK deep sleep and wakeup on GPIO is used. This drives requires you to set a DoorSensor pin. Change on door sensor pin wakes up the device. If there are no changes for some time, device goes to sleep. See example [here](https://www.elektroda.com/rtvforum/topic3960149.html). If your door sensor does not wake up in certain pos, please use DSEdge command (try all 3 options, default is 2). ",
 	//drvdetail:"requires":""}
 	{ "DoorSensor",                          // Driver Name
-	DoorSensor_Init,                         // Init
 	DoorSensor_OnEverySecond,                // onEverySecond
 	DoorSensor_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
-	DoorSensor_StopDriver,                   // stopFunction
 	DoorSensor_OnChannelChanged,             // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	DoorSensor_reserveIORoles,               // reserveIORoles
+	DoorSensor_frameworkRequest,               // frameworkRequest
 	false,                                   // loaded
 	},
 #endif
@@ -1320,14 +1310,12 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"Custom mechanism to measure battery level with ADC and an optional relay. See [example here](https://www.elektroda.com/rtvforum/topic3959103.html).",
 	//drvdetail:"requires":""}
 	{ "Battery",                             // Driver Name
-	Batt_Init,                               // Init
 	Batt_OnEverySecond,                      // onEverySecond
 	Batt_AppendInformationToHTTPIndexPage,   // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
-	Batt_StopDriver,                         // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	Battery_reserveIORoles,					 // reserveIORoles
+	Battery_frameworkRequest,                // frameworkRequest
 	false,                                   // loaded
 	},
 #endif
@@ -1515,8 +1503,8 @@ void DRV_StopDriver(const char* name) {
 	for (i = 0; i < g_numDrivers; i++) {
 		if (*name == '*' || !stricmp(g_drivers[i].name, name)) {
 			if (g_drivers[i].bLoaded) {
-				if (g_drivers[i].stopFunc != 0) {
-					g_drivers[i].stopFunc();
+				if (g_drivers[i].frameworkRequest) {
+					g_drivers[i].frameworkRequest(OBKF_Stop, 0);
 				}
 				g_drivers[i].bLoaded = false;
 				ADDLOG_INFO(LOG_FEATURE_MAIN, "Drv %s stopped.", g_drivers[i].name);
@@ -1561,8 +1549,9 @@ void DRV_StartDriver(const char* name) {
 				bStarted = 1;
 				break;
 			} else {
-				if (g_drivers[i].initFunc) {
-					g_drivers[i].initFunc(i);
+				if (g_drivers[i].frameworkRequest) {
+					g_drivers[i].frameworkRequest(OBKF_Init, 0);
+					g_drivers[i].frameworkRequest(OBKF_AcquirePin, 0);
 				}
 				g_drivers[i].bLoaded = true;
 				ADDLOG_INFO(LOG_FEATURE_MAIN, "Started %s.\n", name);
@@ -1629,8 +1618,8 @@ void DRV_Generic_Init() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopDriver", DRV_Stop, NULL);
 	for (int driverIndex = 0; driverIndex < g_numDrivers; driverIndex++) {
-		if (g_drivers[driverIndex].reserveIORoles) {
-			g_drivers[driverIndex].reserveIORoles(driverIndex);
+		if (g_drivers[driverIndex].frameworkRequest) {
+			g_drivers[driverIndex].frameworkRequest(OBKF_PinRoles, driverIndex);
 		}
 	}
 #if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
@@ -1648,8 +1637,9 @@ void DRV_Autostart() {
 	{
 		int driverIndex = PIN_pinIORoleDriver()[PIN_registeredPinDetails()[i].pinIORole];
 		if (driverIndex && !g_drivers[driverIndex].bLoaded) {
-			if (g_drivers[driverIndex].initFunc) {
-				g_drivers[driverIndex].initFunc(i);
+			if (g_drivers[driverIndex].frameworkRequest) {
+				g_drivers[driverIndex].frameworkRequest(OBKF_Init, 0);
+				g_drivers[driverIndex].frameworkRequest(OBKF_AcquirePin, 0);
 			}
 			g_drivers[driverIndex].bLoaded = true;
 		}

@@ -7,6 +7,7 @@
 
 typedef enum obkFramework_e {
 	OBKF_Init,
+	OBKF_Stop,
 	OBKF_PinRoles,
 	OBKF_AcquirePin,
 	OBKF_ReleasePin

@@ -22,7 +22,7 @@ static int g_lastbattvoltage = 0, g_lastbattlevel = 0;
 static float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
 static int g_driverIndex = 0;
 
-static int Batt_Load() {
+static int Battery_Load() {
 	for (int i = 0; i < g_usedpins_index; i++) {
 		switch (PIN_registeredPinDetails()[i].pinIORole)
 		{
@@ -172,14 +172,8 @@ commandResult_t Battery_cycle(const void* context, const char* cmd, const char* 
 	return CMD_RES_OK;
 }
 
-// run on startup to populate dropdowns
-void Battery_reserveIORoles(int driverIndex) {
-	// register IORoles for this driver
-	g_driverIndex = PIN_pinIORoleDriver()[IOR_BAT_ADC] = PIN_pinIORoleDriver()[IOR_BAT_Relay] = PIN_pinIORoleDriver()[IOR_BAT_Relay_n] = driverIndex;
-}
-
 // startDriver Battery
-void Batt_Init() {
+static void Battery_Init() {
 
 	//cmddetail:{"name":"Battery_Setup","args":"[minbatt][maxbatt][V_divider][Vref][AD Bits]",
 	//cmddetail:"descr":"measure battery based on ADC. <br />req. args: minbatt in mv, maxbatt in mv. <br />optional: V_divider(2), Vref(default 2400), ADC bits(4096)",
@@ -193,15 +187,6 @@ void Batt_Init() {
 	//cmddetail:"examples":"Battery_cycle 60"}
 	CMD_RegisterCommand("Battery_cycle", Battery_cycle, NULL);
 
-	// after loading the battery assigned pins
-	// do a quick and dirty to make the first reading valid
-	if ((Batt_Load() != -1) && (g_pin_rel != -1)) {
-		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
-		HAL_ADC_Read(g_pin_adc);
-		HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
-	}
-
-	ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
 }
 
 void Batt_OnEverySecond() {
@@ -225,7 +210,7 @@ void Batt_OnEverySecond() {
 	}
 }
 
-void Batt_StopDriver() {
+static void Battery_StopDriver() {
 	g_pin_adc = -1;
 	g_pin_rel = -1;
 	g_val_rel = -1;
@@ -237,6 +222,34 @@ void Batt_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreStat
 		return;
 	}
 	hprintf255(request, "<h2>Battery level=%.2f%%, voltage=%.2fmV</h2>", g_battlevel, g_battvoltage);
+}
+
+void Battery_frameworkRequest(int obkfRequest, int arg) {
+	switch (obkfRequest)
+	{
+	case OBKF_PinRoles:
+		g_driverIndex = PIN_pinIORoleDriver()[IOR_BAT_ADC] = PIN_pinIORoleDriver()[IOR_BAT_Relay] = PIN_pinIORoleDriver()[IOR_BAT_Relay_n] = arg;
+		break;
+	
+	case OBKF_Init:
+		Battery_Init();
+		break;
+	
+	case OBKF_Stop:
+		Battery_StopDriver();
+		break;
+		
+	case OBKF_AcquirePin:
+		if ((Battery_Load() != -1) && (g_pin_rel != -1)) {
+			HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
+			HAL_ADC_Read(g_pin_adc);
+			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
+		}
+		ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
+
+	default:
+		break;
+	}
 }
 
 #endif // ENABLE_DRIVER_BATTERY
