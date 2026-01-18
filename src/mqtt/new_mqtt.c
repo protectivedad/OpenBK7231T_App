@@ -2148,15 +2148,6 @@ void MQTT_BroadcastTasmotaTeleSENSOR() {
 	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES) == false) {
 		return;
 	}
-	bool bHasAnySensor = false;
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	if (DRV_IsMeasuringPower()) {
-		bHasAnySensor = true;
-	}
-#endif
-	if (bHasAnySensor) {
-		MQTT_ProcessCommandReplyJSON("SENSOR", "", COMMAND_FLAG_SOURCE_TELESENDER);
-	}
 #endif
 }
 void MQTT_BroadcastTasmotaTeleSTATE() {

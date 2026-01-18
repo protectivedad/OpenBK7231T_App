@@ -1057,12 +1057,6 @@ void Main_OnEverySecond()
 		if (!g_reset) {
 			// ensure any config changes are saved before reboot.
 			CFG_Save_IfThereArePendingChanges();
-#if ENABLE_BL_SHARED
-			if (DRV_IsMeasuringPower())
-			{
-				BL09XX_SaveEmeteringStatistics();
-			}
-#endif       
 #if ENABLE_DRIVER_HLW8112SPI
 			HLW8112_Save_Statistics();
 #endif 

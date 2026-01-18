@@ -1532,68 +1532,27 @@ void DRV_StopDriver(const char* name) {
 	DRV_Mutex_Free();
 }
 void DRV_StartDriver(const char* name) {
-	int i;
-	int bStarted;
-
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	bStarted = 0;
-#if (ENABLE_DRIVER_DS1820) && (ENABLE_DRIVER_DS1820_FULL)
-			bool twinrunning=false;
-#endif
-	for (i = 0; i < g_numDrivers; i++) {
+	for (int i = 0; i < g_numDrivers; i++) {
 		if (!stricmp(g_drivers[i].name, name)) {
-#if (ENABLE_DRIVER_DS1820) && (ENABLE_DRIVER_DS1820_FULL)
-			twinrunning=false;
-			if (!stricmp("DS1820", name) && DRV_IsRunning("DS1820_FULL")){
-				ADDLOG_ERROR(LOG_FEATURE_MAIN, "Drv DS1820_FULL is already loaded - can't start DS1820, too.\n", name);
-				twinrunning=true;
-				break;
-			}
-			if (!stricmp("DS1820_FULL", name) && DRV_IsRunning("DS1820")){
-				ADDLOG_ERROR(LOG_FEATURE_MAIN, "Drv DS1820 is already loaded - can't start DS1820_FULL, too.\n", name);
-				twinrunning=true;
-				break;
-			}
-#endif
 			if (g_drivers[i].bLoaded) {
-				ADDLOG_INFO(LOG_FEATURE_MAIN, "Drv %s is already loaded.\n", name);
-				bStarted = 1;
-				break;
+				ADDLOG_WARN(LOG_FEATURE_MAIN, "Driver %s - Already loaded", name);
 			} else {
 				if (g_drivers[i].frameworkRequest) {
-					g_drivers[i].frameworkRequest(OBKF_Init, 0);
-					g_drivers[i].frameworkRequest(OBKF_AcquirePin, 0);
+					g_drivers[i].bLoaded = g_drivers[i].frameworkRequest(OBKF_Init, 0);
+				} else {
+					g_drivers[i].bLoaded = true;
 				}
-				g_drivers[i].bLoaded = true;
-				ADDLOG_INFO(LOG_FEATURE_MAIN, "Started %s.\n", name);
-				bStarted = 1;
-				break;
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "%s - %s", name, g_drivers[i].bLoaded ? "Started" : "Failed");
 			}
-		}
-	}
-#if (ENABLE_DRIVER_DS1820) && (ENABLE_DRIVER_DS1820_FULL)
-	if (!bStarted && !twinrunning) {
-#else
-	if (!bStarted) {
-#endif
-		ADDLOG_INFO(LOG_FEATURE_MAIN, "Driver %s is not known in this build.\n", name);
-		ADDLOG_INFO(LOG_FEATURE_MAIN, "Available drivers: ");
-		for (i = 0; i < g_numDrivers; i++) {
-			if (i == 0) {
-				ADDLOG_INFO(LOG_FEATURE_MAIN, "%s", g_drivers[i].name);
-			}
-			else {
-				ADDLOG_INFO(LOG_FEATURE_MAIN, ", %s", g_drivers[i].name);
-			}
+			break;
 		}
 	}
 	DRV_Mutex_Free();
 }
-// startDriver DGR
-// startDriver BL0942
-// startDriver BL0937
+
 static commandResult_t DRV_Start(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, 0);
 	// following check must be done after 'Tokenizer_TokenizeString',
@@ -1717,30 +1676,4 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 		}
 		hprintf255(request, ", total: %i</h5>", g_numDrivers);
 	}
-}
-
-bool DRV_IsMeasuringPower() {
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	return DRV_IsRunning("BL0937") || DRV_IsRunning("BL0942")
-		|| DRV_IsRunning("CSE7766") || DRV_IsRunning("TESTPOWER")
-		|| DRV_IsRunning("BL0942SPI") || DRV_IsRunning("RN8209");
-		// || DRV_IsRunning("HLW8112SPI"); TODO messup ha config if enabled
-#else
-	return false;
-#endif
-}
-bool DRV_IsMeasuringBattery() {
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	return DRV_IsRunning("Battery");
-#else
-	return false;
-#endif
-}
-
-bool DRV_IsSensor() {
-#ifndef OBK_DISABLE_ALL_DRIVERS
-	return DRV_IsRunning("SHT3X") || DRV_IsRunning("CHT83XX") || DRV_IsRunning("SGP") || DRV_IsRunning("AHT2X") || DRV_IsRunning("DS1820") || DRV_IsRunning("DS1820_full");
-#else
-	return false;
-#endif
 }
