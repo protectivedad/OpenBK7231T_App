@@ -663,17 +663,9 @@ void PIN_SetupPins() {
 }
 
 int PIN_GetPinRoleForPinIndex(int index) {
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
-		return 0;
-	}
 	return g_cfg.pins.roles[index];
 }
 int PIN_GetPinChannelForPinIndex(int index) {
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannelForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
-		return 0;
-	}
 	return g_cfg.pins.channels[index];
 }
 int PIN_CountPinsWithRoleOrRole(int role, int role2) {
@@ -708,10 +700,6 @@ int PIN_FindPinIndexForRole(int role, int defaultIndexToReturnIfNotFound) {
 	return defaultIndexToReturnIfNotFound;
 }
 int PIN_GetPinChannel2ForPinIndex(int index) {
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_GetPinChannel2ForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
-		return 0;
-	}
 	return g_cfg.pins.channels2[index];
 }
 // return number of channels used for a role
@@ -1157,11 +1145,6 @@ void CFG_ApplyChannelStartValues() {
 		case IOR_ToggleChannelOnToggle:
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensor:
-		case IOR_DoorSensor_NoPup:
-		case IOR_DoorSensor_pd:
-#endif
 			iValue = g_cfg.pins.channels[i];
 			g_lastValidState[i] = g_channelValues[iValue];
 		}
@@ -1955,8 +1938,7 @@ void PIN_ticks(void* param)
 			PIN_Input_Handler(pinIndex, t_diff);
 		} else if (
 			pinIORole == IOR_DigitalInput || pinIORole == IOR_DigitalInput_n ||
-			pinIORole == IOR_DigitalInput_NoPup || pinIORole == IOR_DigitalInput_NoPup_n
-			|| IS_PIN_DS_ROLE(pinIORole))
+			pinIORole == IOR_DigitalInput_NoPup || pinIORole == IOR_DigitalInput_NoPup_n)
 		{
 			// read pin digital value (and already invert it if needed)
 			value = PIN_ReadDigitalInputValue_WithInversionIncluded(pinIndex);

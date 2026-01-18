@@ -24,6 +24,7 @@
 static int g_noChangeTimePassed = 0; // time without change. Every event of the doorsensor channel resets it.
 static int g_emergencyTimeWithNoConnection = 0; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
 static int g_registeredPin = -1; // pin found on initialization
+static bool g_lastValidState = false;
 static int setting_automaticWakeUpAfterSleepTime = 0;
 static int setting_timeRequiredUntilDeepSleep = 60;
 static int g_driverIndex;
@@ -64,6 +65,11 @@ commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const c
 	}
 
 	return CMD_RES_OK;
+}
+
+static bool DoorSensor_pinValue() {
+	bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
+	return CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !pinValue : pinValue;
 }
 
 commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -110,9 +116,8 @@ static int DoorSensor_Load() {
 	}
 	
 	if (g_registeredPin != -1) {
-		bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
-		pinValue = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !pinValue : pinValue;
-		setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? pinValue : g_defaultWakeEdge);
+		setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? DoorSensor_pinValue() : g_defaultWakeEdge);
+		g_lastValidState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
 	}
 	ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
 	return (g_registeredPin != -1);
@@ -137,14 +142,12 @@ void DoorSensor_Init() {
 }
 
 void DoorSensor_OnEverySecond() {
-	if (OTA_GetProgress() >= 0) {
+	if (OTA_GetProgress() >= 0)
 		return;
-	}
 
-	if (g_registeredPin == -1) {
-		ADDLOG_WARN(LOG_FEATURE_DRV, "doorsensor: Driver not assigned to pin, restart device");
+	if (g_registeredPin == -1)
 		return;
-	}
+
 #if ENABLE_MQTT
 	if (Main_HasMQTTConnected()) { // executes every second when connection is established
 		if (++g_noChangeTimePassed >= setting_timeRequiredUntilDeepSleep) {
@@ -164,7 +167,10 @@ void DoorSensor_OnEverySecond() {
 
 void DoorSensor_StopDriver() {
 	// reset pins and time passed values
-	g_registeredPin = -1;
+	if (g_registeredPin != -1) {
+		setGPIActive(g_registeredPin, 0, 0);
+		g_registeredPin = -1;
+	}
 	g_noChangeTimePassed = 0;
 	g_emergencyTimeWithNoConnection = 0;
 }
@@ -194,10 +200,6 @@ void DoorSensor_OnChannelChanged(int ch, int value) {
 	// (only sleep when there are no changes for certain time)
 
 	if (g_cfg.pins.channels[g_registeredPin] == ch) {
-		ADDLOGF_TIMING("%i - %s - Channel %i is being set to state %i", xTaskGetTickCount(), __func__, ch, value);
-		// 0 seconds since last change
-		g_noChangeTimePassed = 0;
-		g_emergencyTimeWithNoConnection = 0;
 	}
 }
 
@@ -228,4 +230,21 @@ int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	return true;
 }
 
+void DoorSensor_QuickTick() {
+	if (OTA_GetProgress() >= 0)
+		return;
+
+	if (g_registeredPin == -1)
+		return;
+
+	// might need debouncing
+	bool pinValue = DoorSensor_pinValue();
+	if (pinValue != g_lastValidState) {
+		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), pinValue, 0);
+		g_lastValidState = pinValue;
+		g_noChangeTimePassed = 0;
+		g_emergencyTimeWithNoConnection = 0;
+		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, pinValue);
+	}
+}
 #endif // ENABLE_DRIVER_DOORSENSOR

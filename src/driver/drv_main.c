@@ -936,10 +936,10 @@ static driver_t g_drivers[] = {
 	{ "DoorSensor",                          // Driver Name
 	DoorSensor_OnEverySecond,                // onEverySecond
 	DoorSensor_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
-	NULL,                                    // runQuickTick
-	DoorSensor_OnChannelChanged,             // onChannelChanged
+	DoorSensor_QuickTick,                    // runQuickTick
+	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	DoorSensor_frameworkRequest,               // frameworkRequest
+	DoorSensor_frameworkRequest,             // frameworkRequest
 	false,                                   // loaded
 	},
 #endif

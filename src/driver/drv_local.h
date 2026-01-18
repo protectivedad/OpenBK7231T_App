@@ -22,7 +22,7 @@ void BMP280_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreSt
 int DoorSensor_frameworkRequest(int obkfRequest, int arg);
 void DoorSensor_OnEverySecond();
 void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
-void DoorSensor_OnChannelChanged(int ch, int value);
+void DoorSensor_QuickTick();
 
 void DRV_MAX72XX_Clock_OnEverySecond();
 void DRV_MAX72XX_Clock_RunFrame();
