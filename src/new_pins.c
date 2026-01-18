@@ -389,11 +389,6 @@ bool BTN_ShouldInvert(int index) {
 		|| role == IOR_SmartButtonForLEDs_n) {
 		return true;
 	}
-#if ENABLE_DRIVER_DOORSENSOR
-	if (CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE)) {
-		return (IS_PIN_DS_ROLE(role));
-	}
-#endif
 	return false;
 }
 uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index) {
@@ -1126,6 +1121,8 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 // TODO: think on channels and pins and drivers
 void CFG_ApplyChannelStartValues() {
 	int i, iValue;
+	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
+
 	for (i = 0; i < CHANNEL_MAX; i++) {
 		iValue = g_cfg.startChannelValues[i];
 		if (iValue == -1) {
@@ -1138,13 +1135,14 @@ void CFG_ApplyChannelStartValues() {
 		}
 	}
 	// preload pin values from channels for pin types that look at g_lastValidState
+	// drivers need to take car of this
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		switch (g_cfg.pins.roles[i]) {
 		case IOR_DigitalInput:
 		case IOR_DigitalInput_n:
-		case IOR_ToggleChannelOnToggle:
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
+		case IOR_ToggleChannelOnToggle:
 			iValue = g_cfg.pins.channels[i];
 			g_lastValidState[i] = g_channelValues[iValue];
 		}
@@ -2402,9 +2400,6 @@ int h_isChannelDigitalInput(int tg_ch) {
 			continue;
 		role = PIN_GetPinRoleForPinIndex(i);
 		if (role == IOR_DigitalInput || role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
-			return true;
-		}
-		if (IS_PIN_DS_ROLE(role)) {
 			return true;
 		}
 	}

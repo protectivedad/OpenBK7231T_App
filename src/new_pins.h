@@ -670,11 +670,6 @@ typedef enum ioRole_e {
 #else
 #define IS_PIN_AIR_SENSOR_ROLE(role) (false)
 #endif
-#if ENABLE_DRIVER_DOORSENSOR
-#define IS_PIN_DS_ROLE(role) (((role)==IOR_DoorSensor) || ((role)==IOR_DoorSensor_NoPup) || ((role)==IOR_DoorSensor_pd))
-#else
-#define IS_PIN_DS_ROLE(role) (false)
-#endif
 
 typedef enum channelType_e {
 	//chandetail:{"name":"Default",

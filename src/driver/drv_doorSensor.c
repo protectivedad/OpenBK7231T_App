@@ -1,8 +1,17 @@
-// Power-saving door sensor driver with deep sleep
-// Device reboots and waits for MQTT connection, while monitoring door sensor status.
-// After a certain amount of time with MQTT connection, to make sure that door state is 
-// already reported, and with no futher door state changes, device goes to deep sleep 
-// and waits for wakeup from door sensor input state change.
+// Door Sensor Driver
+// Keeps track of one pin and posts any updates to one channel 
+// using quick tick timing. Diplays open/closed status along with
+// time until sleep. Counts down time to sleep on the every second
+// timer loop. When time to sleep reaches zero driver requests the
+// system go to sleep. Time to sleep resets when pin changes state.
+
+// Driver is responsible for:
+// 1 - taking ownership of IORoles
+// 2 - initialization
+// 3 - registering commands
+// 4 - assigning pins to allocated IORoles
+// 5 - every second loop function
+// 6 - quick tick loop function
 
 #include "../obk_config.h"
 #if ENABLE_DRIVER_DOORSENSOR
@@ -21,8 +30,9 @@
 #include "../hal/hal_adc.h"
 #include "../hal/hal_ota.h"
 
-static int g_noChangeTimePassed = 0; // time without change. Every event of the doorsensor channel resets it.
-static int g_emergencyTimeWithNoConnection = 0; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
+static int g_noChangeTimePassed; // time without change. Every event of the doorsensor channel resets it.
+static int g_emergencyTimeWithNoConnection; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
+
 static int g_registeredPin = -1; // pin found on initialization
 static bool g_lastValidState = false;
 static int setting_automaticWakeUpAfterSleepTime = 0;
@@ -39,8 +49,7 @@ int Simulator_GetDoorSennsorAutomaticWakeUpAfterSleepTime() {
 	return setting_automaticWakeUpAfterSleepTime;
 }
 
-// addEventHandler OnClick 8 DSTime +100
-commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const char* args, int cmdFlags) {
+static commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char *a;
 
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
@@ -67,13 +76,7 @@ commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const c
 	return CMD_RES_OK;
 }
 
-static bool DoorSensor_pinValue() {
-	bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
-	return CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !pinValue : pinValue;
-}
-
-commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
-
+static commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
 	// following check must be done after 'Tokenizer_TokenizeString',
 	// so we know arguments count in Tokenizer. 'cmd' argument is
@@ -90,8 +93,21 @@ commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, const c
 	return CMD_RES_OK;
 }
 
-// returns false if pin not found
-static int DoorSensor_Load() {
+// clear timer values
+static void DoorSensor_clearTimers() {
+	g_noChangeTimePassed = 0;
+	g_emergencyTimeWithNoConnection = 0;
+}
+
+// read and returns monitored pin value (inverted if flag is set)
+static bool DoorSensor_pinValue() {
+	bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
+	return CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !pinValue : pinValue;
+}
+
+// Finds associated pin, first assigned is chosen
+// returns false if no pin is found
+static bool DoorSensor_AssignPins() {
 	for (int i = 0; i < g_usedpins_index; i++) {
 		switch (PIN_registeredPinDetails()[i].pinIORole)
 		{
@@ -99,33 +115,42 @@ static int DoorSensor_Load() {
 			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
 			HAL_PIN_Setup_Input_Pullup(g_registeredPin);
 			// this is input - sample initial state down below
-			break;
+			return true;
 		case IOR_DoorSensor_pd:
 			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
 			HAL_PIN_Setup_Input_Pulldown(g_registeredPin);
 			// this is input - sample initial state down below
-			break;
+			return true;
 		case IOR_DoorSensor_NoPup:
 			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
 			HAL_PIN_Setup_Input(g_registeredPin);
 			// this is input - sample initial state down below
-			break;
+			return true;
 		default:
 			break;
 		}
 	}
-	
-	if (g_registeredPin != -1) {
+	return false;
+}
+
+// assigns pins and does any activation, active status, last state, etc
+// returns true when pin is found
+static int DoorSensor_ActivatePins() {
+	if (DoorSensor_AssignPins()) {
 		setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? DoorSensor_pinValue() : g_defaultWakeEdge);
 		g_lastValidState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
+	} else {
+		g_registeredPin = -1;
 	}
-	ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
+
+	ADDLOGF_TIMING("%i - %s - Registered pin %i, previous state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_lastValidState);
 	return (g_registeredPin != -1);
 }
 
-void DoorSensor_Init() {
-	// 0 seconds since last change
-	g_noChangeTimePassed = 0;
+// clears timing counters and registers commands
+static void DoorSensor_Init() {
+	g_registeredPin = -1;
+	DoorSensor_clearTimers();
 
 	//cmddetail:{"name":"DSTime","args":"[timeSeconds][optionalAutoWakeUpTimeSeconds]",
 	//cmddetail:"descr":"DoorSensor driver configuration command. Time to keep device running before next sleep after last door sensor change. In future we may add also an option to automatically sleep after MQTT confirms door state receival. You can also use this to extend current awake time (at runtime) with syntax: 'DSTime +10', this will make device stay awake 10 seconds longer. You can also restart current value of awake counter by 'DSTime clear', this will make counter go from 0 again.",
@@ -141,6 +166,18 @@ void DoorSensor_Init() {
 
 }
 
+// runs deactivation of any previous assigned pin, clears pin and timers
+static void DoorSensor_StopDriver() {
+	// reset pins and time passed values
+	if (g_registeredPin != -1) {
+		setGPIActive(g_registeredPin, 0, 0);
+		g_registeredPin = -1;
+	}
+	DoorSensor_clearTimers();
+}
+
+// every second timing loop function
+// counts seconds and requests deep sleep when countdown reaches zero
 void DoorSensor_OnEverySecond() {
 	if (OTA_GetProgress() >= 0)
 		return;
@@ -165,44 +202,21 @@ void DoorSensor_OnEverySecond() {
 	}
 }
 
-void DoorSensor_StopDriver() {
-	// reset pins and time passed values
-	if (g_registeredPin != -1) {
-		setGPIActive(g_registeredPin, 0, 0);
-		g_registeredPin = -1;
-	}
-	g_noChangeTimePassed = 0;
-	g_emergencyTimeWithNoConnection = 0;
-}
-
+// posts html information
 void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
 {
-	if (bPreState){
+	if (bPreState)
 		return;
-	}
-	int untilSleep;
+	int untilSleep = EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT - g_emergencyTimeWithNoConnection;
 
 #if ENABLE_MQTT
-	if (Main_HasMQTTConnected()) {
+	if (Main_HasMQTTConnected())
 		untilSleep = setting_timeRequiredUntilDeepSleep - g_noChangeTimePassed;
-		hprintf255(request, "<h2>Door: time until deep sleep: %i</h2>", untilSleep);
-	}
-	else 
 #endif
-	{
-		untilSleep = EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT - g_emergencyTimeWithNoConnection;
-		hprintf255(request, "<h2>Door: waiting for MQTT connection (but will emergency sleep in %i)</h2>", untilSleep);
-	}
+	hprintf255(request, "<h2>Door %s: deep sleep: %i (s)</h2>", g_lastValidState ? "open" : "closed", untilSleep);
 }
 
-void DoorSensor_OnChannelChanged(int ch, int value) {
-	// detect door state change
-	// (only sleep when there are no changes for certain time)
-
-	if (g_cfg.pins.channels[g_registeredPin] == ch) {
-	}
-}
-
+// framework request function
 int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)
 	{
@@ -213,7 +227,7 @@ int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	case OBKF_Init:
 		DoorSensor_Init();
 	case OBKF_AcquirePin:
-		return DoorSensor_Load();
+		return DoorSensor_ActivatePins();
 
 	case OBKF_ReleasePin:
 	case OBKF_Stop:
@@ -230,6 +244,8 @@ int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	return true;
 }
 
+// quick tick timing loop function
+// reads pin value posts changes to channel
 void DoorSensor_QuickTick() {
 	if (OTA_GetProgress() >= 0)
 		return;
@@ -242,8 +258,7 @@ void DoorSensor_QuickTick() {
 	if (pinValue != g_lastValidState) {
 		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), pinValue, 0);
 		g_lastValidState = pinValue;
-		g_noChangeTimePassed = 0;
-		g_emergencyTimeWithNoConnection = 0;
+		DoorSensor_clearTimers();
 		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, pinValue);
 	}
 }
