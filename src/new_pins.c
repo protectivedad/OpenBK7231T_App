@@ -54,7 +54,6 @@ int BTN_SHORT_MS;
 int BTN_LONG_MS;
 int BTN_HOLD_REPEAT_MS;
 byte *g_defaultWakeEdge = 0;
-int g_initialPinStates = 0;
 
 int g_pinIORoleDriver[IOR_Total_Options];
 int g_usedpins_index;
@@ -225,10 +224,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 			g_cfg.pins.roles[i] == IOR_DigitalInput
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_n
 			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
-			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n
-			|| IS_PIN_DS_ROLE(g_cfg.pins.roles[i])) {
-			//value = CHANNEL_Get(g_cfg.pins.channels[i]);
-
+			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n) {
 			// added per request
 			// https://www.elektroda.pl/rtvforum/viewtopic.php?p=20543190#20543190
 			// forcing a certain edge for both states helps on some door sensors, somehow
@@ -1074,14 +1070,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		g_cfg.pins.roles[index] = role;
 		g_cfg_pendingChanges++;
 	}
-	if (PIN_ProcessNewPinRole(index, role)) {
-		if (PIN_ReadDigitalInputValue_WithInversionIncluded(index)) {
-			BIT_SET(g_initialPinStates, index);
-		}
-		else {
-			BIT_CLEAR(g_initialPinStates, index);
-		}
-	}
+	PIN_ProcessNewPinRole(index, role);
 
 #ifdef ENABLE_DRIVER_DHT
 	if (bDHTChange) {

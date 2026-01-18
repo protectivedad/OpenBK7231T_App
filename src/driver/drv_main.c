@@ -40,6 +40,19 @@ void GirierMCU_RunEverySecond();
 
 // startDriver BL0937
 static driver_t g_drivers[] = {
+	//drvdetail:{"name":"Null",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"General input/output controls",
+	//drvdetail:"requires":""}
+	{ "Null",                                // Driver Name
+	NULL,                                    // onEverySecond
+	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // runQuickTick
+	NULL,                                    // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	NULL,                                    // frameworkRequest
+	false,                                   // loaded
+	},
 	//drvdetail:{"name":"IODriver",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"General input/output controls",

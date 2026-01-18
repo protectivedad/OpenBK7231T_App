@@ -27,6 +27,7 @@ static int g_registeredPin = -1; // pin found on initialization
 static int setting_automaticWakeUpAfterSleepTime = 0;
 static int setting_timeRequiredUntilDeepSleep = 60;
 static int g_driverIndex;
+static int g_defaultWakeEdge = 2;
 
 #define EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT 60 * 5
 
@@ -65,19 +66,35 @@ commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const c
 	return CMD_RES_OK;
 }
 
-int DoorSensor_Load() {
+commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
+
+	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1))
+	{
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+	// strlen("DoorSensor_SetEdge") == 6
+	if (Tokenizer_GetArgsCount() == 1) {
+		g_defaultWakeEdge = Tokenizer_GetArgInteger(0);
+	}
+
+	return CMD_RES_OK;
+}
+
+static int DoorSensor_Load() {
 	for (int i = 0; i < g_usedpins_index; i++) {
 		switch (PIN_registeredPinDetails()[i].pinIORole)
 		{
 		case IOR_DoorSensor:
 			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
-			setGPIActive(g_registeredPin, 1, 0);
 			HAL_PIN_Setup_Input_Pullup(g_registeredPin);
 			// this is input - sample initial state down below
 			break;
 		case IOR_DoorSensor_pd:
 			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
-			setGPIActive(g_registeredPin, 1, 0);
 			HAL_PIN_Setup_Input_Pulldown(g_registeredPin);
 			// this is input - sample initial state down below
 			break;
@@ -90,10 +107,10 @@ int DoorSensor_Load() {
 			break;
 		}
 	}
-	if (PIN_ReadDigitalInputValue_WithInversionIncluded(g_registeredPin))
-		BIT_SET(g_initialPinStates, g_registeredPin);
-	else
-		BIT_CLEAR(g_initialPinStates, g_registeredPin);
+
+	bool pinValue = PIN_ReadDigitalInputValue_WithInversionIncluded(g_registeredPin);
+//	bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
+	setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? pinValue : g_defaultWakeEdge);
 	return g_registeredPin;
 }
 
@@ -105,7 +122,13 @@ void DoorSensor_Init() {
 	//cmddetail:"descr":"DoorSensor driver configuration command. Time to keep device running before next sleep after last door sensor change. In future we may add also an option to automatically sleep after MQTT confirms door state receival. You can also use this to extend current awake time (at runtime) with syntax: 'DSTime +10', this will make device stay awake 10 seconds longer. You can also restart current value of awake counter by 'DSTime clear', this will make counter go from 0 again.",
 	//cmddetail:"fn":"DoorSensor_SetTime","file":"driver/drv_doorSensor.c","requires":"",
 	//cmddetail:"examples":""}
-	CMD_RegisterCommand("DSTime", DoorSensor_SetTime, NULL);
+	CMD_RegisterCommand("DoorSensor_SetTime", DoorSensor_SetTime, NULL);
+
+	//cmddetail:{"name":"DoorSensor_SetEdge","args":"[edgeCode]",
+	//cmddetail:"descr":"DoorSensor wake configuration command. 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising. Default is 2. Second argument is optional and allows to set per-pin DSEdge instead of setting it for all pins.",
+	//cmddetail:"fn":"DoorSensor_SetEdge","file":"driver/drv_doorSensor.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("DoorSensor_SetEdge", DoorSensor_SetEdge, NULL);
 
 }
 
@@ -153,13 +176,13 @@ void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bP
 #if ENABLE_MQTT
 	if (Main_HasMQTTConnected()) {
 		untilSleep = setting_timeRequiredUntilDeepSleep - g_noChangeTimePassed;
-		hprintf255(request, "<h2>Door (initial: %i): time until deep sleep: %i</h2>", g_initialPinStates, untilSleep);
+		hprintf255(request, "<h2>Door: time until deep sleep: %i</h2>", untilSleep);
 	}
 	else 
 #endif
 	{
 		untilSleep = EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT - g_emergencyTimeWithNoConnection;
-		hprintf255(request, "<h2>Door (initial: %i): waiting for MQTT connection (but will emergency sleep in %i)</h2>", g_initialPinStates, untilSleep);
+		hprintf255(request, "<h2>Door: waiting for MQTT connection (but will emergency sleep in %i)</h2>", untilSleep);
 	}
 }
 
