@@ -1524,7 +1524,6 @@ typedef struct mainConfig_s {
 extern mainConfig_t g_cfg;
 
 extern char g_enable_pins;
-extern int g_initialPinStates;
 
 #define CHANNEL_SET_FLAG_FORCE		1
 #define CHANNEL_SET_FLAG_SKIP_MQTT	2
