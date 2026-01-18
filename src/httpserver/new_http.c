@@ -472,10 +472,10 @@ int http_getArgInteger(const char* base, const char* name) {
 
 const char* htmlPinRoleNames[] = {
 	" ",
-	"Rel",
-	"Rel_n",
-	"Btn",
-	"Btn_n",
+	"Relay",
+	"Relay_n",
+	"Button",
+	"Button_n",
 	"LED",
 	"LED_n",
 	"PWM",

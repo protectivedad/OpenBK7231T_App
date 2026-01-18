@@ -243,27 +243,27 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 			else {
 				falling = g_defaultWakeEdge[i];
 			}
-#if PLATFORM_XRADIO
-			int pull = 1;
-			if(
-#if ENABLE_DRIVER_DOORSENSOR
-				g_cfg.pins.roles[i] == IOR_DoorSensor_NoPup ||
-#endif
-				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
-				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n)
-			{
-				pull = 0;
-			}
-#if ENABLE_DRIVER_DOORSENSOR
-			else if(g_cfg.pins.roles[i] == IOR_DoorSensor_pd)
-			{
-				pull = 2;
-			}
-#endif
-			SetWUPIO(i, pull, falling);
-#else
+// #if PLATFORM_XRADIO
+// 			int pull = 1;
+// 			if(
+// #if ENABLE_DRIVER_DOORSENSOR
+// 				g_cfg.pins.roles[i] == IOR_DoorSensor_NoPup ||
+// #endif
+// 				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
+// 				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n)
+// 			{
+// 				pull = 0;
+// 			}
+// #if ENABLE_DRIVER_DOORSENSOR
+// 			else if(g_cfg.pins.roles[i] == IOR_DoorSensor_pd)
+// 			{
+// 				pull = 2;
+// 			}
+// #endif
+// 			SetWUPIO(i, pull, falling);
+// #else
 			setGPIActive(i, 1, falling);
-#endif
+// #endif
 		}
 	}
 	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map[0], g_gpio_edge_map[0]);
@@ -382,12 +382,7 @@ void PIN_TriggerPoll() {
 #endif
 extern int g_pwmFrequency;
 bool BTN_ShouldInvert(int index) {
-	int role;
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
-		return false;
-	}
-	role = g_cfg.pins.roles[index];
+	int role = g_cfg.pins.roles[index];
 	if (role == IOR_Button_n || role == IOR_Button_ToggleAll_n ||
 		role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup_n
 		|| role == IOR_Button_ScriptOnly_n
@@ -403,12 +398,7 @@ bool BTN_ShouldInvert(int index) {
 }
 uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index) {
 	uint8_t iVal = HAL_PIN_ReadDigitalInput(index);
-
-	// support inverted button
-	if (BTN_ShouldInvert(index)) {
-		return (iVal == 0) ? 1 : 0;
-	}
-	return iVal;
+	return BTN_ShouldInvert(index) ? !iVal : iVal;
 }
 static uint8_t button_generic_get_gpio_value(void* param) {
 	int index = ((pinButton_s*)param) - g_buttons;
@@ -418,10 +408,25 @@ unsigned short g_counterDeltas[PLATFORM_GPIO_MAX];
 void PIN_InterruptHandler(int gpio) {
 	g_counterDeltas[gpio]++;
 }
-// returns bSampleInitialState
-static bool PIN_ProcessNewPinRole(int index, int role) {
-	bool bSampleInitialState = false;
+void NEW_button_init(pinButton_s* handle, uint8_t(*pin_level)(void* self), uint8_t active_level)
+{
+	memset(handle, 0, sizeof(pinButton_s));
+
+	handle->event = (uint8_t)BTN_NONE_PRESS;
+	handle->hal_button_Level = pin_level;
+	handle->button_level = handle->hal_button_Level(handle);
+	handle->active_level = active_level;
+}
+static void PIN_ProcessNewPinRole(int index, int role) {
 	if (g_enable_pins) {
+		if (!role) // no role no processing
+			return;
+		int driverIndex = g_pinIORoleDriver[role];
+		if (driverIndex) { // let driver take care of pins
+			DRV_SendRequest(driverIndex, OBKF_AcquirePin, 0);
+			return;
+		}
+
 		int falling = 0;
 
 		// init new role
@@ -448,7 +453,6 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 			// init button after initializing pin role
 			NEW_button_init(bt, button_generic_get_gpio_value, 0);
 			// this is input - sample initial state down below
-			bSampleInitialState = true;
 		}
 		break;
 
@@ -477,14 +481,10 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 #endif
 			g_lastValidState[index] = PIN_ReadDigitalInputValue_WithInversionIncluded(index);
 			// this is input - sample initial state down below
-			bSampleInitialState = true;
 		}
 		break;
 		case IOR_DigitalInput_n:
 			falling = 1;
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensor:
-#endif
 		case IOR_DigitalInput:
 		{
 			// add to active inputs
@@ -492,26 +492,10 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 			// digital input
 			HAL_PIN_Setup_Input_Pullup(index);
 			// this is input - sample initial state down below
-			bSampleInitialState = true;
 		}
 		break;
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensor_pd:
-		{
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-			// digital input
-			HAL_PIN_Setup_Input_Pulldown(index);
-			// this is input - sample initial state down below
-			bSampleInitialState = true;
-		}
-		break;
-#endif
 		case IOR_DigitalInput_NoPup_n:
 			falling = 1;
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensor_NoPup:
-#endif
 		case IOR_DigitalInput_NoPup:
 		{
 			// add to active inputs
@@ -520,13 +504,10 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 			// digital input
 			HAL_PIN_Setup_Input(index);
 			// this is input - sample initial state down below
-			bSampleInitialState = true;
 		}
 		break;
 		case IOR_LED:
 		case IOR_LED_n:
-		case IOR_BAT_Relay:
-		case IOR_BAT_Relay_n:
 		case IOR_Relay:
 		case IOR_Relay_n:
 		{
@@ -537,7 +518,7 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 			channelValue = g_channelValues[channelIndex];
 
 			HAL_PIN_Setup_Output(index);
-			if (role == IOR_LED_n || role == IOR_Relay_n || role == IOR_BAT_Relay_n) {
+			if (role == IOR_LED_n || role == IOR_Relay_n) {
 				HAL_PIN_SetOutputValue(index, !channelValue);
 			}
 			else {
@@ -577,7 +558,6 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 			HAL_PIN_Setup_Output(index);
 		}
 		break;
-		case IOR_BAT_ADC:
 		case IOR_ADC_Button:
 		case IOR_ADC:
 			// init ADC for given pin
@@ -632,7 +612,6 @@ static bool PIN_ProcessNewPinRole(int index, int role) {
 			break;
 		}
 	}
-	return bSampleInitialState;
 }
 
 
@@ -737,21 +716,24 @@ int PIN_GetPinChannel2ForPinIndex(int index) {
 }
 // return number of channels used for a role
 // taken from code in http_fnc.c
-int PIN_IOR_NofChan(int test){
+int PIN_IOR_NofChan(int role) {
+	int driverIndex = g_pinIORoleDriver[role];
+	if (driverIndex) {
+		return DRV_SendRequest(driverIndex, OBKF_NoOfChannels, 0);
+	}
 	// For button, is relay index to toggle on double click
-	if (test == IOR_Button || test == IOR_Button_n || IS_PIN_DHT_ROLE(test) || IS_PIN_TEMP_HUM_SENSOR_ROLE(test) || IS_PIN_AIR_SENSOR_ROLE(test)){
+	if (role == IOR_Button || role == IOR_Button_n || IS_PIN_DHT_ROLE(role) || IS_PIN_TEMP_HUM_SENSOR_ROLE(role) || IS_PIN_AIR_SENSOR_ROLE(role)){
 			return 2;
 	}
 	// Some roles don't need any channels
-	if (test == IOR_SGP_CLK || test == IOR_SHT3X_CLK || test == IOR_CHT83XX_CLK || test == IOR_Button_ToggleAll || test == IOR_Button_ToggleAll_n
-			|| test == IOR_BL0937_CF || test == IOR_BL0937_CF1 || test == IOR_BL0937_SEL
-			|| test == IOR_LED_WIFI || test == IOR_LED_WIFI_n || test == IOR_BL0937_SEL_n
-			|| test == IOR_BAT_ADC || test == IOR_BAT_Relay || test == IOR_BAT_Relay_n
-			|| test == IOR_RCRecv || test == IOR_RCRecv_nPup
-			|| (test >= IOR_IRRecv && test <= IOR_DHT11)
-			|| (test >= IOR_SM2135_DAT && test <= IOR_BP1658CJ_CLK)
-			|| (test == IOR_HLW8112_SCSN)
-			|| (test == IOR_TuyaMCU)) {
+	if (role == IOR_SGP_CLK || role == IOR_SHT3X_CLK || role == IOR_CHT83XX_CLK || role == IOR_Button_ToggleAll || role == IOR_Button_ToggleAll_n
+			|| role == IOR_BL0937_CF || role == IOR_BL0937_CF1 || role == IOR_BL0937_SEL
+			|| role == IOR_LED_WIFI || role == IOR_LED_WIFI_n || role == IOR_BL0937_SEL_n
+			|| role == IOR_RCRecv || role == IOR_RCRecv_nPup
+			|| (role >= IOR_IRRecv && role <= IOR_DHT11)
+			|| (role >= IOR_SM2135_DAT && role <= IOR_BP1658CJ_CLK)
+			|| (role == IOR_HLW8112_SCSN)
+			|| (role == IOR_TuyaMCU)) {
 			return 0;
 	}
 	// all others have 1 channel
@@ -909,16 +891,6 @@ void Button_OnLongPressHoldStart(int index) {
 #define PIN_UART2_RXD 1
 #define PIN_UART2_TXD 0
 
-void NEW_button_init(pinButton_s* handle, uint8_t(*pin_level)(void* self), uint8_t active_level)
-{
-	memset(handle, 0, sizeof(pinButton_s));
-
-	handle->event = (uint8_t)BTN_NONE_PRESS;
-	handle->hal_button_Level = pin_level;
-	handle->button_level = handle->hal_button_Level(handle);
-	handle->active_level = active_level;
-}
-
 void CHANNEL_SetFirstChannelByTypeEx(int requiredType, int newVal, int ausemovingaverage) {
 	int i;
 
@@ -994,39 +966,24 @@ void PIN_ApplyCounterDeltas() {
 
 static void PIN_ProcessOldPinRole(int index) {
 	if (g_enable_pins) {
+		int role = g_cfg.pins.roles[index];
+		if (!role) // no role no processing
+			return;
+		int driverIndex = g_pinIORoleDriver[role];
+		if (driverIndex) { // let driver take care of pins
+			DRV_SendRequest(driverIndex, OBKF_ReleasePin, 0);
+			return;
+		}
 		// remove from active inputs
 		setGPIActive(index, 0, 0);
-		switch (g_cfg.pins.roles[index])
+		switch (role)
 		{
-		case IOR_Button:
-		case IOR_Button_n:
-		case IOR_Button_ToggleAll:
-		case IOR_Button_ToggleAll_n:
-		case IOR_Button_ScriptOnly:
-		case IOR_Button_ScriptOnly_n:
-		case IOR_SmartButtonForLEDs:
-		case IOR_SmartButtonForLEDs_n:
-		{
-			//pinButton_s *bt = &g_buttons[index];
-			// TODO: disable button
-		}
-		break;
-		case IOR_LED:
-		case IOR_LED_n:
-		case IOR_Relay:
-		case IOR_Relay_n:
-		case IOR_LED_WIFI:
-		case IOR_LED_WIFI_n:
-			// TODO: disable?
-			break;
-			// Disable PWM for previous pin role
 		case IOR_PWM_n:
 		case IOR_PWM_ScriptOnly:
 		case IOR_PWM_ScriptOnly_n:
 		case IOR_PWM:
 			HAL_PIN_PWM_Stop(index);
 			break;
-		case IOR_BAT_ADC:
 		case IOR_ADC_Button:
 		case IOR_ADC:
 			HAL_ADC_Deinit(index);
@@ -1055,18 +1012,6 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 	PIN_ProcessOldPinRole(index);
 	// set new role
 	if (g_cfg.pins.roles[index] != role) {
-#ifdef ENABLE_DRIVER_DHT
-		if (g_enable_pins) {
-			// if old role is DHT
-			if (IS_PIN_DHT_ROLE(g_cfg.pins.roles[index])) {
-				bDHTChange = true;
-			}
-			// or new role is DHT
-			if (IS_PIN_DHT_ROLE(role)) {
-				bDHTChange = true;
-			}
-		}
-#endif // ENABLE_DRIVER_DHT
 		g_cfg.pins.roles[index] = role;
 		g_cfg_pendingChanges++;
 	}
@@ -1160,10 +1105,10 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 #endif
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		if (g_cfg.pins.channels[i] == ch) {
-			if (g_cfg.pins.roles[i] == IOR_Relay || g_cfg.pins.roles[i] == IOR_BAT_Relay || g_cfg.pins.roles[i] == IOR_LED) {
+			if (g_cfg.pins.roles[i] == IOR_Relay || g_cfg.pins.roles[i] == IOR_LED) {
 				RAW_SetPinValue(i, bOn);
 			}
-			else if (g_cfg.pins.roles[i] == IOR_Relay_n || g_cfg.pins.roles[i] == IOR_LED_n || g_cfg.pins.roles[i] == IOR_BAT_Relay_n) {
+			else if (g_cfg.pins.roles[i] == IOR_Relay_n || g_cfg.pins.roles[i] == IOR_LED_n) {
 				RAW_SetPinValue(i, !bOn);
 			}
 			else if (g_cfg.pins.roles[i] == IOR_PWM || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly) {
@@ -1189,6 +1134,8 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 
 	Channel_SaveInFlashIfNeeded(ch);
 }
+
+// TODO: think on channels and pins and drivers
 void CFG_ApplyChannelStartValues() {
 	int i, iValue;
 	for (i = 0; i < CHANNEL_MAX; i++) {
@@ -1217,7 +1164,6 @@ void CFG_ApplyChannelStartValues() {
 #endif
 			iValue = g_cfg.pins.channels[i];
 			g_lastValidState[i] = g_channelValues[iValue];
-			//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Pin %i is being set channel state %i", i, g_channelValues[iValue]);
 		}
 	}
 }
@@ -1688,32 +1634,32 @@ bool CHANNEL_IsPowerRelayChannel(int ch) {
 	}
 	return false;
 }
-bool CHANNEL_ShouldBePublished(int ch) {
-	int i;
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		int role = g_cfg.pins.roles[i];
+// TODO: Again think about channels
 
-		if (g_cfg.pins.channels[i] == ch) {
-			if (role == IOR_Relay || role == IOR_Relay_n
+bool CHANNEL_ShouldBePublished(int ch) {
+	for (int i = 0; i < g_usedpins_index; i++) {
+		int role = registeredPinDetails[i].pinIORole;
+		int pinIndex = registeredPinDetails[i].pinIndex;
+		int driverIndex = registeredPinDetails[i].driverIndex;
+		if (g_cfg.pins.channels[pinIndex] == ch) {
+			if (driverIndex) {
+				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, ch);
+			} else if (role == IOR_Relay || role == IOR_Relay_n
 				|| role == IOR_LED || role == IOR_LED_n
-				|| role == IOR_ADC || role == IOR_BAT_ADC
+				|| role == IOR_ADC
 				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
 				|| role == IOR_DigitalInput || role == IOR_DigitalInput_n
 				|| IS_PIN_AIR_SENSOR_ROLE(role)
-				|| IS_PIN_DS_ROLE(role)
 				|| IS_PIN_DHT_ROLE(role)
 				|| role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
 				return true;
 			}
-		}
-		else if (g_cfg.pins.channels2[i] == ch) {
-			if (IS_PIN_DHT_ROLE(role)) {
+		} else if (g_cfg.pins.channels2[pinIndex] == ch) {
+			if (IS_PIN_DHT_ROLE(role))
 				return true;
-			}
 			// SGP, CHT8305 and SHT3X uses secondary channel for humidity
-			if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || IS_PIN_AIR_SENSOR_ROLE(role)) {
+			if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || IS_PIN_AIR_SENSOR_ROLE(role))
 				return true;
-			}
 		}
 	}
 	if (g_cfg.pins.channelTypes[ch] != ChType_Default) {
@@ -1737,13 +1683,13 @@ bool CHANNEL_ShouldBePublished(int ch) {
 	}
 	return false;
 }
+// TODO: Need to think about channels assigned to unused pins
+// first role wins so do we assign channels in the driver?
 int CHANNEL_GetRoleForOutputChannel(int ch) {
 	int i;
 	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		if (g_cfg.pins.channels[i] == ch) {
 			switch (g_cfg.pins.roles[i]) {
-			case IOR_BAT_Relay:
-			case IOR_BAT_Relay_n:
 			case IOR_Relay:
 			case IOR_Relay_n:
 			case IOR_LED:
@@ -1752,15 +1698,9 @@ int CHANNEL_GetRoleForOutputChannel(int ch) {
 			case IOR_PWM:
 			case IOR_PWM_ScriptOnly:
 			case IOR_PWM_ScriptOnly_n:
-				return g_cfg.pins.roles[i];
 			case IOR_BridgeForward:
 			case IOR_BridgeReverse:
 				return g_cfg.pins.roles[i];
-			case IOR_Button:
-			case IOR_Button_n:
-			case IOR_LED_WIFI:
-			case IOR_LED_WIFI_n:
-				break;
 			}
 		}
 	}
@@ -1926,25 +1866,23 @@ void PIN_set_wifi_led(int value) {
 	}
 }
 
-static uint32_t g_time = 0;
-static uint32_t g_last_time = 0;
 static int activepoll_time = 0; // time to keep polling active until
 
 //  background ticks, timer repeat invoking interval defined by PIN_TMR_DURATION.
 void PIN_ticks(void* param)
 {
-	int i;
+	static uint32_t g_time = 0, g_last_time = 0;
+	uint32_t t_diff = PIN_TMR_DURATION;
 	int value;
-
 
 	PIN_ApplyCounterDeltas();
 
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
 	g_time = rtos_get_time();
+	t_diff = g_time - g_last_time;
 #else
 	g_time += PIN_TMR_DURATION;
 #endif
-	uint32_t t_diff = g_time - g_last_time;
 	// cope with wrap
 	if (t_diff > 0x4000) {
 		t_diff = ((g_time + 0x4000) - (g_last_time + 0x4000));
@@ -1966,47 +1904,40 @@ void PIN_ticks(void* param)
 	int activepins = 0;
 	uint32_t pinvalues[2] = { 0, 0 };
 
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++)
-	{
-		// note pins which are active - i.e. would not trigger an edge interrupt on change.
-		// if we have any, then we must poll until none
-		// TODO: this will only be used when GPI interrupt triggeringis used.
-		// but it's useful info anyway...
-
-		if (i >= 32)
-		{
-			if (g_gpio_index_map[1] & (1 << (i - 32)))
-			{
+	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
+		int driverIndex = registeredPinDetails[usedIndex].driverIndex;
+		int pinIORole = registeredPinDetails[usedIndex].pinIORole;
+		if (pinIndex >= 32) {
+			if (g_gpio_index_map[1] & (1 << (pinIndex - 32))) {
 				uint32_t level = 1;
-				if (g_gpio_edge_map[1] & (1 << (i - 32))) {
+				if (g_gpio_edge_map[1] & (1 << (pinIndex - 32))) {
 					level = 0;
 				}
-				int rawval = HAL_PIN_ReadDigitalInput(i);
+				int rawval = HAL_PIN_ReadDigitalInput(pinIndex);
 				if (rawval && level == 1) {
 					activepins++;
-					pinvalues[1] |= (1 << (i - 32));
+					pinvalues[1] |= (1 << (pinIndex - 32));
 				}
 				if (!rawval && level == 0) {
 					activepins++;
-					pinvalues[1] |= (1 << (i - 32));
+					pinvalues[1] |= (1 << (pinIndex - 32));
 				}
 			}
-		}
-		else {
-			if (g_gpio_index_map[0] & (1 << i))
-			{
+		} else {
+			if (g_gpio_index_map[0] & (1 << pinIndex)) {
 				uint32_t level = 1;
-				if (g_gpio_edge_map[0] & (1 << i)) {
+				if (g_gpio_edge_map[0] & (1 << pinIndex)) {
 					level = 0;
 				}
-				int rawval = HAL_PIN_ReadDigitalInput(i);
+				int rawval = HAL_PIN_ReadDigitalInput(pinIndex);
 				if (rawval && level == 1) {
 					activepins++;
-					pinvalues[0] |= (1 << i);
+					pinvalues[0] |= (1 << pinIndex);
 				}
 				if (!rawval && level == 0) {
 					activepins++;
-					pinvalues[0] |= (1 << i);
+					pinvalues[0] |= (1 << pinIndex);
 				}
 			}
 		}
@@ -2016,101 +1947,85 @@ void PIN_ticks(void* param)
 			activepoll_time = 1000; //20 x 50ms = 1s of polls after button release
 		}
 
-#if 0
-		if (g_cfg.pins.roles[i] == IOR_PWM || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly) {
-			HAL_PIN_PWM_Update(i, g_channelValuesFloats[g_cfg.pins.channels[i]]);
-		}
-		else if (g_cfg.pins.roles[i] == IOR_PWM_n || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly_n) {
-			// invert PWM value
-			HAL_PIN_PWM_Update(i, 100 - g_channelValuesFloats[g_cfg.pins.channels[i]]);
-		}
-		else
-#endif
-			if (g_cfg.pins.roles[i] == IOR_Button || g_cfg.pins.roles[i] == IOR_Button_n
-				|| g_cfg.pins.roles[i] == IOR_Button_ToggleAll || g_cfg.pins.roles[i] == IOR_Button_ToggleAll_n
-				|| g_cfg.pins.roles[i] == IOR_Button_ScriptOnly || g_cfg.pins.roles[i] == IOR_Button_ScriptOnly_n
-				|| g_cfg.pins.roles[i] == IOR_SmartButtonForLEDs || g_cfg.pins.roles[i] == IOR_SmartButtonForLEDs_n) {
-				//ADDLOG_INFO(LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
-				PIN_Input_Handler(i, t_diff);
-			}
-			else if (
-				g_cfg.pins.roles[i] == IOR_DigitalInput || g_cfg.pins.roles[i] == IOR_DigitalInput_n ||
-				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup || g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n
-				|| IS_PIN_DS_ROLE(g_cfg.pins.roles[i]))
-			{
-				// read pin digital value (and already invert it if needed)
-				value = PIN_ReadDigitalInputValue_WithInversionIncluded(i);
+		if (pinIORole == IOR_Button || pinIORole == IOR_Button_n
+			|| pinIORole == IOR_Button_ToggleAll || pinIORole == IOR_Button_ToggleAll_n
+			|| pinIORole == IOR_Button_ScriptOnly || pinIORole == IOR_Button_ScriptOnly_n
+			|| pinIORole == IOR_SmartButtonForLEDs || pinIORole == IOR_SmartButtonForLEDs_n) {
+			//ADDLOG_INFO(LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
+			PIN_Input_Handler(pinIndex, t_diff);
+		} else if (
+			pinIORole == IOR_DigitalInput || pinIORole == IOR_DigitalInput_n ||
+			pinIORole == IOR_DigitalInput_NoPup || pinIORole == IOR_DigitalInput_NoPup_n
+			|| IS_PIN_DS_ROLE(pinIORole))
+		{
+			// read pin digital value (and already invert it if needed)
+			value = PIN_ReadDigitalInputValue_WithInversionIncluded(pinIndex);
 
-#if 0
-				CHANNEL_Set(g_cfg.pins.channels[i], value, 0);
-#else
-				// debouncing
-				if (value) {
-					if (g_times[i] > debounceMS) {
-						if (g_lastValidState[i] != value) {
-							// became up
-							g_lastValidState[i] = value;
-							CHANNEL_Set(g_cfg.pins.channels[i], value, 0);
-						}
+			// debouncing
+			if (value) {
+				if (g_times[pinIndex] > debounceMS) {
+					if (g_lastValidState[pinIndex] != value) {
+						// became up
+						g_lastValidState[pinIndex] = value;
+						CHANNEL_Set(g_cfg.pins.channels[pinIndex], value, 0);
 					}
-					else {
-						g_times[i] += t_diff;
-					}
-					g_times2[i] = 0;
 				}
 				else {
-					if (g_times2[i] > debounceMS) {
-						if (g_lastValidState[i] != value) {
-							// became down
-							g_lastValidState[i] = value;
-							CHANNEL_Set(g_cfg.pins.channels[i], value, 0);
-						}
-					}
-					else {
-						g_times2[i] += t_diff;
-					}
-					g_times[i] = 0;
+					g_times[pinIndex] += t_diff;
 				}
-
-#endif
+				g_times2[pinIndex] = 0;
 			}
-			else if (g_cfg.pins.roles[i] == IOR_ToggleChannelOnToggle) {
-				value = PIN_ReadDigitalInputValue_WithInversionIncluded(i);
-			
-				if (value) {
-					if (g_times[i] > debounceMS) {
-						if (g_lastValidState[i] != value) {
-							g_lastValidState[i] = value;
-			
-							if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-								CHANNEL_Toggle(g_cfg.pins.channels[i]);
-								EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, i);
-							} else {
-								ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-							}
-						}
-					} else {
-						g_times[i] += t_diff;
+			else {
+				if (g_times2[pinIndex] > debounceMS) {
+					if (g_lastValidState[pinIndex] != value) {
+						// became down
+						g_lastValidState[pinIndex] = value;
+						CHANNEL_Set(g_cfg.pins.channels[pinIndex], value, 0);
 					}
-					g_times2[i] = 0;
+				}
+				else {
+					g_times2[pinIndex] += t_diff;
+				}
+				g_times[pinIndex] = 0;
+			}
+		}
+		else if (pinIORole == IOR_ToggleChannelOnToggle) {
+			value = PIN_ReadDigitalInputValue_WithInversionIncluded(pinIndex);
+		
+			if (value) {
+				if (g_times[pinIndex] > debounceMS) {
+					if (g_lastValidState[pinIndex] != value) {
+						g_lastValidState[pinIndex] = value;
+		
+						if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
+							CHANNEL_Toggle(g_cfg.pins.channels[pinIndex]);
+							EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, pinIndex);
+						} else {
+							ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
+						}
+					}
 				} else {
-					if (g_times2[i] > debounceMS) {
-						if (g_lastValidState[i] != value) {
-							g_lastValidState[i] = value;
-			
-							if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-								CHANNEL_Toggle(g_cfg.pins.channels[i]);
-								EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, i);
-							} else {
-								ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-							}
-						}
-					} else {
-						g_times2[i] += t_diff;
-					}
-					g_times[i] = 0;
+					g_times[pinIndex] += t_diff;
 				}
+				g_times2[pinIndex] = 0;
+			} else {
+				if (g_times2[pinIndex] > debounceMS) {
+					if (g_lastValidState[pinIndex] != value) {
+						g_lastValidState[pinIndex] = value;
+		
+						if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
+							CHANNEL_Toggle(g_cfg.pins.channels[pinIndex]);
+							EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, pinIndex);
+						} else {
+							ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
+						}
+					}
+				} else {
+					g_times2[pinIndex] += t_diff;
+				}
+				g_times[pinIndex] = 0;
 			}
+		}
 	}
 
 #ifdef PLATFORM_BEKEN
@@ -2430,11 +2345,11 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 		case IOR_DigitalInput_n:
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensor:
-		case IOR_DoorSensor_NoPup:
-		case IOR_DoorSensor_pd:
-#endif
+// #if ENABLE_DRIVER_DOORSENSOR
+// 		case IOR_DoorSensor:
+// 		case IOR_DoorSensor_NoPup:
+// 		case IOR_DoorSensor_pd:
+// #endif
 			if (dInputCount) {
 				(*dInputCount)++;
 			}

@@ -1426,19 +1426,6 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 				DRV_StartDriver("Bridge");
 			}
 #endif
-// #if ENABLE_DRIVER_DOORSENSOR
-// 			if ((PIN_FindPinIndexForRole(IOR_DoorSensor, -1) != -1) ||
-// 				(PIN_FindPinIndexForRole(IOR_DoorSensor_NoPup, -1) != -1) ||
-// 				(PIN_FindPinIndexForRole(IOR_DoorSensor_pd, -1) != -1))
-// 			{
-// 				DRV_StartDriver("DoorSensor");
-// 			}
-// #endif // ENABLE_DRIVER_DOORSENSOR
-// #if ENABLE_DRIVER_BATTERY
-// 			if (PIN_FindPinIndexForRole(IOR_BAT_ADC, -1) != -1) {
-// 				DRV_StartDriver("Battery");
-// 			}
-// #endif
 #if ENABLE_DRIVER_HLW8112SPI
 			if (PIN_FindPinIndexForRole(IOR_HLW8112_SCSN, -1) != -1) {
 				DRV_StartDriver("HLW8112SPI");

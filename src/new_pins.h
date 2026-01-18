@@ -6,11 +6,20 @@
 #define test12321321  321321321
 
 typedef enum obkFramework_e {
+	// no arg, return false if failed
 	OBKF_Init,
+	// no arg, no return
 	OBKF_Stop,
+	// requires driver index as arg, no return
 	OBKF_PinRoles,
+	// no arg, returns false if pin not found
 	OBKF_AcquirePin,
-	OBKF_ReleasePin
+	// no arg
+	OBKF_ReleasePin,
+	// no arg, returns number of channels
+	OBKF_NoOfChannels,
+	// optional channel as arg, returns true to publish
+	OBKF_ShouldPublish
 } obkFramework_t;
 
 typedef enum ioRole_e {
@@ -1552,7 +1561,6 @@ const char* PIN_GetPinNameAlias(int index);
 void PIN_SetPinRoleForPinIndex(int index, int role);
 void PIN_SetPinChannelForPinIndex(int index, int ch);
 void PIN_SetPinChannel2ForPinIndex(int index, int ch);
-uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index);
 void CHANNEL_Toggle(int ch);
 void CHANNEL_DoSpecialToggleAll();
 bool CHANNEL_Check(int ch);
