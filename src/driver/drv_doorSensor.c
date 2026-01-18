@@ -97,11 +97,6 @@ int DoorSensor_Load() {
 	return g_registeredPin;
 }
 
-void DoorSensor_reserveIORoles(int driverIndex) {
-	// register IORoles for this driver
-	g_driverIndex = PIN_pinIORoleDriver()[IOR_DoorSensor] = PIN_pinIORoleDriver()[IOR_DoorSensor_NoPup] = PIN_pinIORoleDriver()[IOR_DoorSensor_pd] = driverIndex;
-}
-
 void DoorSensor_Init() {
 	// 0 seconds since last change
 	g_noChangeTimePassed = 0;
@@ -112,8 +107,6 @@ void DoorSensor_Init() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DSTime", DoorSensor_SetTime, NULL);
 
-	DoorSensor_Load();
-	ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
 }
 
 void DoorSensor_OnEverySecond() {
@@ -179,6 +172,30 @@ void DoorSensor_OnChannelChanged(int ch, int value) {
 		// 0 seconds since last change
 		g_noChangeTimePassed = 0;
 		g_emergencyTimeWithNoConnection = 0;
+	}
+}
+
+void DoorSensor_frameworkRequest(int obkfRequest, int arg) {
+	switch (obkfRequest)
+	{
+	case OBKF_PinRoles:
+		g_driverIndex = PIN_pinIORoleDriver()[IOR_DoorSensor] = PIN_pinIORoleDriver()[IOR_DoorSensor_NoPup] = PIN_pinIORoleDriver()[IOR_DoorSensor_pd] = arg;
+		break;
+	
+	case OBKF_Init:
+		DoorSensor_Init();
+		break;
+	
+	case OBKF_Stop:
+		DoorSensor_StopDriver();
+		break;
+		
+	case OBKF_AcquirePin:
+		DoorSensor_Load();
+		ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
+
+	default:
+		break;
 	}
 }
 
