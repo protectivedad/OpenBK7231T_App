@@ -42,6 +42,21 @@ void GirierMCU_RunEverySecond();
 
 // startDriver BL0937
 static driver_t g_drivers[] = {
+	//drvdetail:{"name":"IODriver",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"General input/output controls",
+	//drvdetail:"requires":""}
+	{ "IODriver",                            // Driver Name
+	NULL,                                    // Init
+	NULL,                                    // onEverySecond
+	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // runQuickTick
+	NULL,                                    // stopFunction
+	NULL,                                    // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	NULL,                                    // reserveIORoles
+	false,                                   // loaded
+	},
 #if ENABLE_DRIVER_TUYAMCU
 	//drvdetail:{"name":"TuyaMCU",
 	//drvdetail:"title":"TODO",
@@ -914,14 +929,14 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"DoorSensor is using deep sleep to preserve battery. This is used for devices without TuyaMCU, where BK deep sleep and wakeup on GPIO is used. This drives requires you to set a DoorSensor pin. Change on door sensor pin wakes up the device. If there are no changes for some time, device goes to sleep. See example [here](https://www.elektroda.com/rtvforum/topic3960149.html). If your door sensor does not wake up in certain pos, please use DSEdge command (try all 3 options, default is 2). ",
 	//drvdetail:"requires":""}
 	{ "DoorSensor",                          // Driver Name
-	DoorDeepSleep_Init,                      // Init
-	DoorDeepSleep_OnEverySecond,             // onEverySecond
-	DoorDeepSleep_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DoorSensor_Init,                         // Init
+	DoorSensor_OnEverySecond,                // onEverySecond
+	DoorSensor_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
-	DoorDeepSleep_StopDriver,                // stopFunction
-	DoorDeepSleep_OnChannelChanged,          // onChannelChanged
+	DoorSensor_StopDriver,                   // stopFunction
+	DoorSensor_OnChannelChanged,             // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // reserveIORoles
+	DoorSensor_reserveIORoles,               // reserveIORoles
 	false,                                   // loaded
 	},
 #endif
@@ -1515,9 +1530,6 @@ void DRV_StopDriver(const char* name) {
 	}
 	DRV_Mutex_Free();
 }
-void DRV_StartDriverIndex(int driverIndex) {
-
-}
 void DRV_StartDriver(const char* name) {
 	int i;
 	int bStarted;
@@ -1616,10 +1628,9 @@ void DRV_Generic_Init() {
 	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopDriver", DRV_Stop, NULL);
-	int i;
-	for (i = 0; i < g_numDrivers; i++) {
-		if (g_drivers[i].reserveIORoles) {
-			g_drivers[i].reserveIORoles(i);
+	for (int driverIndex = 0; driverIndex < g_numDrivers; driverIndex++) {
+		if (g_drivers[driverIndex].reserveIORoles) {
+			g_drivers[driverIndex].reserveIORoles(driverIndex);
 		}
 	}
 #if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK

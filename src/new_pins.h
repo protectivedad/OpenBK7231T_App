@@ -5,6 +5,13 @@
 
 #define test12321321  321321321
 
+typedef enum obkFramework_e {
+	OBKF_Init,
+	OBKF_PinRoles,
+	OBKF_AcquirePin,
+	OBKF_ReleasePin
+} obkFramework_t;
+
 typedef enum ioRole_e {
 	//iodetail:{"name":"None",
 	//iodetail:"title":"TODO",
@@ -416,17 +423,17 @@ typedef enum ioRole_e {
 	//iodetail:{"name":"DoorSensorWithDeepSleep",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Setting this role will make DoorSensor driver autostart. DoorSensor will work like digital input, sending only its value on change. When there are no changes for some times, device will go into deep sleep to save battery. When a change occurs, device will wake up and report change. See [a door sensor example here](https://www.elektroda.com/rtvforum/topic3960149.html)",
-	//iodetail:"enum":"IOR_DoorSensorWithDeepSleep",
+	//iodetail:"enum":"IOR_DoorSensor",
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":""}
-	IOR_DoorSensorWithDeepSleep,
+	IOR_DoorSensor,
 	//iodetail:{"name":"DoorSensorWithDeepSleep_NoPup",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As DoorSensorWithDeepSleep, but no pullup resistor",
-	//iodetail:"enum":"IOR_DoorSensorWithDeepSleep_NoPup",
+	//iodetail:"enum":"IOR_DoorSensor_NoPup",
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":""}
-	IOR_DoorSensorWithDeepSleep_NoPup,
+	IOR_DoorSensor_NoPup,
 	//iodetail:{"name":"BAT_ADC",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Like ADC, but for a Battery driver that does Battery measurement. See [battery driver topic here](https://www.elektroda.com/rtvforum/topic3959103.html)",
@@ -465,10 +472,10 @@ typedef enum ioRole_e {
 	//iodetail:{"name":"DoorSensorWithDeepSleep_pd",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"As DoorSensorWithDeepSleep, but with pulldown resistor",
-	//iodetail:"enum":"IOR_DoorSensorWithDeepSleep_pd",
+	//iodetail:"enum":"IOR_DoorSensor_pd",
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":""}
-	IOR_DoorSensorWithDeepSleep_pd,
+	IOR_DoorSensor_pd,
 	//iodetail:{"name":"SGP_CLK",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"SGP Quality Sensor Clock line. will autostart related driver",
@@ -654,7 +661,7 @@ typedef enum ioRole_e {
 #define IS_PIN_AIR_SENSOR_ROLE(role) (false)
 #endif
 #if ENABLE_DRIVER_DOORSENSOR
-#define IS_PIN_DS_ROLE(role) (((role)==IOR_DoorSensorWithDeepSleep) || ((role)==IOR_DoorSensorWithDeepSleep_NoPup) || ((role)==IOR_DoorSensorWithDeepSleep_pd))
+#define IS_PIN_DS_ROLE(role) (((role)==IOR_DoorSensor) || ((role)==IOR_DoorSensor_NoPup) || ((role)==IOR_DoorSensor_pd))
 #else
 #define IS_PIN_DS_ROLE(role) (false)
 #endif
@@ -1545,6 +1552,7 @@ const char* PIN_GetPinNameAlias(int index);
 void PIN_SetPinRoleForPinIndex(int index, int role);
 void PIN_SetPinChannelForPinIndex(int index, int ch);
 void PIN_SetPinChannel2ForPinIndex(int index, int ch);
+uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index);
 void CHANNEL_Toggle(int ch);
 void CHANNEL_DoSpecialToggleAll();
 bool CHANNEL_Check(int ch);

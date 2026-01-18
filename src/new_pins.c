@@ -1,6 +1,4 @@
 
-
-
 #include "new_common.h"
 #include "new_pins.h"
 #include "quicktick.h"
@@ -253,7 +251,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 			int pull = 1;
 			if(
 #if ENABLE_DRIVER_DOORSENSOR
-				g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_NoPup ||
+				g_cfg.pins.roles[i] == IOR_DoorSensor_NoPup ||
 #endif
 				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
 				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n)
@@ -261,7 +259,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 				pull = 0;
 			}
 #if ENABLE_DRIVER_DOORSENSOR
-			else if(g_cfg.pins.roles[i] == IOR_DoorSensorWithDeepSleep_pd)
+			else if(g_cfg.pins.roles[i] == IOR_DoorSensor_pd)
 			{
 				pull = 2;
 			}
@@ -386,12 +384,276 @@ void PIN_TriggerPoll() {
 }
 #endif
 #endif
+extern int g_pwmFrequency;
+bool BTN_ShouldInvert(int index) {
+	int role;
+	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
+		return false;
+	}
+	role = g_cfg.pins.roles[index];
+	if (role == IOR_Button_n || role == IOR_Button_ToggleAll_n ||
+		role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup_n
+		|| role == IOR_Button_ScriptOnly_n
+		|| role == IOR_SmartButtonForLEDs_n) {
+		return true;
+	}
+#if ENABLE_DRIVER_DOORSENSOR
+	if (CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE)) {
+		return (IS_PIN_DS_ROLE(role));
+	}
+#endif
+	return false;
+}
+uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index) {
+	uint8_t iVal = HAL_PIN_ReadDigitalInput(index);
+
+	// support inverted button
+	if (BTN_ShouldInvert(index)) {
+		return (iVal == 0) ? 1 : 0;
+	}
+	return iVal;
+}
+static uint8_t button_generic_get_gpio_value(void* param) {
+	int index = ((pinButton_s*)param) - g_buttons;
+	return PIN_ReadDigitalInputValue_WithInversionIncluded(index);
+}
+unsigned short g_counterDeltas[PLATFORM_GPIO_MAX];
+void PIN_InterruptHandler(int gpio) {
+	g_counterDeltas[gpio]++;
+}
+// returns bSampleInitialState
+static bool PIN_ProcessNewPinRole(int index, int role) {
+	bool bSampleInitialState = false;
+	if (g_enable_pins) {
+		int falling = 0;
+
+		// init new role
+		switch (role)
+		{
+		case IOR_Button:
+		case IOR_Button_ToggleAll:
+		case IOR_Button_ScriptOnly:
+		case IOR_SmartButtonForLEDs:
+			falling = 1;
+		case IOR_Button_n:
+		case IOR_Button_ToggleAll_n:
+		case IOR_Button_ScriptOnly_n:
+		case IOR_SmartButtonForLEDs_n:
+		{
+			pinButton_s* bt = &g_buttons[index];
+
+			// add to active inputs
+			setGPIActive(index, 1, falling);
+
+			// digital input
+			HAL_PIN_Setup_Input_Pullup(index);
+
+			// init button after initializing pin role
+			NEW_button_init(bt, button_generic_get_gpio_value, 0);
+			// this is input - sample initial state down below
+			bSampleInitialState = true;
+		}
+		break;
+
+		case IOR_IRRecv:
+			falling = 1;
+			// add to active inputs
+			setGPIActive(index, 1, falling);
+			break;
+
+		case IOR_ToggleChannelOnToggle:
+		{
+			// add to active inputs
+			falling = 1;
+			setGPIActive(index, 1, falling);
+
+			// digital input
+			HAL_PIN_Setup_Input_Pullup(index);
+			// otherwise we get a toggle on start			
+#ifdef PLATFORM_BEKEN
+			//20231217 XJIKKA
+			//On the BK7231N Mini WiFi Smart Switch, the correct state of the ADC input pin
+			//can be readed 1000us after the pin is initialized. Maybe there is a capacitor?
+			//Without delay, g_lastValidState is after restart set to 0, so the light will toggle, if the switch on input pin is on (1).
+			//To be sure, we will wait for 20000 us.
+			usleep(20000);
+#endif
+			g_lastValidState[index] = PIN_ReadDigitalInputValue_WithInversionIncluded(index);
+			// this is input - sample initial state down below
+			bSampleInitialState = true;
+		}
+		break;
+		case IOR_DigitalInput_n:
+			falling = 1;
+#if ENABLE_DRIVER_DOORSENSOR
+		case IOR_DoorSensor:
+#endif
+		case IOR_DigitalInput:
+		{
+			// add to active inputs
+			setGPIActive(index, 1, falling);
+			// digital input
+			HAL_PIN_Setup_Input_Pullup(index);
+			// this is input - sample initial state down below
+			bSampleInitialState = true;
+		}
+		break;
+#if ENABLE_DRIVER_DOORSENSOR
+		case IOR_DoorSensor_pd:
+		{
+			// add to active inputs
+			setGPIActive(index, 1, falling);
+			// digital input
+			HAL_PIN_Setup_Input_Pulldown(index);
+			// this is input - sample initial state down below
+			bSampleInitialState = true;
+		}
+		break;
+#endif
+		case IOR_DigitalInput_NoPup_n:
+			falling = 1;
+#if ENABLE_DRIVER_DOORSENSOR
+		case IOR_DoorSensor_NoPup:
+#endif
+		case IOR_DigitalInput_NoPup:
+		{
+			// add to active inputs
+			// TODO: We cannot set active here, as later code may enforce pullup/down????
+			//setGPIActive(index, 1, falling);
+			// digital input
+			HAL_PIN_Setup_Input(index);
+			// this is input - sample initial state down below
+			bSampleInitialState = true;
+		}
+		break;
+		case IOR_LED:
+		case IOR_LED_n:
+		case IOR_BAT_Relay:
+		case IOR_BAT_Relay_n:
+		case IOR_Relay:
+		case IOR_Relay_n:
+		{
+			int channelIndex;
+			int channelValue;
+
+			channelIndex = PIN_GetPinChannelForPinIndex(index);
+			channelValue = g_channelValues[channelIndex];
+
+			HAL_PIN_Setup_Output(index);
+			if (role == IOR_LED_n || role == IOR_Relay_n || role == IOR_BAT_Relay_n) {
+				HAL_PIN_SetOutputValue(index, !channelValue);
+			}
+			else {
+				HAL_PIN_SetOutputValue(index, channelValue);
+			}
+		}
+		break;
+		case IOR_BridgeForward:
+		case IOR_BridgeReverse:
+		{
+			int channelIndex;
+			int channelValue;
+
+			channelIndex = PIN_GetPinChannelForPinIndex(index);
+			channelValue = g_channelValues[channelIndex];
+
+			HAL_PIN_Setup_Output(index);
+			HAL_PIN_SetOutputValue(index, 0);
+		}
+		break;
+
+		case IOR_AlwaysHigh:
+		{
+			HAL_PIN_Setup_Output(index);
+			HAL_PIN_SetOutputValue(index, 1);
+		}
+		break;
+		case IOR_AlwaysLow:
+		{
+			HAL_PIN_Setup_Output(index);
+			HAL_PIN_SetOutputValue(index, 0);
+		}
+		break;
+		case IOR_LED_WIFI:
+		case IOR_LED_WIFI_n:
+		{
+			HAL_PIN_Setup_Output(index);
+		}
+		break;
+		case IOR_BAT_ADC:
+		case IOR_ADC_Button:
+		case IOR_ADC:
+			// init ADC for given pin
+#if PLATFORM_XRADIO
+			OBK_HAL_ADC_Init(index);
+#else
+			HAL_ADC_Init(index);
+#endif
+			break; 
+		case IOR_Counter_f:
+			HAL_PIN_Setup_Input_Pullup(index);
+			HAL_AttachInterrupt(index, INTERRUPT_FALLING, PIN_InterruptHandler);
+			break;
+		case IOR_Counter_r:
+			HAL_PIN_Setup_Input_Pullup(index);
+			HAL_AttachInterrupt(index, INTERRUPT_RISING, PIN_InterruptHandler);
+			break;
+		case IOR_PWM_n:
+		case IOR_PWM_ScriptOnly:
+		case IOR_PWM_ScriptOnly_n:
+		case IOR_PWM:
+		{
+			int channelIndex;
+			float channelValue;
+
+			channelIndex = PIN_GetPinChannelForPinIndex(index);
+			channelValue = g_channelValuesFloats[channelIndex];
+
+			//100hz to 20000hz according to tuya code
+#define PWM_FREQUENCY_SLOW 600 //Slow frequency for LED Drivers requiring slower PWM Freq
+
+			int useFreq;
+			useFreq = g_pwmFrequency;
+			//Use slow pwm if user has set checkbox in webif
+			if (CFG_HasFlag(OBK_FLAG_SLOW_PWM))
+				useFreq = PWM_FREQUENCY_SLOW;
+
+			HAL_PIN_PWM_Start(index, useFreq);
+
+			if (role == IOR_PWM_n
+				|| role == IOR_PWM_ScriptOnly_n) {
+				// inversed PWM
+				HAL_PIN_PWM_Update(index, 100.0f - channelValue);
+			}
+			else {
+				HAL_PIN_PWM_Update(index, channelValue);
+			}
+		}
+		break;
+
+		default:
+			break;
+		}
+	}
+	return bSampleInitialState;
+}
 
 
 void PIN_SetupPins() {
-	int i;
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		PIN_SetPinRoleForPinIndex(i, g_cfg.pins.roles[i]);
+	for (int pinIndex = 0; pinIndex < PLATFORM_GPIO_MAX; pinIndex++) {
+		int role = g_cfg.pins.roles[pinIndex];
+		if (role) { // only process pins with a role
+			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
+			registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
+			registeredPinDetails[g_usedpins_index].pinIORole = role;
+			int driverIndex = g_pinIORoleDriver[role];
+			if (driverIndex) // let driver take care of pins
+				registeredPinDetails[g_usedpins_index].driverIndex = driverIndex;
+			else
+				PIN_ProcessNewPinRole(pinIndex, role);
+			g_usedpins_index++;
+		}
 	}
 
 #ifdef PLATFORM_BEKEN
@@ -646,42 +908,6 @@ void Button_OnLongPressHoldStart(int index) {
 	EventHandlers_FireEvent(CMD_EVENT_PIN_ONHOLDSTART, index);
 }
 
-bool BTN_ShouldInvert(int index) {
-	int role;
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "BTN_ShouldInvert: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
-		return false;
-	}
-	role = g_cfg.pins.roles[index];
-	if (role == IOR_Button_n || role == IOR_Button_ToggleAll_n ||
-		role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup_n
-		|| role == IOR_Button_ScriptOnly_n
-		|| role == IOR_SmartButtonForLEDs_n) {
-		return true;
-	}
-#if ENABLE_DRIVER_DOORSENSOR
-	if (CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE)) {
-		return (IS_PIN_DS_ROLE(role));
-	}
-#endif
-	return false;
-}
-static uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index) {
-	uint8_t iVal = HAL_PIN_ReadDigitalInput(index);
-
-	// support inverted button
-	if (BTN_ShouldInvert(index)) {
-		return (iVal == 0) ? 1 : 0;
-	}
-	return iVal;
-}
-static uint8_t button_generic_get_gpio_value(void* param)
-{
-	int index;
-	index = ((pinButton_s*)param) - g_buttons;
-
-	return PIN_ReadDigitalInputValue_WithInversionIncluded(index);
-}
 #define PIN_UART1_RXD 10
 #define PIN_UART1_TXD 11
 #define PIN_UART2_RXD 1
@@ -757,22 +983,7 @@ void CHANNEL_DoSpecialToggleAll() {
 		}
 	}
 }
-extern int g_pwmFrequency;
 
-#if 0
-void PIN_InterruptHandler(int gpio) {
-	int ch = g_cfg.pins.channels[gpio];
-	CHANNEL_Add(ch, 1);
-}
-#else
-
-
-#endif
-
-unsigned short g_counterDeltas[PLATFORM_GPIO_MAX];
-void PIN_InterruptHandler(int gpio) {
-	g_counterDeltas[gpio]++;
-}
 void PIN_ApplyCounterDeltas() {
 	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		if (g_counterDeltas[i]) {
@@ -785,39 +996,10 @@ void PIN_ApplyCounterDeltas() {
 	}
 }
 
-
-
-void PIN_SetPinRoleForPinIndex(int index, int role) {
-	bool bDHTChange = false;
-	bool bSampleInitialState = false;
-
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "PIN_SetPinRoleForPinIndex: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
-		return;
-	}
-#if 0
-	if (index == PIN_UART1_RXD) {
-		// default role to None in order to fix broken config
-		role = IOR_None;
-	}
-	if (index == PIN_UART1_TXD) {
-		// default role to None in order to fix broken config
-		role = IOR_None;
-	}
-	if (index == PIN_UART2_RXD) {
-		// default role to None in order to fix broken config
-		role = IOR_None;
-	}
-	if (index == PIN_UART2_TXD) {
-		// default role to None in order to fix broken config
-		role = IOR_None;
-	}
-#endif
+static void PIN_ProcessOldPinRole(int index) {
 	if (g_enable_pins) {
-
 		// remove from active inputs
 		setGPIActive(index, 0, 0);
-
 		switch (g_cfg.pins.roles[index])
 		{
 		case IOR_Button:
@@ -835,8 +1017,6 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		break;
 		case IOR_LED:
 		case IOR_LED_n:
-		case IOR_BAT_Relay:
-		case IOR_BAT_Relay_n:
 		case IOR_Relay:
 		case IOR_Relay_n:
 		case IOR_LED_WIFI:
@@ -867,8 +1047,19 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			break;
 		}
 	}
+}
+
+void PIN_SetPinRoleForPinIndex(int index, int role) {
+	bool bDHTChange = false;
+
+	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
+		ADDLOG_ERROR(LOG_FEATURE_CFG, "%s - Pin index %i out of range <0,%i).", __func__, index, PLATFORM_GPIO_MAX);
+		return;
+	}
+	PIN_ProcessOldPinRole(index);
 	// set new role
 	if (g_cfg.pins.roles[index] != role) {
+#ifdef ENABLE_DRIVER_DHT
 		if (g_enable_pins) {
 			// if old role is DHT
 			if (IS_PIN_DHT_ROLE(g_cfg.pins.roles[index])) {
@@ -879,222 +1070,11 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 				bDHTChange = true;
 			}
 		}
+#endif // ENABLE_DRIVER_DHT
 		g_cfg.pins.roles[index] = role;
 		g_cfg_pendingChanges++;
 	}
-
-	if (g_enable_pins) {
-		int falling = 0;
-
-		// init new role
-		switch (role)
-		{
-		case IOR_Button:
-		case IOR_Button_ToggleAll:
-		case IOR_Button_ScriptOnly:
-		case IOR_SmartButtonForLEDs:
-			falling = 1;
-		case IOR_Button_n:
-		case IOR_Button_ToggleAll_n:
-		case IOR_Button_ScriptOnly_n:
-		case IOR_SmartButtonForLEDs_n:
-		{
-			pinButton_s* bt = &g_buttons[index];
-
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-
-			// digital input
-			HAL_PIN_Setup_Input_Pullup(index);
-
-			// init button after initializing pin role
-			NEW_button_init(bt, button_generic_get_gpio_value, 0);
-			// this is input - sample initial state down below
-			bSampleInitialState = true;
-		}
-		break;
-
-		case IOR_IRRecv:
-			falling = 1;
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-			break;
-
-		case IOR_ToggleChannelOnToggle:
-		{
-			// add to active inputs
-			falling = 1;
-			setGPIActive(index, 1, falling);
-
-			// digital input
-			HAL_PIN_Setup_Input_Pullup(index);
-			// otherwise we get a toggle on start			
-#ifdef PLATFORM_BEKEN
-			//20231217 XJIKKA
-			//On the BK7231N Mini WiFi Smart Switch, the correct state of the ADC input pin
-			//can be readed 1000us after the pin is initialized. Maybe there is a capacitor?
-			//Without delay, g_lastValidState is after restart set to 0, so the light will toggle, if the switch on input pin is on (1).
-			//To be sure, we will wait for 20000 us.
-			usleep(20000);
-#endif
-			g_lastValidState[index] = PIN_ReadDigitalInputValue_WithInversionIncluded(index);
-			// this is input - sample initial state down below
-			bSampleInitialState = true;
-		}
-		break;
-		case IOR_DigitalInput_n:
-			falling = 1;
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensorWithDeepSleep:
-#endif
-		case IOR_DigitalInput:
-		{
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-			// digital input
-			HAL_PIN_Setup_Input_Pullup(index);
-			// this is input - sample initial state down below
-			bSampleInitialState = true;
-		}
-		break;
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensorWithDeepSleep_pd:
-		{
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-			// digital input
-			HAL_PIN_Setup_Input_Pulldown(index);
-			// this is input - sample initial state down below
-			bSampleInitialState = true;
-		}
-		break;
-#endif
-		case IOR_DigitalInput_NoPup_n:
-			falling = 1;
-#if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensorWithDeepSleep_NoPup:
-#endif
-		case IOR_DigitalInput_NoPup:
-		{
-			// add to active inputs
-			// TODO: We cannot set active here, as later code may enforce pullup/down????
-			//setGPIActive(index, 1, falling);
-			// digital input
-			HAL_PIN_Setup_Input(index);
-			// this is input - sample initial state down below
-			bSampleInitialState = true;
-		}
-		break;
-		case IOR_LED:
-		case IOR_LED_n:
-		case IOR_BAT_Relay:
-		case IOR_BAT_Relay_n:
-		case IOR_Relay:
-		case IOR_Relay_n:
-		{
-			int channelIndex;
-			int channelValue;
-
-			channelIndex = PIN_GetPinChannelForPinIndex(index);
-			channelValue = g_channelValues[channelIndex];
-
-			HAL_PIN_Setup_Output(index);
-			if (role == IOR_LED_n || role == IOR_Relay_n || role == IOR_BAT_Relay_n) {
-				HAL_PIN_SetOutputValue(index, !channelValue);
-			}
-			else {
-				HAL_PIN_SetOutputValue(index, channelValue);
-			}
-		}
-		break;
-		case IOR_BridgeForward:
-		case IOR_BridgeReverse:
-		{
-			int channelIndex;
-			int channelValue;
-
-			channelIndex = PIN_GetPinChannelForPinIndex(index);
-			channelValue = g_channelValues[channelIndex];
-
-			HAL_PIN_Setup_Output(index);
-			HAL_PIN_SetOutputValue(index, 0);
-		}
-		break;
-
-		case IOR_AlwaysHigh:
-		{
-			HAL_PIN_Setup_Output(index);
-			HAL_PIN_SetOutputValue(index, 1);
-		}
-		break;
-		case IOR_AlwaysLow:
-		{
-			HAL_PIN_Setup_Output(index);
-			HAL_PIN_SetOutputValue(index, 0);
-		}
-		break;
-		case IOR_LED_WIFI:
-		case IOR_LED_WIFI_n:
-		{
-			HAL_PIN_Setup_Output(index);
-		}
-		break;
-		case IOR_BAT_ADC:
-		case IOR_ADC_Button:
-		case IOR_ADC:
-			// init ADC for given pin
-#if PLATFORM_XRADIO
-			OBK_HAL_ADC_Init(index);
-#else
-			HAL_ADC_Init(index);
-#endif
-			break; 
-		case IOR_Counter_f:
-			HAL_PIN_Setup_Input_Pullup(index);
-			HAL_AttachInterrupt(index, INTERRUPT_FALLING, PIN_InterruptHandler);
-			break;
-		case IOR_Counter_r:
-			HAL_PIN_Setup_Input_Pullup(index);
-			HAL_AttachInterrupt(index, INTERRUPT_RISING, PIN_InterruptHandler);
-			break;
-		case IOR_PWM_n:
-		case IOR_PWM_ScriptOnly:
-		case IOR_PWM_ScriptOnly_n:
-		case IOR_PWM:
-		{
-			int channelIndex;
-			float channelValue;
-
-			channelIndex = PIN_GetPinChannelForPinIndex(index);
-			channelValue = g_channelValuesFloats[channelIndex];
-
-			//100hz to 20000hz according to tuya code
-#define PWM_FREQUENCY_SLOW 600 //Slow frequency for LED Drivers requiring slower PWM Freq
-
-			int useFreq;
-			useFreq = g_pwmFrequency;
-			//Use slow pwm if user has set checkbox in webif
-			if (CFG_HasFlag(OBK_FLAG_SLOW_PWM))
-				useFreq = PWM_FREQUENCY_SLOW;
-
-			HAL_PIN_PWM_Start(index, useFreq);
-
-			if (role == IOR_PWM_n
-				|| role == IOR_PWM_ScriptOnly_n) {
-				// inversed PWM
-				HAL_PIN_PWM_Update(index, 100.0f - channelValue);
-			}
-			else {
-				HAL_PIN_PWM_Update(index, channelValue);
-			}
-		}
-		break;
-
-		default:
-			break;
-		}
-	}
-	if (bSampleInitialState) {
+	if (PIN_ProcessNewPinRole(index, role)) {
 		if (PIN_ReadDigitalInputValue_WithInversionIncluded(index)) {
 			BIT_SET(g_initialPinStates, index);
 		}
@@ -1103,12 +1083,12 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		}
 	}
 
-	if (bDHTChange) {
 #ifdef ENABLE_DRIVER_DHT
+	if (bDHTChange) {
 		// TODO: better place to call?
 		DHT_OnPinsConfigChanged();
-#endif
 	}
+#endif
 	
 	bool pullFromNext = false;
 	int i;
@@ -1242,9 +1222,9 @@ void CFG_ApplyChannelStartValues() {
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
 #if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensorWithDeepSleep:
-		case IOR_DoorSensorWithDeepSleep_NoPup:
-		case IOR_DoorSensorWithDeepSleep_pd:
+		case IOR_DoorSensor:
+		case IOR_DoorSensor_NoPup:
+		case IOR_DoorSensor_pd:
 #endif
 			iValue = g_cfg.pins.channels[i];
 			g_lastValidState[i] = g_channelValues[iValue];
@@ -2462,9 +2442,9 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
 #if ENABLE_DRIVER_DOORSENSOR
-		case IOR_DoorSensorWithDeepSleep:
-		case IOR_DoorSensorWithDeepSleep_NoPup:
-		case IOR_DoorSensorWithDeepSleep_pd:
+		case IOR_DoorSensor:
+		case IOR_DoorSensor_NoPup:
+		case IOR_DoorSensor_pd:
 #endif
 			if (dInputCount) {
 				(*dInputCount)++;

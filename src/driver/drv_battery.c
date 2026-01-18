@@ -28,14 +28,19 @@ static int Batt_Load() {
 		{
 		case IOR_BAT_ADC:
 			g_pin_adc = PIN_registeredPinDetails()[i].pinIndex;
+			HAL_ADC_Init(g_pin_adc);
 			break;
 		case IOR_BAT_Relay:
 			g_pin_rel = PIN_registeredPinDetails()[i].pinIndex;
 			g_val_rel = 1;
+			HAL_PIN_Setup_Output(g_pin_rel);
+			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
 			break;
 		case IOR_BAT_Relay_n:
 			g_pin_rel = PIN_registeredPinDetails()[i].pinIndex;
 			g_val_rel = 0;
+			HAL_PIN_Setup_Output(g_pin_rel);
+			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
 			break;
 		default:
 			break;

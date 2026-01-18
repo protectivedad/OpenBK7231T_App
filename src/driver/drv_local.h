@@ -19,11 +19,12 @@ void BMP280_Init();
 void BMP280_OnEverySecond();
 void BMP280_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 
-void DoorDeepSleep_Init();
-void DoorDeepSleep_OnEverySecond();
-void DoorDeepSleep_StopDriver();
-void DoorDeepSleep_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
-void DoorDeepSleep_OnChannelChanged(int ch, int value);
+void DoorSensor_reserveIORoles(int driverIndex);
+void DoorSensor_Init();
+void DoorSensor_OnEverySecond();
+void DoorSensor_StopDriver();
+void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
+void DoorSensor_OnChannelChanged(int ch, int value);
 
 void DRV_MAX72XX_Clock_OnEverySecond();
 void DRV_MAX72XX_Clock_RunFrame();
