@@ -51,6 +51,7 @@ extern int g_dhtsCount;
 
 void DRV_Generic_Init();
 void DRV_Autostart();
+int DRV_SendRequest(int driverIndex, int OBKFRequest, int arg);
 void DRV_OnHassDiscovery(const char *topic);
 void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState);
 void DRV_OnEverySecond();

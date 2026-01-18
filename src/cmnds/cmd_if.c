@@ -149,16 +149,16 @@ float getActiveRepeatingEvents(const char *s) {
 	return RepeatingEvents_GetActiveCount();
 }
 
-#ifdef ENABLE_DRIVER_BATTERY
-float getBatteryVoltage(const char* s)
-{
-	return Battery_lastreading(OBK_BATT_VOLTAGE);
-}
-float getBatteryLevel(const char* s)
-{
-	return Battery_lastreading(OBK_BATT_LEVEL);
-}
-#endif
+// #ifdef ENABLE_DRIVER_BATTERY
+// float getBatteryVoltage(const char* s)
+// {
+// 	return Battery_lastreading(OBK_BATT_VOLTAGE);
+// }
+// float getBatteryLevel(const char* s)
+// {
+// 	return Battery_lastreading(OBK_BATT_LEVEL);
+// }
+// #endif
 
 #ifdef ENABLE_DRIVER_BL0937
 

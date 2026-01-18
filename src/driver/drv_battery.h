@@ -1,7 +1,7 @@
 #ifndef __DRV_BATTERY_H__
 #define __DRV_BATTERY_H__
 
-void Battery_frameworkRequest(int obkfRequest, int arg);
+int Battery_frameworkRequest(int obkfRequest, int arg);
 void Batt_OnEverySecond();
 void Batt_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 

@@ -22,6 +22,7 @@ static int g_lastbattvoltage = 0, g_lastbattlevel = 0;
 static float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
 static int g_driverIndex = 0;
 
+// returns false if pin not found
 static int Battery_Load() {
 	for (int i = 0; i < g_usedpins_index; i++) {
 		switch (PIN_registeredPinDetails()[i].pinIORole)
@@ -46,7 +47,8 @@ static int Battery_Load() {
 			break;
 		}
 	}
-	return g_pin_adc;
+	ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
+	return (g_pin_adc != -1);
 }
 
 static void Batt_Measure() {
@@ -211,7 +213,11 @@ void Batt_OnEverySecond() {
 }
 
 static void Battery_StopDriver() {
-	g_pin_adc = -1;
+	if (g_pin_adc != -1) {
+		setGPIActive(g_pin_adc, 0, 0);
+		HAL_ADC_Deinit(g_pin_adc);
+		g_pin_adc = -1;
+	}
 	g_pin_rel = -1;
 	g_val_rel = -1;
 }
@@ -224,7 +230,7 @@ void Batt_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreStat
 	hprintf255(request, "<h2>Battery level=%.2f%%, voltage=%.2fmV</h2>", g_battlevel, g_battvoltage);
 }
 
-void Battery_frameworkRequest(int obkfRequest, int arg) {
+int Battery_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:
@@ -233,19 +239,22 @@ void Battery_frameworkRequest(int obkfRequest, int arg) {
 	
 	case OBKF_Init:
 		Battery_Init();
-		break;
-	
-	case OBKF_Stop:
-		Battery_StopDriver();
-		break;
-		
 	case OBKF_AcquirePin:
-		if ((Battery_Load() != -1) && (g_pin_rel != -1)) {
+		if (Battery_Load() && (g_pin_rel != -1)) {
 			HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
 			HAL_ADC_Read(g_pin_adc);
 			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
 		}
-		ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
+		return (g_pin_adc != -1);
+
+	case OBKF_ReleasePin:
+	case OBKF_Stop:
+		Battery_StopDriver();
+		break;
+		
+	case OBKF_ShouldPublish:
+	case OBKF_NoOfChannels:
+		return 0;
 
 	default:
 		break;

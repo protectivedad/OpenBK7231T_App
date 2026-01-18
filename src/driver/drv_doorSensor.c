@@ -84,6 +84,7 @@ commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, const c
 	return CMD_RES_OK;
 }
 
+// returns false if pin not found
 static int DoorSensor_Load() {
 	for (int i = 0; i < g_usedpins_index; i++) {
 		switch (PIN_registeredPinDetails()[i].pinIORole)
@@ -107,11 +108,14 @@ static int DoorSensor_Load() {
 			break;
 		}
 	}
-
-	bool pinValue = PIN_ReadDigitalInputValue_WithInversionIncluded(g_registeredPin);
-//	bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
-	setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? pinValue : g_defaultWakeEdge);
-	return g_registeredPin;
+	
+	if (g_registeredPin != -1) {
+		bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
+		pinValue = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !pinValue : pinValue;
+		setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? pinValue : g_defaultWakeEdge);
+	}
+	ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
+	return (g_registeredPin != -1);
 }
 
 void DoorSensor_Init() {
@@ -133,7 +137,6 @@ void DoorSensor_Init() {
 }
 
 void DoorSensor_OnEverySecond() {
-
 	if (OTA_GetProgress() >= 0) {
 		return;
 	}
@@ -198,7 +201,7 @@ void DoorSensor_OnChannelChanged(int ch, int value) {
 	}
 }
 
-void DoorSensor_frameworkRequest(int obkfRequest, int arg) {
+int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:
@@ -207,19 +210,22 @@ void DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	
 	case OBKF_Init:
 		DoorSensor_Init();
-		break;
-	
+	case OBKF_AcquirePin:
+		return DoorSensor_Load();
+
+	case OBKF_ReleasePin:
 	case OBKF_Stop:
 		DoorSensor_StopDriver();
 		break;
 		
-	case OBKF_AcquirePin:
-		DoorSensor_Load();
-		ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
+	case OBKF_ShouldPublish:
+	case OBKF_NoOfChannels:
+		return 1;
 
 	default:
 		break;
 	}
+	return true;
 }
 
 #endif // ENABLE_DRIVER_DOORSENSOR

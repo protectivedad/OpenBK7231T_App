@@ -30,7 +30,7 @@ typedef struct driver_s {
 	void(*runQuickTick)();
 	void(*onChannelChanged)(int ch, int val);
 	void(*onHassDiscovery)(const char *topic);
-	void(*frameworkRequest)(int obkfRequest, int arg);
+	int(*frameworkRequest)(int obkfRequest, int arg);
 	bool bLoaded;
 } driver_t;
 
@@ -1419,13 +1419,9 @@ static driver_t g_drivers[] = {
 static const int g_numDrivers = sizeof(g_drivers) / sizeof(g_drivers[0]);
 
 bool DRV_IsRunning(const char* name) {
-	int i;
-
-	for (i = 0; i < g_numDrivers; i++) {
-		if (g_drivers[i].bLoaded) {
-			if (!stricmp(name, g_drivers[i].name)) {
-				return true;
-			}
+	for (int i = 0; i < g_numDrivers; i++) {
+		if (g_drivers[i].bLoaded && !stricmp(name, g_drivers[i].name)) {
+			return true;
 		}
 	}
 	return false;
@@ -1469,20 +1465,15 @@ void DRV_OnEverySecond() {
 	DRV_Mutex_Free();
 }
 void DRV_RunQuickTick() {
-	int i;
-
-	if (DRV_Mutex_Take(0) == false) {
+	if (DRV_Mutex_Take(0) == false)
 		return;
-	}
-	for (i = 0; i < g_numDrivers; i++) {
-		if (g_drivers[i].bLoaded) {
-			if (g_drivers[i].runQuickTick != 0) {
-				g_drivers[i].runQuickTick();
-			}
-		}
+	for (int i = 0; i < g_numDrivers; i++) {
+		if (g_drivers[i].bLoaded && g_drivers[i].runQuickTick)
+			g_drivers[i].runQuickTick();
 	}
 	DRV_Mutex_Free();
 }
+// TODO: need to think about how channels are tied to drivers
 void DRV_OnChannelChanged(int channel, int iVal) {
 	int i;
 
@@ -1564,6 +1555,7 @@ static commandResult_t DRV_Start(const void* context, const char* cmd, const cha
 	DRV_StartDriver(Tokenizer_GetArg(0));
 	return CMD_RES_OK;
 }
+
 static commandResult_t DRV_Stop(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, 0);
 
@@ -1600,25 +1592,29 @@ void DRV_Generic_Init() {
 #endif
 }
 
+int DRV_SendRequest(int driverIndex, int OBKFRequest, int arg) {
+	if (g_drivers[driverIndex].frameworkRequest)
+		return g_drivers[driverIndex].frameworkRequest(OBKFRequest, arg);
+}
 // interate through used pins and autostart any drivers associated
 // with the IORole assigned to the pin
 void DRV_Autostart() {
 	if (!DRV_Mutex_Take(100)) 
 		return;
-	for (int i = 0; i < g_usedpins_index; i++)
-	{
+	for (int i = 0; i < g_usedpins_index; i++) {
 		int driverIndex = PIN_pinIORoleDriver()[PIN_registeredPinDetails()[i].pinIORole];
 		if (driverIndex && !g_drivers[driverIndex].bLoaded) {
 			if (g_drivers[driverIndex].frameworkRequest) {
-				g_drivers[driverIndex].frameworkRequest(OBKF_Init, 0);
-				g_drivers[driverIndex].frameworkRequest(OBKF_AcquirePin, 0);
+				g_drivers[driverIndex].bLoaded = g_drivers[driverIndex].frameworkRequest(OBKF_Init, 0);
+			} else {
+				g_drivers[driverIndex].bLoaded = true;
 			}
-			g_drivers[driverIndex].bLoaded = true;
 		}
 	}
 	DRV_Mutex_Free();
 }
 
+#if ENABLE_HA_DISCOVERY
 void DRV_OnHassDiscovery(const char *topic) {
 	int i;
 
@@ -1635,6 +1631,7 @@ void DRV_OnHassDiscovery(const char *topic) {
 	DRV_Mutex_Free();
 
 }
+#endif // ENABLE_HA_DISCOVERY
 void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState) {
 	int i, j;
 	int c_active = 0;

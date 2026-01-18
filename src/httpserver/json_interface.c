@@ -332,6 +332,7 @@ static int http_tasmota_json_status_SNS(void* request, jsonCb_t printer, bool bA
 		bHasAnyDHT = true;
 		break;
 	}
+#endif
 	printer(request, "}");
 
 	return 0;
@@ -401,11 +402,11 @@ static int http_tasmota_json_status_STS(void* request, jsonCb_t printer, bool bA
 	}
 	JSON_PrintKeyValue_Int(request, printer, "LoadAvg", 99, true);
 	JSON_PrintKeyValue_Int(request, printer, "MqttCount", 23, true);
-#ifdef ENABLE_DRIVER_BATTERY
-	if (DRV_IsRunning("Battery")) {
-		printer(request, "\"Vcc\":%.4f,", Battery_lastreading(OBK_BATT_VOLTAGE) / 1000.00);
-	}
-#endif
+// #ifdef ENABLE_DRIVER_BATTERY
+// 	if (DRV_IsRunning("Battery")) {
+// 		printer(request, "\"Vcc\":%.4f,", Battery_lastreading(OBK_BATT_VOLTAGE) / 1000.00);
+// 	}
+// #endif
 	http_tasmota_json_power(request, printer);
 	printer(request, ",");
 	printer(request, "\"Wifi\":{"); // open WiFi
