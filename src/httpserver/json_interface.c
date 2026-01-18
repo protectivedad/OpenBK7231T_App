@@ -144,32 +144,19 @@ static float _getReading_NanToZero(energySensor_t type) {
 static int http_tasmota_json_ENERGY(void* request, jsonCb_t printer) {
 	float voltage, batterypercentage = 0;
 
-	if (DRV_IsMeasuringBattery()) {
-#ifdef ENABLE_DRIVER_BATTERY
-		voltage = Battery_lastreading(OBK_BATT_VOLTAGE) / 1000.00;
-		batterypercentage = Battery_lastreading(OBK_BATT_LEVEL);
-#endif
-		printer(request, "{");
-		printer(request, "\"Voltage\":%.4f,", _getReading_NanToZero(OBK_VOLTAGE));
-		printer(request, "\"Batterypercentage\":%.0f", batterypercentage);
-		// close ENERGY block
-		printer(request, "}");
-	}
-	else {
-		printer(request, "{"); 
-		printer(request, "\"Power\": %f,", _getReading_NanToZero(OBK_POWER));
-		printer(request, "\"ApparentPower\": %f,", _getReading_NanToZero(OBK_POWER_APPARENT));
-		printer(request, "\"ReactivePower\": %f,", _getReading_NanToZero(OBK_POWER_REACTIVE));
-		printer(request, "\"Factor\":%f,", _getReading_NanToZero(OBK_POWER_FACTOR));
-		printer(request, "\"Voltage\":%f,", _getReading_NanToZero(OBK_VOLTAGE));
-		printer(request, "\"Current\":%f,", _getReading_NanToZero(OBK_CURRENT));
-		printer(request, "\"Frequency\":%f,", _getReading_NanToZero(OBK_FREQUENCY));
-		printer(request, "\"ConsumptionTotal\":%f,", _getReading_NanToZero(OBK_CONSUMPTION_TOTAL));
-		printer(request, "\"Yesterday\": %f,", _getReading_NanToZero(OBK_CONSUMPTION_YESTERDAY));
-		printer(request, "\"ConsumptionLastHour\":%f", _getReading_NanToZero(OBK_CONSUMPTION_LAST_HOUR));
-		// close ENERGY block
-		printer(request, "}");
-	}
+	printer(request, "{"); 
+	printer(request, "\"Power\": %f,", _getReading_NanToZero(OBK_POWER));
+	printer(request, "\"ApparentPower\": %f,", _getReading_NanToZero(OBK_POWER_APPARENT));
+	printer(request, "\"ReactivePower\": %f,", _getReading_NanToZero(OBK_POWER_REACTIVE));
+	printer(request, "\"Factor\":%f,", _getReading_NanToZero(OBK_POWER_FACTOR));
+	printer(request, "\"Voltage\":%f,", _getReading_NanToZero(OBK_VOLTAGE));
+	printer(request, "\"Current\":%f,", _getReading_NanToZero(OBK_CURRENT));
+	printer(request, "\"Frequency\":%f,", _getReading_NanToZero(OBK_FREQUENCY));
+	printer(request, "\"ConsumptionTotal\":%f,", _getReading_NanToZero(OBK_CONSUMPTION_TOTAL));
+	printer(request, "\"Yesterday\": %f,", _getReading_NanToZero(OBK_CONSUMPTION_YESTERDAY));
+	printer(request, "\"ConsumptionLastHour\":%f", _getReading_NanToZero(OBK_CONSUMPTION_LAST_HOUR));
+	// close ENERGY block
+	printer(request, "}");
 	return 0;
 }
 #endif	// ENABLE_DRIVER_BL0937
@@ -337,15 +324,6 @@ static int http_tasmota_json_status_SNS(void* request, jsonCb_t printer, bool bA
 	JSON_PrintKeyValue_String(request, printer, "Time", TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_ISO_8601), false);
 
 #ifndef OBK_DISABLE_ALL_DRIVERS
-#ifdef ENABLE_DRIVER_BL0937
-	if (DRV_IsMeasuringPower() || DRV_IsMeasuringBattery()) {
-
-		// begin ENERGY block
-		printer(request, ",");
-		printer(request, "\"ENERGY\":");
-		http_tasmota_json_ENERGY(request, printer);
-	}
-#endif	// ENABLE_DRIVER_BL0937
 	bool bHasAnyDHT = false;
 	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
 		int role = PIN_GetPinRoleForPinIndex(i);
@@ -354,16 +332,6 @@ static int http_tasmota_json_status_SNS(void* request, jsonCb_t printer, bool bA
 		bHasAnyDHT = true;
 		break;
 	}
-#ifdef NO_CHIP_TEMPERATURE	
-	if (DRV_IsSensor() || bHasAnyDHT) {
-#else
-	if (1) {
-#endif
-		http_tasmota_json_SENSOR(request, printer);
-		JSON_PrintKeyValue_String(request, printer, "TempUnit", "C", false);
-	}
-#endif
-
 	printer(request, "}");
 
 	return 0;

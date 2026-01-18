@@ -1800,11 +1800,6 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 		topic = "homeassistant";
 	}
 
-#ifdef ENABLE_DRIVER_BL0937
-	measuringPower = DRV_IsMeasuringPower();
-#endif
-	measuringBattery = DRV_IsMeasuringBattery();
-
 	PIN_get_Relay_PWM_Count(&relayCount, &pwmCount, &dInputCount);
 	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", relayCount, pwmCount, dInputCount, excludedCount);
 
