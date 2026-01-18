@@ -36,7 +36,7 @@ void Test_DoorSensor() {
 	// start state
 	CHANNEL_Set(1, 0, 0);
 
-	PIN_SetPinRoleForPinIndex(9, IOR_DoorSensorWithDeepSleep);
+	PIN_SetPinRoleForPinIndex(9, IOR_DoorSensor);
 	PIN_SetPinChannelForPinIndex(9, 1);
 
 	for (int i = 0; i < 10; i++) {

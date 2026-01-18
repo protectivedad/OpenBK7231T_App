@@ -26,6 +26,7 @@ static int g_emergencyTimeWithNoConnection = 0; // time without connection to MQ
 static int g_registeredPin = -1; // pin found on initialization
 static int setting_automaticWakeUpAfterSleepTime = 0;
 static int setting_timeRequiredUntilDeepSleep = 60;
+static int g_driverIndex;
 
 #define EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT 60 * 5
 
@@ -37,7 +38,7 @@ int Simulator_GetDoorSennsorAutomaticWakeUpAfterSleepTime() {
 }
 
 // addEventHandler OnClick 8 DSTime +100
-commandResult_t DoorDeepSleep_SetTime(const void* context, const char* cmd, const char* args, int cmdFlags) {
+commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char *a;
 
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
@@ -64,31 +65,58 @@ commandResult_t DoorDeepSleep_SetTime(const void* context, const char* cmd, cons
 	return CMD_RES_OK;
 }
 
-int DoorDeepSleep_Load() {
-	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (IS_PIN_DS_ROLE(g_cfg.pins.roles[i])) {
-			g_registeredPin = i;
+int DoorSensor_Load() {
+	for (int i = 0; i < g_usedpins_index; i++) {
+		switch (PIN_registeredPinDetails()[i].pinIORole)
+		{
+		case IOR_DoorSensor:
+			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
+			setGPIActive(g_registeredPin, 1, 0);
+			HAL_PIN_Setup_Input_Pullup(g_registeredPin);
+			// this is input - sample initial state down below
+			break;
+		case IOR_DoorSensor_pd:
+			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
+			setGPIActive(g_registeredPin, 1, 0);
+			HAL_PIN_Setup_Input_Pulldown(g_registeredPin);
+			// this is input - sample initial state down below
+			break;
+		case IOR_DoorSensor_NoPup:
+			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
+			HAL_PIN_Setup_Input(g_registeredPin);
+			// this is input - sample initial state down below
+			break;
+		default:
 			break;
 		}
 	}
+	if (PIN_ReadDigitalInputValue_WithInversionIncluded(g_registeredPin))
+		BIT_SET(g_initialPinStates, g_registeredPin);
+	else
+		BIT_CLEAR(g_initialPinStates, g_registeredPin);
 	return g_registeredPin;
 }
 
-void DoorDeepSleep_Init() {
+void DoorSensor_reserveIORoles(int driverIndex) {
+	// register IORoles for this driver
+	g_driverIndex = PIN_pinIORoleDriver()[IOR_DoorSensor] = PIN_pinIORoleDriver()[IOR_DoorSensor_NoPup] = PIN_pinIORoleDriver()[IOR_DoorSensor_pd] = driverIndex;
+}
+
+void DoorSensor_Init() {
 	// 0 seconds since last change
 	g_noChangeTimePassed = 0;
 
 	//cmddetail:{"name":"DSTime","args":"[timeSeconds][optionalAutoWakeUpTimeSeconds]",
 	//cmddetail:"descr":"DoorSensor driver configuration command. Time to keep device running before next sleep after last door sensor change. In future we may add also an option to automatically sleep after MQTT confirms door state receival. You can also use this to extend current awake time (at runtime) with syntax: 'DSTime +10', this will make device stay awake 10 seconds longer. You can also restart current value of awake counter by 'DSTime clear', this will make counter go from 0 again.",
-	//cmddetail:"fn":"DoorDeepSleep_SetTime","file":"driver/drv_doorSensorWithDeepSleep.c","requires":"",
+	//cmddetail:"fn":"DoorSensor_SetTime","file":"driver/drv_doorSensor.c","requires":"",
 	//cmddetail:"examples":""}
-	CMD_RegisterCommand("DSTime", DoorDeepSleep_SetTime, NULL);
+	CMD_RegisterCommand("DSTime", DoorSensor_SetTime, NULL);
 
-	DoorDeepSleep_Load();
+	DoorSensor_Load();
 	ADDLOGF_TIMING("%i - %s - Registered pin %i", xTaskGetTickCount(), __func__, g_registeredPin);
 }
 
-void DoorDeepSleep_OnEverySecond() {
+void DoorSensor_OnEverySecond() {
 
 	if (OTA_GetProgress() >= 0) {
 		return;
@@ -115,14 +143,14 @@ void DoorDeepSleep_OnEverySecond() {
 	}
 }
 
-void DoorDeepSleep_StopDriver() {
+void DoorSensor_StopDriver() {
 	// reset pins and time passed values
 	g_registeredPin = -1;
 	g_noChangeTimePassed = 0;
 	g_emergencyTimeWithNoConnection = 0;
 }
 
-void DoorDeepSleep_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
+void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
 {
 	if (bPreState){
 		return;
@@ -142,7 +170,7 @@ void DoorDeepSleep_AppendInformationToHTTPIndexPage(http_request_t* request, int
 	}
 }
 
-void DoorDeepSleep_OnChannelChanged(int ch, int value) {
+void DoorSensor_OnChannelChanged(int ch, int value) {
 	// detect door state change
 	// (only sleep when there are no changes for certain time)
 
