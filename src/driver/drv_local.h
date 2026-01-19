@@ -3,6 +3,11 @@
 #include "../httpserver/new_http.h"
 #include "../cmnds/cmd_public.h"
 
+int Output_frameworkRequest(int obkfRequest, int arg);
+// void LED_OnEverySecond();
+// void LED_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
+void Output_QuickTick();
+
 void DRV_DGR_Init();
 void DRV_DGR_RunQuickTick();
 void DRV_DGR_RunEverySecond();

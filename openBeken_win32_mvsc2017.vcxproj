@@ -255,6 +255,7 @@
     <ClCompile Include="src\libraries\obktime\obktime.c" />
     <ClCompile Include="src\driver\drv_timed_events.c" />
     <ClCompile Include="src\driver\drv_openWeatherMap.c" />
+    <ClCompile Include="src\driver\drv_output.c" />
     <ClCompile Include="src\driver\drv_pinMutex.c" />
     <ClCompile Include="src\driver\drv_pir.c" />
     <ClCompile Include="src\driver\drv_pixelAnim.c" />

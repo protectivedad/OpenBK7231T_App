@@ -1099,10 +1099,6 @@ void Main_OnEverySecond()
 #define WIFI_LED_FAST_BLINK_DURATION 250
 #define WIFI_LED_SLOW_BLINK_DURATION 500
 
-
-
-static int g_wifiLedToggleTime = 0;
-static int g_wifi_ledState = 0;
 unsigned int g_timeMs = 0;
 static uint32_t g_last_time = 0;
 #if ENABLE_DEEPSLEEP
@@ -1159,31 +1155,6 @@ void QuickTick(void* param)
 #if ENABLE_MQTT
 	MQTT_RunQuickTick();
 #endif
-
-	// WiFi LED
-	// In Open Access point mode, fast blink
-	if (Main_IsOpenAccessPointMode()) {
-		g_wifiLedToggleTime += g_deltaTimeMS;
-		if (g_wifiLedToggleTime > WIFI_LED_FAST_BLINK_DURATION) {
-			g_wifi_ledState = !g_wifi_ledState;
-			g_wifiLedToggleTime = 0;
-			PIN_set_wifi_led(g_wifi_ledState);
-		}
-	}
-	else if (g_bHasWiFiConnected) {
-		// In WiFi client success mode, just stay enabled
-		PIN_set_wifi_led(1);
-	}
-	else {
-		// in connecting mode, slow blink
-		g_wifiLedToggleTime += g_deltaTimeMS;
-		if (g_wifiLedToggleTime > WIFI_LED_SLOW_BLINK_DURATION) {
-			g_wifi_ledState = !g_wifi_ledState;
-			g_wifiLedToggleTime = 0;
-			PIN_set_wifi_led(g_wifi_ledState);
-		}
-	}
-
 }
 
 #define QT_STACK_SIZE 2048
@@ -1355,7 +1326,7 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 
 	g_enable_pins = 1;
 	// this actually sets the pins, moved out so we could avoid if necessary
-	// need to setup pins before loading drivers
+	// need to setup pins before loading drivers so they can find their pins
 	PIN_SetupPins();
 
 	if (bAutoRunScripts) {

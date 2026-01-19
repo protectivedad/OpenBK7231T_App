@@ -53,17 +53,17 @@ static driver_t g_drivers[] = {
 	NULL,                                    // frameworkRequest
 	false,                                   // loaded
 	},
-	//drvdetail:{"name":"IODriver",
+	//drvdetail:{"name":"Output",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"General input/output controls",
 	//drvdetail:"requires":""}
-	{ "IODriver",                            // Driver Name
+	{ "Output",                              // Driver Name
 	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
-	NULL,                                    // runQuickTick
+	Output_QuickTick,                        // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // frameworkRequest
+	Output_frameworkRequest,                 // frameworkRequest
 	false,                                   // loaded
 	},
 #if ENABLE_DRIVER_TUYAMCU

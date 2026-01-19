@@ -501,25 +501,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			// this is input - sample initial state down below
 		}
 		break;
-		case IOR_LED:
-		case IOR_LED_n:
-		case IOR_Relay:
-		case IOR_Relay_n:
-		{
-			int channelIndex;
-			int channelValue;
-
-			channelIndex = PIN_GetPinChannelForPinIndex(index);
-			channelValue = g_channelValues[channelIndex];
-
-			HAL_PIN_Setup_Output(index);
-			if (role == IOR_LED_n || role == IOR_Relay_n) {
-				HAL_PIN_SetOutputValue(index, !channelValue);
-			}
-			else {
-				HAL_PIN_SetOutputValue(index, channelValue);
-			}
-		}
 		break;
 		case IOR_BridgeForward:
 		case IOR_BridgeReverse:
@@ -547,11 +528,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			HAL_PIN_SetOutputValue(index, 0);
 		}
 		break;
-		case IOR_LED_WIFI:
-		case IOR_LED_WIFI_n:
-		{
-			HAL_PIN_Setup_Output(index);
-		}
 		break;
 		case IOR_ADC_Button:
 		case IOR_ADC:
@@ -614,17 +590,13 @@ void PIN_SetupPins() {
 	for (int pinIndex = 0; pinIndex < PLATFORM_GPIO_MAX; pinIndex++) {
 		int role = g_cfg.pins.roles[pinIndex];
 		if (role) { // only process pins with a role
-			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
 			registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
 			registeredPinDetails[g_usedpins_index].pinIORole = role;
 			int driverIndex = g_pinIORoleDriver[role];
-			if (driverIndex) { // let driver take care of pins
-				registeredPinDetails[g_usedpins_index].driverIndex = driverIndex;
+			if (driverIndex) // let driver take care of pins
 				DRV_SendRequest(driverIndex, OBKF_AcquirePin, pinIndex);
-			} else {
+			else
 				PIN_ProcessNewPinRole(pinIndex, role);
-			}
-			g_usedpins_index++;
 		}
 	}
 
@@ -713,8 +685,7 @@ int PIN_IOR_NofChan(int role) {
 	// Some roles don't need any channels
 	if (role == IOR_SGP_CLK || role == IOR_SHT3X_CLK || role == IOR_CHT83XX_CLK || role == IOR_Button_ToggleAll || role == IOR_Button_ToggleAll_n
 			|| role == IOR_BL0937_CF || role == IOR_BL0937_CF1 || role == IOR_BL0937_SEL
-			|| role == IOR_LED_WIFI || role == IOR_LED_WIFI_n || role == IOR_BL0937_SEL_n
-			|| role == IOR_RCRecv || role == IOR_RCRecv_nPup
+			|| role == IOR_BL0937_SEL_n || role == IOR_RCRecv || role == IOR_RCRecv_nPup
 			|| (role >= IOR_IRRecv && role <= IOR_DHT11)
 			|| (role >= IOR_SM2135_DAT && role <= IOR_BP1658CJ_CLK)
 			|| (role == IOR_HLW8112_SCSN)
@@ -1007,7 +978,6 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			} else if (role) { // different role, update driver/role
 				ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Switched entry for pin %i role %i to role %i", __func__, index, registeredPinDetails[i].pinIORole, role);
 				registeredPinDetails[i].pinIORole = role;
-				registeredPinDetails[i].driverIndex = g_pinIORoleDriver[role];
 				break;
 			} else { // no longer has role, compress entry
 				ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin %i and role %i", __func__, index, registeredPinDetails[i].pinIORole);
@@ -1015,7 +985,6 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 			}
 		}
 		if (pullFromNext && ((i + 1) < g_usedpins_index)) { // pin index is no longer used
-			registeredPinDetails[i].driverIndex = registeredPinDetails[i + 1].driverIndex;
 			registeredPinDetails[i].pinIORole = registeredPinDetails[i + 1].pinIORole;
 			registeredPinDetails[i].pinIndex = registeredPinDetails[i + 1].pinIndex;
 		}
@@ -1023,13 +992,11 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 	if (pullFromNext) { // compressed previous used pin
 		registeredPinDetails[i].pinIndex = 0;
 		registeredPinDetails[i].pinIORole = 0;
-		registeredPinDetails[i].driverIndex = 0;
 		g_usedpins_index--;
 	} else if (i == g_usedpins_index) { // never found pin
 		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, index, g_pinIORoleDriver[role], role);
 		registeredPinDetails[i].pinIndex = index;
 		registeredPinDetails[i].pinIORole = role;
-		registeredPinDetails[i].driverIndex = g_pinIORoleDriver[role];
 		g_usedpins_index++;
 	}
 }
@@ -1611,7 +1578,7 @@ bool CHANNEL_ShouldBePublished(int ch) {
 	for (int i = 0; i < g_usedpins_index; i++) {
 		int role = registeredPinDetails[i].pinIORole;
 		int pinIndex = registeredPinDetails[i].pinIndex;
-		int driverIndex = registeredPinDetails[i].driverIndex;
+		int driverIndex = g_pinIORoleDriver[role];
 		if (g_cfg.pins.channels[pinIndex] == ch) {
 			if (driverIndex) {
 				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, ch);
@@ -1821,19 +1788,6 @@ void PIN_Input_Handler(int pinIndex, uint32_t ms_since_last)
 			handle->state = 0; //reset
 		}
 		break;
-	}
-}
-
-void PIN_set_wifi_led(int value) {
-	int i;
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.roles[i] == IOR_LED_WIFI) {
-			RAW_SetPinValue(i, value);
-		}
-		else if (g_cfg.pins.roles[i] == IOR_LED_WIFI_n) {
-			// inversed
-			RAW_SetPinValue(i, !value);
-		}
 	}
 }
 

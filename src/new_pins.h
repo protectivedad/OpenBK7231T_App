@@ -77,7 +77,7 @@ typedef enum ioRole_e {
 	//iodetail:"descr":"Pulse width modulation output for LED dimmers (with MQTT dimming support from Home Assistant). Remember to set related channel to correct color index, in the RGBCW order. For CW only lights, set only CW indices.",
 	//iodetail:"enum":"IOR_PWM",
 	//iodetail:"file":"new_pins.h",
-	//iodetail:"driver":"output"}
+	//iodetail:"driver":""}
 	IOR_PWM,
 	//iodetail:{"name":"LED_WIFI",
 	//iodetail:"title":"TODO",
@@ -1246,7 +1246,6 @@ typedef struct pinsState_s {
 #endif
 
 typedef struct pinDetails_s {
-	int driverIndex;
 	int pinIndex;
 	int pinIORole;
 } pinDetails_t;
@@ -1541,7 +1540,6 @@ void PIN_DeepSleep_SetAllWakeUpEdges(byte edgeCode);
 void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime);
 #endif
 
-void PIN_set_wifi_led(int value);
 void PIN_AddCommands(void);
 void PIN_SetupPins();
 void PIN_OnReboot();
