@@ -1769,7 +1769,6 @@ HassDeviceInfo *hass_createEnumChannelInfo(int i) {
 }
 void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	int i;
-	int relayCount;
 	int pwmCount;
 	int dInputCount;
 	int excludedCount = 0;
@@ -1800,8 +1799,8 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 		topic = "homeassistant";
 	}
 
-	PIN_get_Relay_PWM_Count(&relayCount, &pwmCount, &dInputCount);
-	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", relayCount, pwmCount, dInputCount, excludedCount);
+	PIN_get_Relay_PWM_Count(&pwmCount, &dInputCount);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), pwmCount, dInputCount, excludedCount);
 
 #if PLATFORM_TXW81X
 	hooks.malloc_fn = _os_malloc;
@@ -2220,7 +2219,6 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	}
 #endif
 
-	//if (relayCount > 0) {
 	for (i = 0; i < CHANNEL_MAX; i++) {
 		// if already included by light, skip
 		if (BIT_CHECK(flagsChannelPublished, i)) {
@@ -2242,7 +2240,6 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 			discoveryQueued = true;
 		}
 	}
-	//}
 	if (dInputCount > 0) {
 		for (i = 0; i < CHANNEL_MAX; i++) {
 			if (h_isChannelDigitalInput(i)) {
@@ -2360,7 +2357,6 @@ void hprintf_qos_payload(http_request_t* request, const char* clientId) {
 #endif
 #if ENABLE_HA_DISCOVERY
 int http_fn_ha_cfg(http_request_t* request) {
-	int relayCount;
 	int pwmCount;
 	int dInputCount;
 	const char* shortDeviceName;
@@ -2386,9 +2382,9 @@ int http_fn_ha_cfg(http_request_t* request) {
 
 	poststr(request, "<textarea rows=\"40\" cols=\"50\">");
 
-	PIN_get_Relay_PWM_Count(&relayCount, &pwmCount, &dInputCount);
+	PIN_get_Relay_PWM_Count(&pwmCount, &dInputCount);
 
-	if (relayCount > 0) {
+	if (Output_relayCount() > 0) {
 
 		for (i = 0; i < CHANNEL_MAX; i++) {
 			if (h_isChannelRelay(i)) {

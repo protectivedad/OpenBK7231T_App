@@ -12,6 +12,7 @@
 #include "../driver/drv_tuyaMCU.h"
 #include "../driver/drv_public.h"
 #include "../driver/drv_battery.h"
+#include "../driver/drv_local.h"
 #include "../hal/hal_wifi.h"
 #include "../hal/hal_pins.h"
 #include "../hal/hal_flashConfig.h"
@@ -569,7 +570,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 	const char* friendlyName;
 	const char* clientId;
 	int powerCode;
-	int relayCount, pwmCount, dInputCount, i;
+	int pwmCount, dInputCount, i;
 	bool bRelayIndexingStartsWithZero;
 
 	deviceName = CFG_GetShortDeviceName();
@@ -581,7 +582,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 
 	bRelayIndexingStartsWithZero = CHANNEL_HasChannelPinWithRoleOrRole(0, IOR_Relay, IOR_Relay_n);
 
-	PIN_get_Relay_PWM_Count(&relayCount, &pwmCount, &dInputCount);
+	PIN_get_Relay_PWM_Count(&pwmCount, &dInputCount);
 
 	{
 		powerCode = 0;
@@ -611,7 +612,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 	printer(request, "\"Status\":{\"Module\":0,");
 	JSON_PrintKeyValue_String(request, printer, "DeviceName", deviceName, true);
 	printer(request, "\"FriendlyName\":[");
-	if (relayCount == 0) {
+	if (!Output_relayCount()) {
 		printer(request, "\"%s\"", friendlyName);
 	}
 	else {

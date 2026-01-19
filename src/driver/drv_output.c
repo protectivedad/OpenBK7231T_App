@@ -23,6 +23,8 @@ uint32_t g_driverIndex;
 uint32_t g_wifiLEDIndex;
 uint32_t g_led;
 
+uint32_t g_relayCount;
+
 #define WIFI_LED_FAST_BLINK_DURATION 250
 #define WIFI_LED_SLOW_BLINK_DURATION 500
 
@@ -102,6 +104,7 @@ static bool Output_ActivatePin(int pinIndex) {
 	case IOR_LED:
 	case IOR_Relay:
 		HAL_PIN_SetOutputValue(pinIndex, !channelValue);
+		g_relayCount++;
 		return true;
 
 	default:
@@ -116,13 +119,22 @@ static void Output_ReleasePin(int pinIndex) {
 	case IOR_LED_WIFI:
 		g_wifiLEDIndex = 0;
 		return;
+	case IOR_LED:
+	case IOR_LED_n:
+	case IOR_Relay:
+	case IOR_Relay_n:
+		g_relayCount--;
 	}
 }
 
 static void Output_StopDriver() {
 	g_wifiLEDIndex = 0;
+	g_relayCount = 0;
 }
 
+uint32_t Output_relayCount() {
+	return g_relayCount;
+}
 // framework request function
 int Output_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)

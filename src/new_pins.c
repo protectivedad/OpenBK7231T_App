@@ -12,6 +12,7 @@
 #include "driver/drv_tuyaMCU.h"
 #include "driver/drv_girierMCU.h"
 #include "driver/drv_public.h"
+#include "driver/drv_local.h"
 #include "hal/hal_flashVars.h"
 #include "hal/hal_pins.h"
 #include "hal/hal_adc.h"
@@ -1583,9 +1584,7 @@ bool CHANNEL_ShouldBePublished(int ch) {
 		if (g_cfg.pins.channels[pinIndex] == ch) {
 			if (driverIndex) {
 				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, ch);
-			} else if (role == IOR_Relay || role == IOR_Relay_n
-				|| role == IOR_LED || role == IOR_LED_n
-				|| role == IOR_ADC
+			} else if (role == IOR_ADC
 				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
 				|| role == IOR_DigitalInput || role == IOR_DigitalInput_n
 				|| IS_PIN_AIR_SENSOR_ROLE(role)
@@ -2231,13 +2230,9 @@ static commandResult_t CMD_setStartupSSID(const void* context, const char* cmd, 
 }
 #endif
 /// @brief Computes the Relay and PWM count.
-/// @param relayCount Number of relay and LED channels.
 /// @param pwmCount Number of PWM channels.
-void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
+void PIN_get_Relay_PWM_Count(int* pwmCount, int* dInputCount) {
 	int pwmBits;
-	if (relayCount) {
-		(*relayCount) = 0;
-	}
 	if (pwmCount) {
 		(*pwmCount) = 0;
 	}
@@ -2252,14 +2247,6 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
 		int role = PIN_GetPinRoleForPinIndex(pinIndex);
 		switch (role) {
-		case IOR_Relay:
-		case IOR_Relay_n:
-		case IOR_LED:
-		case IOR_LED_n:
-			if (relayCount) {
-				(*relayCount)++;
-			}
-			break;
 		case IOR_PWM:
 		case IOR_PWM_n:
 			// if we have two PWMs on single channel, count it once

@@ -7,6 +7,7 @@ int Output_frameworkRequest(int obkfRequest, int arg);
 // void LED_OnEverySecond();
 // void LED_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 void Output_QuickTick();
+uint32_t Output_relayCount();
 
 void DRV_DGR_Init();
 void DRV_DGR_RunQuickTick();
