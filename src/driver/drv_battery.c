@@ -22,33 +22,28 @@ static int g_lastbattvoltage = 0, g_lastbattlevel = 0;
 static float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
 static int g_driverIndex = 0;
 
-// returns false if pin not found
-static int Battery_Load() {
-	for (int i = 0; i < g_usedpins_index; i++) {
-		switch (PIN_registeredPinDetails()[i].pinIORole)
-		{
-		case IOR_BAT_ADC:
-			g_pin_adc = PIN_registeredPinDetails()[i].pinIndex;
-			HAL_ADC_Init(g_pin_adc);
-			break;
-		case IOR_BAT_Relay:
-			g_pin_rel = PIN_registeredPinDetails()[i].pinIndex;
-			g_val_rel = 1;
-			HAL_PIN_Setup_Output(g_pin_rel);
-			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
-			break;
-		case IOR_BAT_Relay_n:
-			g_pin_rel = PIN_registeredPinDetails()[i].pinIndex;
-			g_val_rel = 0;
-			HAL_PIN_Setup_Output(g_pin_rel);
-			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
-			break;
-		default:
-			break;
-		}
+static bool Battery_AssignPin(int pinIndex) {
+	int pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
+	switch (pinIORole) {
+	case IOR_BAT_ADC:
+		g_pin_adc = pinIndex;
+		HAL_ADC_Init(g_pin_adc);
+		return true;
+	case IOR_BAT_Relay:
+		g_pin_rel = pinIndex;
+		g_val_rel = 1;
+		HAL_PIN_Setup_Output(g_pin_rel);
+		HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
+		return true;
+	case IOR_BAT_Relay_n:
+		g_pin_rel = pinIndex;
+		g_val_rel = 0;
+		HAL_PIN_Setup_Output(g_pin_rel);
+		HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
+		return true;
+	default:
+		return false;
 	}
-	ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
-	return (g_pin_adc != -1);
 }
 
 static void Batt_Measure() {
@@ -189,6 +184,13 @@ static void Battery_Init() {
 	//cmddetail:"examples":"Battery_cycle 60"}
 	CMD_RegisterCommand("Battery_cycle", Battery_cycle, NULL);
 
+	if ((g_pin_rel != -1) && (g_pin_adc != -1)) {
+		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
+		HAL_ADC_Read(g_pin_adc);
+		HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
+	}
+
+	ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
 }
 
 void Batt_OnEverySecond() {
@@ -212,13 +214,20 @@ void Batt_OnEverySecond() {
 	}
 }
 
-static void Battery_StopDriver() {
-	if (g_pin_adc != -1) {
-		setGPIActive(g_pin_adc, 0, 0);
+static void Battery_ReleasePin(int pinIndex) {
+	setGPIActive(pinIndex, 0, 0);
+	if (pinIndex = g_pin_adc) {
 		HAL_ADC_Deinit(g_pin_adc);
 		g_pin_adc = -1;
-	}
-	g_pin_rel = -1;
+	} else if (pinIndex = g_pin_rel)
+		g_pin_rel = -1;
+}
+
+static void Battery_StopDriver() {
+	if (g_pin_adc != -1)
+		Battery_ReleasePin(g_pin_adc);
+	if (g_pin_rel != -1)
+		Battery_ReleasePin(g_pin_rel);
 	g_val_rel = -1;
 }
 
@@ -239,15 +248,15 @@ int Battery_frameworkRequest(int obkfRequest, int arg) {
 	
 	case OBKF_Init:
 		Battery_Init();
+		break;
+
 	case OBKF_AcquirePin:
-		if (Battery_Load() && (g_pin_rel != -1)) {
-			HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
-			HAL_ADC_Read(g_pin_adc);
-			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
-		}
-		return (g_pin_adc != -1);
+		return Battery_AssignPin(arg);
 
 	case OBKF_ReleasePin:
+		Battery_ReleasePin(arg);
+		break;
+
 	case OBKF_Stop:
 		Battery_StopDriver();
 		break;
@@ -259,6 +268,7 @@ int Battery_frameworkRequest(int obkfRequest, int arg) {
 	default:
 		break;
 	}
+	return true;
 }
 
 #endif // ENABLE_DRIVER_BATTERY

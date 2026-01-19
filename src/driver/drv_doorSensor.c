@@ -107,49 +107,44 @@ static bool DoorSensor_pinValue() {
 
 // Finds associated pin, first assigned is chosen
 // returns false if no pin is found
-static bool DoorSensor_AssignPins() {
-	for (int i = 0; i < g_usedpins_index; i++) {
-		switch (PIN_registeredPinDetails()[i].pinIORole)
-		{
-		case IOR_DoorSensor:
-			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
-			HAL_PIN_Setup_Input_Pullup(g_registeredPin);
-			// this is input - sample initial state down below
-			return true;
-		case IOR_DoorSensor_pd:
-			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
-			HAL_PIN_Setup_Input_Pulldown(g_registeredPin);
-			// this is input - sample initial state down below
-			return true;
-		case IOR_DoorSensor_NoPup:
-			g_registeredPin = PIN_registeredPinDetails()[i].pinIndex;
-			HAL_PIN_Setup_Input(g_registeredPin);
-			// this is input - sample initial state down below
-			return true;
-		default:
-			break;
-		}
+static bool DoorSensor_AssignPin(int pinIndex) {
+	int pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
+	switch (pinIORole) {
+	case IOR_DoorSensor:
+		g_registeredPin = pinIndex;
+		HAL_PIN_Setup_Input_Pullup(g_registeredPin);
+		// this is input - sample initial state down below
+		return true;
+	case IOR_DoorSensor_pd:
+		g_registeredPin = pinIndex;
+		HAL_PIN_Setup_Input_Pulldown(g_registeredPin);
+		// this is input - sample initial state down below
+		return true;
+	case IOR_DoorSensor_NoPup:
+		g_registeredPin = pinIndex;
+		HAL_PIN_Setup_Input(g_registeredPin);
+		// this is input - sample initial state down below
+		return true;
+	default:
+		return false;
 	}
-	return false;
 }
 
-// assigns pins and does any activation, active status, last state, etc
+// assigns pin and does any activation, active status, last state, etc
 // returns true when pin is found
-static int DoorSensor_ActivatePins() {
-	if (DoorSensor_AssignPins()) {
+static int DoorSensor_ActivatePin(int pinIndex) {
+	if (DoorSensor_AssignPin(pinIndex)) {
 		setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? DoorSensor_pinValue() : g_defaultWakeEdge);
 		g_lastValidState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
 	} else {
 		g_registeredPin = -1;
 	}
 
-	ADDLOGF_TIMING("%i - %s - Registered pin %i, previous state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_lastValidState);
 	return (g_registeredPin != -1);
 }
 
 // clears timing counters and registers commands
 static void DoorSensor_Init() {
-	g_registeredPin = -1;
 	DoorSensor_clearTimers();
 
 	//cmddetail:{"name":"DSTime","args":"[timeSeconds][optionalAutoWakeUpTimeSeconds]",
@@ -164,15 +159,20 @@ static void DoorSensor_Init() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DoorSensor_SetEdge", DoorSensor_SetEdge, NULL);
 
+	ADDLOGF_TIMING("%i - %s - Pin index %i, last valid state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_lastValidState);
+}
+
+static void DoorSensor_ReleasePin(int pinIndex) {
+	setGPIActive(pinIndex, 0, 0);
+	if (pinIndex == g_registeredPin)
+		g_registeredPin = -1;
 }
 
 // runs deactivation of any previous assigned pin, clears pin and timers
 static void DoorSensor_StopDriver() {
 	// reset pins and time passed values
-	if (g_registeredPin != -1) {
-		setGPIActive(g_registeredPin, 0, 0);
-		g_registeredPin = -1;
-	}
+	if (g_registeredPin != -1)
+		DoorSensor_ReleasePin(g_registeredPin);
 	DoorSensor_clearTimers();
 }
 
@@ -226,10 +226,15 @@ int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 	
 	case OBKF_Init:
 		DoorSensor_Init();
+		break;
+
 	case OBKF_AcquirePin:
-		return DoorSensor_ActivatePins();
+		return DoorSensor_ActivatePin(arg);
 
 	case OBKF_ReleasePin:
+		DoorSensor_ReleasePin(arg);
+		break;
+
 	case OBKF_Stop:
 		DoorSensor_StopDriver();
 		break;

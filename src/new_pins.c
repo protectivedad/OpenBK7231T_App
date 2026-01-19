@@ -418,7 +418,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			return;
 		int driverIndex = g_pinIORoleDriver[role];
 		if (driverIndex) { // let driver take care of pins
-			DRV_SendRequest(driverIndex, OBKF_AcquirePin, 0);
+			DRV_SendRequest(driverIndex, OBKF_AcquirePin, index);
 			return;
 		}
 
@@ -614,14 +614,16 @@ void PIN_SetupPins() {
 	for (int pinIndex = 0; pinIndex < PLATFORM_GPIO_MAX; pinIndex++) {
 		int role = g_cfg.pins.roles[pinIndex];
 		if (role) { // only process pins with a role
-			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
 			registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
 			registeredPinDetails[g_usedpins_index].pinIORole = role;
 			int driverIndex = g_pinIORoleDriver[role];
-			if (driverIndex) // let driver take care of pins
+			if (driverIndex) { // let driver take care of pins
 				registeredPinDetails[g_usedpins_index].driverIndex = driverIndex;
-			else
+				DRV_SendRequest(driverIndex, OBKF_AcquirePin, pinIndex);
+			} else {
 				PIN_ProcessNewPinRole(pinIndex, role);
+			}
 			g_usedpins_index++;
 		}
 	}
@@ -702,7 +704,7 @@ int PIN_GetPinChannel2ForPinIndex(int index) {
 int PIN_IOR_NofChan(int role) {
 	int driverIndex = g_pinIORoleDriver[role];
 	if (driverIndex) {
-		return DRV_SendRequest(driverIndex, OBKF_NoOfChannels, 0);
+		return DRV_SendRequest(driverIndex, OBKF_NoOfChannels, role);
 	}
 	// For button, is relay index to toggle on double click
 	if (role == IOR_Button || role == IOR_Button_n || IS_PIN_DHT_ROLE(role) || IS_PIN_TEMP_HUM_SENSOR_ROLE(role) || IS_PIN_AIR_SENSOR_ROLE(role)){
@@ -935,18 +937,6 @@ void CHANNEL_DoSpecialToggleAll() {
 	}
 }
 
-void PIN_ApplyCounterDeltas() {
-	for (int i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_counterDeltas[i]) {
-			// TODO: disable interrupts now so it won't get called in meantime?
-			int delta = g_counterDeltas[i];
-			g_counterDeltas[i] = 0;
-			int ch = g_cfg.pins.channels[i];
-			CHANNEL_Add(ch, delta);
-		}
-	}
-}
-
 static void PIN_ProcessOldPinRole(int index) {
 	if (g_enable_pins) {
 		int role = g_cfg.pins.roles[index];
@@ -954,7 +944,7 @@ static void PIN_ProcessOldPinRole(int index) {
 			return;
 		int driverIndex = g_pinIORoleDriver[role];
 		if (driverIndex) { // let driver take care of pins
-			DRV_SendRequest(driverIndex, OBKF_ReleasePin, 0);
+			DRV_SendRequest(driverIndex, OBKF_ReleasePin, index);
 			return;
 		}
 		// remove from active inputs
@@ -1856,7 +1846,14 @@ void PIN_ticks(void* param)
 	uint32_t t_diff = PIN_TMR_DURATION;
 	int value;
 
-	PIN_ApplyCounterDeltas();
+	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
+		if (g_counterDeltas[pinIndex]) {
+			// TODO: disable interrupts now so it won't get called in meantime?
+			CHANNEL_Add(g_cfg.pins.channels[pinIndex], g_counterDeltas[pinIndex]);
+			g_counterDeltas[pinIndex] = 0;
+		}
+	}
 
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
 	g_time = rtos_get_time();
@@ -1887,7 +1884,6 @@ void PIN_ticks(void* param)
 
 	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
 		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
-		int driverIndex = registeredPinDetails[usedIndex].driverIndex;
 		int pinIORole = registeredPinDetails[usedIndex].pinIORole;
 		if (pinIndex >= 32) {
 			if (g_gpio_index_map[1] & (1 << (pinIndex - 32))) {
@@ -2283,7 +2279,6 @@ static commandResult_t CMD_setStartupSSID(const void* context, const char* cmd, 
 /// @param relayCount Number of relay and LED channels.
 /// @param pwmCount Number of PWM channels.
 void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
-	int i;
 	int pwmBits;
 	if (relayCount) {
 		(*relayCount) = 0;
@@ -2298,8 +2293,9 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 	// if we have two PWMs on single channel, count it once
 	pwmBits = 0;
 
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		int role = PIN_GetPinRoleForPinIndex(i);
+	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
+		int role = PIN_GetPinRoleForPinIndex(pinIndex);
 		switch (role) {
 		case IOR_Relay:
 		case IOR_Relay_n:
@@ -2312,7 +2308,7 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 		case IOR_PWM:
 		case IOR_PWM_n:
 			// if we have two PWMs on single channel, count it once
-			BIT_SET(pwmBits, g_cfg.pins.channels[i]);
+			BIT_SET(pwmBits, g_cfg.pins.channels[pinIndex]);
 			//(*pwmCount)++;
 			break;
 		case IOR_PWM_ScriptOnly:
@@ -2340,7 +2336,7 @@ void PIN_get_Relay_PWM_Count(int* relayCount, int* pwmCount, int* dInputCount) {
 	}
 	if (pwmCount) {
 		// if we have two PWMs on single channel, count it once
-		for (i = 0; i < 32; i++) {
+		for (int i = 0; i < 32; i++) {
 			if (BIT_CHECK(pwmBits, i)) {
 				(*pwmCount)++;
 			}
