@@ -21,7 +21,8 @@
 
 uint32_t g_driverIndex;
 uint32_t g_wifiLEDIndex;
-uint32_t g_led;
+uint32_t g_ledPins;
+uint32_t g_relayPins;
 
 uint32_t g_relayCount;
 

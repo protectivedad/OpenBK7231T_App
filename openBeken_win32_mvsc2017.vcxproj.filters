@@ -404,6 +404,7 @@
     <ClCompile Include="src\selftest\selftest_tclAC.c" />
     <ClCompile Include="src\berry\modules\be_i2c.c" />
     <ClCompile Include="src\driver\drv_gosundSW2.c" />
+    <ClCompile Include="src\driver\drv_input.c" />
     <ClCompile Include="src\driver\drv_output.c" />
     <ClCompile Include="src\driver\drv_pinMutex.c" />
     <ClCompile Include="src\driver\drv_ds1820_full.c" />

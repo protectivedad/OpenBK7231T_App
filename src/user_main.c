@@ -1202,7 +1202,7 @@ void QuickTick_StartThread(void)
 ///////////////////////////////////////////////////////
 
 
-void app_on_generic_dbl_click(int btnIndex)
+void app_on_generic_dbl_click(uint32_t btnIndex)
 {
 	if (g_secondsElapsed < 5)
 	{
@@ -1292,7 +1292,7 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 	init_lfs(0);
 #endif
 
-	PIN_SetGenericDoubleClickCallback(app_on_generic_dbl_click);
+	Input_SetGenericDoubleClickCallback(app_on_generic_dbl_click);
 	ADDLOGF_DEBUG("Initialised other callbacks\r\n");
 
 	// initialise rest interface

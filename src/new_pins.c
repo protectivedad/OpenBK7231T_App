@@ -44,16 +44,6 @@
 #include "manual_ps_pub.h"
 #endif
 
-// According to your need to modify the constants.
-#define PIN_TMR_DURATION      QUICK_TMR_DURATION // Delay (in ms) between button scan iterations
-#define BTN_DEBOUNCE_MS         75  
-// NOTE: Original settings was PIN_TIMER_DURATION 5 and BTN_DEBOUNCE_MS 15
-// Now that QUICK_TIMER_DURATION is 25, we can increase debounce to 75 or so...
-
-// loaded from config, they are now configurable
-int BTN_SHORT_MS;
-int BTN_LONG_MS;
-int BTN_HOLD_REPEAT_MS;
 byte *g_defaultWakeEdge = 0;
 
 uint32_t g_pinIORoleDriver[IOR_Total_Options];
@@ -106,34 +96,6 @@ void PIN_DeepSleep_SetAllWakeUpEdges(byte edgeCode) {
 	}
 }
 #endif // ENABLE_DEEPSLEEP
-typedef enum {
-	BTN_PRESS_DOWN = 0,
-	BTN_PRESS_UP,
-	BTN_PRESS_REPEAT,
-	BTN_SINGLE_CLICK,
-	BTN_DOUBLE_CLICK,
-	BTN_LONG_RRESS_START,
-	BTN_LONG_PRESS_HOLD,
-	BTN_TRIPLE_CLICK,
-	BTN_QUADRUPLE_CLICK,
-	BTN_5X_CLICK,
-	BTN_number_of_event,
-	BTN_NONE_PRESS
-}BTN_PRESS_EVT;
-
-typedef struct pinButton_ {
-	uint16_t ticks;
-	uint16_t holdRepeatTicks;
-	uint8_t  repeat : 4;
-	uint8_t  event : 4;
-	uint8_t  state : 3;
-	uint8_t  active_level : 1;
-	uint8_t  button_level : 1;
-
-	uint8_t  debounce_cnt; // make a full byte, so we can count ms
-
-	uint8_t(*hal_button_Level)(void* self);
-}pinButton_s;
 
 // overall pins enable.
 // if zero, all hardware action is disabled.
@@ -143,15 +105,6 @@ char g_enable_pins = 0;
 //int g_channelStates;
 int g_channelValues[CHANNEL_MAX] = { 0 };
 float g_channelValuesFloats[CHANNEL_MAX] = { 0 };
-
-pinButton_s g_buttons[PLATFORM_GPIO_MAX];
-
-void (*g_doubleClickCallback)(int pinIndex) = 0;
-
-static short g_times[PLATFORM_GPIO_MAX];
-static short g_times2[PLATFORM_GPIO_MAX];
-static byte g_lastValidState[PLATFORM_GPIO_MAX];
-
 
 // a bitfield indicating which GPI are inputs.
 // could be used to control edge triggered interrupts...
@@ -382,36 +335,9 @@ void PIN_TriggerPoll() {
 #endif
 #endif
 extern int g_pwmFrequency;
-bool BTN_ShouldInvert(int index) {
-	int role = g_cfg.pins.roles[index];
-	if (role == IOR_Button_n || role == IOR_Button_ToggleAll_n ||
-		role == IOR_DigitalInput_n || role == IOR_DigitalInput_NoPup_n
-		|| role == IOR_Button_ScriptOnly_n
-		|| role == IOR_SmartButtonForLEDs_n) {
-		return true;
-	}
-	return false;
-}
-uint8_t PIN_ReadDigitalInputValue_WithInversionIncluded(int index) {
-	uint8_t iVal = HAL_PIN_ReadDigitalInput(index);
-	return BTN_ShouldInvert(index) ? !iVal : iVal;
-}
-static uint8_t button_generic_get_gpio_value(void* param) {
-	int index = ((pinButton_s*)param) - g_buttons;
-	return PIN_ReadDigitalInputValue_WithInversionIncluded(index);
-}
 unsigned short g_counterDeltas[PLATFORM_GPIO_MAX];
 void PIN_InterruptHandler(int gpio) {
 	g_counterDeltas[gpio]++;
-}
-void NEW_button_init(pinButton_s* handle, uint8_t(*pin_level)(void* self), uint8_t active_level)
-{
-	memset(handle, 0, sizeof(pinButton_s));
-
-	handle->event = (uint8_t)BTN_NONE_PRESS;
-	handle->hal_button_Level = pin_level;
-	handle->button_level = handle->hal_button_Level(handle);
-	handle->active_level = active_level;
 }
 static void PIN_ProcessNewPinRole(int index, int role) {
 	if (g_enable_pins) {
@@ -428,81 +354,11 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		// init new role
 		switch (role)
 		{
-		case IOR_Button:
-		case IOR_Button_ToggleAll:
-		case IOR_Button_ScriptOnly:
-		case IOR_SmartButtonForLEDs:
-			falling = 1;
-		case IOR_Button_n:
-		case IOR_Button_ToggleAll_n:
-		case IOR_Button_ScriptOnly_n:
-		case IOR_SmartButtonForLEDs_n:
-		{
-			pinButton_s* bt = &g_buttons[index];
-
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-
-			// digital input
-			HAL_PIN_Setup_Input_Pullup(index);
-
-			// init button after initializing pin role
-			NEW_button_init(bt, button_generic_get_gpio_value, 0);
-			// this is input - sample initial state down below
-		}
-		break;
-
 		case IOR_IRRecv:
 			falling = 1;
 			// add to active inputs
 			setGPIActive(index, 1, falling);
 			break;
-
-		case IOR_ToggleChannelOnToggle:
-		{
-			// add to active inputs
-			falling = 1;
-			setGPIActive(index, 1, falling);
-
-			// digital input
-			HAL_PIN_Setup_Input_Pullup(index);
-			// otherwise we get a toggle on start			
-#ifdef PLATFORM_BEKEN
-			//20231217 XJIKKA
-			//On the BK7231N Mini WiFi Smart Switch, the correct state of the ADC input pin
-			//can be readed 1000us after the pin is initialized. Maybe there is a capacitor?
-			//Without delay, g_lastValidState is after restart set to 0, so the light will toggle, if the switch on input pin is on (1).
-			//To be sure, we will wait for 20000 us.
-			usleep(20000);
-#endif
-			g_lastValidState[index] = PIN_ReadDigitalInputValue_WithInversionIncluded(index);
-			// this is input - sample initial state down below
-		}
-		break;
-		case IOR_DigitalInput_n:
-			falling = 1;
-		case IOR_DigitalInput:
-		{
-			// add to active inputs
-			setGPIActive(index, 1, falling);
-			// digital input
-			HAL_PIN_Setup_Input_Pullup(index);
-			// this is input - sample initial state down below
-		}
-		break;
-		case IOR_DigitalInput_NoPup_n:
-			falling = 1;
-		case IOR_DigitalInput_NoPup:
-		{
-			// add to active inputs
-			// TODO: We cannot set active here, as later code may enforce pullup/down????
-			//setGPIActive(index, 1, falling);
-			// digital input
-			HAL_PIN_Setup_Input(index);
-			// this is input - sample initial state down below
-		}
-		break;
-		break;
 #if ENABLE_DRIVER_BRIDGE
 		case IOR_BridgeForward:
 		case IOR_BridgeReverse:
@@ -518,8 +374,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		}
 		break;
 #endif // ENABLE_DRIVER_BRIDGE
-
-		break;
 		case IOR_ADC_Button:
 		case IOR_ADC:
 			// init ADC for given pin
@@ -674,11 +528,11 @@ int PIN_IOR_NofChan(int role) {
 		return DRV_SendRequest(driverIndex, OBKF_NoOfChannels, role);
 	}
 	// For button, is relay index to toggle on double click
-	if (role == IOR_Button || role == IOR_Button_n || IS_PIN_DHT_ROLE(role) || IS_PIN_TEMP_HUM_SENSOR_ROLE(role) || IS_PIN_AIR_SENSOR_ROLE(role)){
+	if (IS_PIN_DHT_ROLE(role) || IS_PIN_TEMP_HUM_SENSOR_ROLE(role) || IS_PIN_AIR_SENSOR_ROLE(role)){
 			return 2;
 	}
 	// Some roles don't need any channels
-	if (role == IOR_SGP_CLK || role == IOR_SHT3X_CLK || role == IOR_CHT83XX_CLK || role == IOR_Button_ToggleAll || role == IOR_Button_ToggleAll_n
+	if (role == IOR_SGP_CLK || role == IOR_SHT3X_CLK || role == IOR_CHT83XX_CLK
 			|| role == IOR_BL0937_CF || role == IOR_BL0937_CF1 || role == IOR_BL0937_SEL
 			|| role == IOR_BL0937_SEL_n || role == IOR_RCRecv || role == IOR_RCRecv_nPup
 			|| (role >= IOR_IRRecv && role <= IOR_DHT11)
@@ -699,142 +553,6 @@ void RAW_SetPinValue(int index, int iVal) {
 	if (g_enable_pins) {
 		HAL_PIN_SetOutputValue(index, iVal);
 	}
-}
-void Button_OnPressRelease(int index) {
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was released
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ONRELEASE, index);
-}
-void Button_OnInitialPressDown(int index)
-{
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnInitialPressDown\r\n", index);
-
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ONPRESS, index);
-
-	// so-called SetOption13 - instant reaction to touch instead of waiting for release
-	if (CFG_HasFlag(OBK_FLAG_BTN_INSTANTTOUCH)) {
-		if (g_cfg.pins.roles[index] == IOR_Button_ToggleAll || g_cfg.pins.roles[index] == IOR_Button_ToggleAll_n)
-		{
-			CHANNEL_DoSpecialToggleAll();
-			return;
-		}
-		if (g_cfg.pins.roles[index] == IOR_Button_ScriptOnly || g_cfg.pins.roles[index] == IOR_Button_ScriptOnly_n)
-		{
-
-			return;
-		}
-		{
-			// Relays
-			CHANNEL_Toggle(g_cfg.pins.channels[index]);
-		}
-	}
-}
-void Button_OnShortClick(int index)
-{
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_short_press\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was clicked
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ONCLICK, index);
-	// so-called SetOption13 - instant reaction to touch instead of waiting for release
-	// first click toggles FIRST CHANNEL linked to this button
-	if (CFG_HasFlag(OBK_FLAG_BTN_INSTANTTOUCH) == false) {
-		if (g_cfg.pins.roles[index] == IOR_Button_ToggleAll || g_cfg.pins.roles[index] == IOR_Button_ToggleAll_n)
-		{
-			CHANNEL_DoSpecialToggleAll();
-			return;
-		}
-		if (g_cfg.pins.roles[index] == IOR_Button_ScriptOnly || g_cfg.pins.roles[index] == IOR_Button_ScriptOnly_n)
-		{
-			return;
-		}
-		{
-			// Relays
-			CHANNEL_Toggle(g_cfg.pins.channels[index]);
-		}
-	}
-}
-void Button_OnDoubleClick(int index)
-{
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_double_press\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	if (g_cfg.pins.roles[index] == IOR_Button_ToggleAll || g_cfg.pins.roles[index] == IOR_Button_ToggleAll_n)
-	{
-		CHANNEL_DoSpecialToggleAll();
-		return;
-	}
-	// fire event - button on pin <index> was dbclicked
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ONDBLCLICK, index);
-
-	if (g_cfg.pins.roles[index] == IOR_Button || g_cfg.pins.roles[index] == IOR_Button_n)
-	{
-		// double click toggles SECOND CHANNEL linked to this button
-		CHANNEL_Toggle(g_cfg.pins.channels2[index]);
-	}
-	if (g_doubleClickCallback != 0) {
-		g_doubleClickCallback(index);
-	}
-}
-void Button_OnTripleClick(int index)
-{
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_triple_press\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was 3clicked
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ON3CLICK, index);
-}
-void Button_OnQuadrupleClick(int index)
-{
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_quadruple_press\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was 4clicked
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ON4CLICK, index);
-}
-void Button_On5xClick(int index)
-{
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key_5x_press\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was 4clicked
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ON5CLICK, index);
-}
-void Button_OnLongPressHold(int index) {
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHold\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was held
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ONHOLD, index);
-}
-void Button_OnLongPressHoldStart(int index) {
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHoldStart\r\n", index);
-	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-		return;
-	}
-	// fire event - button on pin <index> was held
-	EventHandlers_FireEvent(CMD_EVENT_PIN_ONHOLDSTART, index);
 }
 
 #define PIN_UART1_RXD 10
@@ -991,9 +709,6 @@ uint32_t PIN_getDriverForRole(uint32_t pinRole) {
 int* PIN_pinIORoleDriver() {
 	return g_pinIORoleDriver;
 }
-void PIN_SetGenericDoubleClickCallback(void (*cb)(int pinIndex)) {
-	g_doubleClickCallback = cb;
-}
 void Channel_SaveInFlashIfNeeded(int ch) {
 	// save, if marked as save value in flash (-1)
 	if (g_cfg.startChannelValues[ch] == -1) {
@@ -1071,19 +786,6 @@ void CFG_ApplyChannelStartValues() {
 		else {
 			g_channelValuesFloats[i] = g_channelValues[i] = iValue;
 			//ADDLOG_INFO(LOG_FEATURE_GENERAL, "CFG_ApplyChannelStartValues: Channel %i is being set to constant state %i", i, g_channelValues[i]);
-		}
-	}
-	// preload pin values from channels for pin types that look at g_lastValidState
-	// drivers need to take car of this
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		switch (g_cfg.pins.roles[i]) {
-		case IOR_DigitalInput:
-		case IOR_DigitalInput_n:
-		case IOR_DigitalInput_NoPup:
-		case IOR_DigitalInput_NoPup_n:
-		case IOR_ToggleChannelOnToggle:
-			iValue = g_cfg.pins.channels[i];
-			g_lastValidState[i] = g_channelValues[iValue];
 		}
 	}
 }
@@ -1564,7 +1266,7 @@ bool CHANNEL_ShouldBePublished(int ch) {
 		int driverIndex = g_pinIORoleDriver[role];
 		if (g_cfg.pins.channels[pinIndex] == ch) {
 			if (driverIndex) {
-				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, ch);
+				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, role);
 			} else if (role == IOR_ADC
 				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
 				|| role == IOR_DigitalInput || role == IOR_DigitalInput_n
@@ -1603,158 +1305,10 @@ bool CHANNEL_ShouldBePublished(int ch) {
 	return false;
 }
 
-#define EVENT_CB(ev)   
-
-#define PIN_TMR_LOOPS_PER_SECOND (1000/PIN_TMR_DURATION)
-#define ADC_SAMPLING_TICK_COUNT PIN_TMR_LOOPS_PER_SECOND
-
-
-void PIN_Input_Handler(int pinIndex, uint32_t ms_since_last)
-{
-	pinButton_s* handle;
-	uint8_t read_gpio_level;
-
-	handle = &g_buttons[pinIndex];
-	if (handle->hal_button_Level != 0) {
-		read_gpio_level = handle->hal_button_Level(handle);
-	}
-	else {
-		read_gpio_level = handle->button_level;
-	}
-
-	//ticks counter working..
-	if ((handle->state) > 0)
-		handle->ticks += ms_since_last;
-
-	/*------------button debounce handle---------------*/
-	if (read_gpio_level != handle->button_level) { //not equal to prev one
-		//continue read 3 times same new level change
-		handle->debounce_cnt += ms_since_last;
-
-		if (handle->debounce_cnt >= BTN_DEBOUNCE_MS) {
-			handle->button_level = read_gpio_level;
-			handle->debounce_cnt = 0;
-		}
-	}
-	else { //leved not change ,counter reset.
-		handle->debounce_cnt = 0;
-	}
-
-	/*-----------------State machine-------------------*/
-	switch (handle->state) {
-	case 0:
-		if (handle->button_level == handle->active_level) {  //start press down
-			handle->event = (uint8_t)BTN_PRESS_DOWN;
-			EVENT_CB(BTN_PRESS_DOWN);
-			Button_OnInitialPressDown(pinIndex);
-			handle->ticks = 0;
-			handle->repeat = 1;
-			handle->state = 1;
-		}
-		else {
-			handle->event = (uint8_t)BTN_NONE_PRESS;
-		}
-		break;
-
-	case 1:
-		if (handle->button_level != handle->active_level) { //released press up
-			handle->event = (uint8_t)BTN_PRESS_UP;
-			EVENT_CB(BTN_PRESS_UP);
-			Button_OnPressRelease(pinIndex);
-			handle->ticks = 0;
-			handle->state = 2;
-
-		}
-		else if (handle->ticks > BTN_LONG_MS) {
-			handle->event = (uint8_t)BTN_LONG_RRESS_START;
-			Button_OnLongPressHoldStart(pinIndex);
-			EVENT_CB(BTN_LONG_RRESS_START);
-			handle->state = 5;
-		}
-		break;
-
-	case 2:
-		if (handle->button_level == handle->active_level) { //press down again
-			handle->event = (uint8_t)BTN_PRESS_DOWN;
-			EVENT_CB(BTN_PRESS_DOWN);
-			handle->repeat++;
-			//if(handle->repeat == 2) {
-			//  EVENT_CB(BTN_DOUBLE_CLICK); // repeat hit
-			//  Button_OnDoubleClick(pinIndex);
-			//}
-			EVENT_CB(BTN_PRESS_REPEAT); // repeat hit
-			handle->ticks = 0;
-			handle->state = 3;
-		}
-		else if (handle->ticks > BTN_SHORT_MS) { //released timeout
-			if (handle->repeat == 1) {
-				handle->event = (uint8_t)BTN_SINGLE_CLICK;
-				EVENT_CB(BTN_SINGLE_CLICK);
-				Button_OnShortClick(pinIndex);
-			}
-			else if (handle->repeat == 2) {
-				handle->event = (uint8_t)BTN_DOUBLE_CLICK;
-				Button_OnDoubleClick(pinIndex);
-			}
-			else if (handle->repeat == 3) {
-				handle->event = (uint8_t)BTN_TRIPLE_CLICK;
-				Button_OnTripleClick(pinIndex);
-			}
-			else if (handle->repeat == 4) {
-				handle->event = (uint8_t)BTN_QUADRUPLE_CLICK;
-				Button_OnQuadrupleClick(pinIndex);
-			}
-			else if (handle->repeat == 5) {
-				handle->event = (uint8_t)BTN_5X_CLICK;
-				Button_On5xClick(pinIndex);
-			}
-			handle->state = 0;
-		}
-		break;
-
-	case 3:
-		if (handle->button_level != handle->active_level) { //released press up
-			handle->event = (uint8_t)BTN_PRESS_UP;
-			EVENT_CB(BTN_PRESS_UP);
-			Button_OnPressRelease(pinIndex);
-			if (handle->ticks < BTN_SHORT_MS) {
-				handle->ticks = 0;
-				handle->state = 2; //repeat press
-			}
-			else {
-				handle->state = 0;
-			}
-		}
-		break;
-
-	case 5:
-		if (handle->button_level == handle->active_level) {
-			//continue hold trigger
-			handle->event = (uint8_t)BTN_LONG_PRESS_HOLD;
-			handle->holdRepeatTicks += ms_since_last;
-			if (handle->holdRepeatTicks > BTN_HOLD_REPEAT_MS) {
-				Button_OnLongPressHold(pinIndex);
-				handle->holdRepeatTicks = 0;
-			}
-			EVENT_CB(BTN_LONG_PRESS_HOLD);
-		}
-		else { //releasd
-			handle->event = (uint8_t)BTN_PRESS_UP;
-			EVENT_CB(BTN_PRESS_UP);
-			Button_OnPressRelease(pinIndex);
-			handle->state = 0; //reset
-		}
-		break;
-	}
-}
-
-static int activepoll_time = 0; // time to keep polling active until
-
-//  background ticks, timer repeat invoking interval defined by PIN_TMR_DURATION.
 void PIN_ticks(void* param)
 {
 	static uint32_t g_time = 0, g_last_time = 0;
-	uint32_t t_diff = PIN_TMR_DURATION;
+	uint32_t t_diff = QUICK_TMR_DURATION;
 	int value;
 
 	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
@@ -1770,7 +1324,7 @@ void PIN_ticks(void* param)
 	g_time = rtos_get_time();
 	t_diff = g_time - g_last_time;
 #else
-	g_time += PIN_TMR_DURATION;
+	g_time += QUICK_TMR_DURATION;
 #endif
 	// cope with wrap
 	if (t_diff > 0x4000) {
@@ -1778,183 +1332,8 @@ void PIN_ticks(void* param)
 	}
 	g_last_time = g_time;
 
-	BTN_SHORT_MS = (g_cfg.buttonShortPress * 100);
-	BTN_LONG_MS = (g_cfg.buttonLongPress * 100);
-	BTN_HOLD_REPEAT_MS = (g_cfg.buttonHoldRepeat * 100);
-
-	int debounceMS;
-	if (CFG_HasFlag(OBK_FLAG_BTN_INSTANTTOUCH)) {
-		debounceMS = 100;
-	}
-	else {
-		debounceMS = 250;
-	}
-
-	int activepins = 0;
-	uint32_t pinvalues[2] = { 0, 0 };
-
-	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex];
-		int pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
-		if (pinIndex >= 32) {
-			if (g_gpio_index_map[1] & (1 << (pinIndex - 32))) {
-				uint32_t level = 1;
-				if (g_gpio_edge_map[1] & (1 << (pinIndex - 32))) {
-					level = 0;
-				}
-				int rawval = HAL_PIN_ReadDigitalInput(pinIndex);
-				if (rawval && level == 1) {
-					activepins++;
-					pinvalues[1] |= (1 << (pinIndex - 32));
-				}
-				if (!rawval && level == 0) {
-					activepins++;
-					pinvalues[1] |= (1 << (pinIndex - 32));
-				}
-			}
-		} else {
-			if (g_gpio_index_map[0] & (1 << pinIndex)) {
-				uint32_t level = 1;
-				if (g_gpio_edge_map[0] & (1 << pinIndex)) {
-					level = 0;
-				}
-				int rawval = HAL_PIN_ReadDigitalInput(pinIndex);
-				if (rawval && level == 1) {
-					activepins++;
-					pinvalues[0] |= (1 << pinIndex);
-				}
-				if (!rawval && level == 0) {
-					activepins++;
-					pinvalues[0] |= (1 << pinIndex);
-				}
-			}
-		}
-
-		// activepins is count of pins which are 'active', i.e. match thier expected active level
-		if (activepins) {
-			activepoll_time = 1000; //20 x 50ms = 1s of polls after button release
-		}
-
-		if (pinIORole == IOR_Button || pinIORole == IOR_Button_n
-			|| pinIORole == IOR_Button_ToggleAll || pinIORole == IOR_Button_ToggleAll_n
-			|| pinIORole == IOR_Button_ScriptOnly || pinIORole == IOR_Button_ScriptOnly_n
-			|| pinIORole == IOR_SmartButtonForLEDs || pinIORole == IOR_SmartButtonForLEDs_n) {
-			//ADDLOG_INFO(LOG_FEATURE_GENERAL,"Test hold %i\r\n",i);
-			PIN_Input_Handler(pinIndex, t_diff);
-		} else if (
-			pinIORole == IOR_DigitalInput || pinIORole == IOR_DigitalInput_n ||
-			pinIORole == IOR_DigitalInput_NoPup || pinIORole == IOR_DigitalInput_NoPup_n)
-		{
-			// read pin digital value (and already invert it if needed)
-			value = PIN_ReadDigitalInputValue_WithInversionIncluded(pinIndex);
-
-			// debouncing
-			if (value) {
-				if (g_times[pinIndex] > debounceMS) {
-					if (g_lastValidState[pinIndex] != value) {
-						// became up
-						g_lastValidState[pinIndex] = value;
-						CHANNEL_Set(g_cfg.pins.channels[pinIndex], value, 0);
-					}
-				}
-				else {
-					g_times[pinIndex] += t_diff;
-				}
-				g_times2[pinIndex] = 0;
-			}
-			else {
-				if (g_times2[pinIndex] > debounceMS) {
-					if (g_lastValidState[pinIndex] != value) {
-						// became down
-						g_lastValidState[pinIndex] = value;
-						CHANNEL_Set(g_cfg.pins.channels[pinIndex], value, 0);
-					}
-				}
-				else {
-					g_times2[pinIndex] += t_diff;
-				}
-				g_times[pinIndex] = 0;
-			}
-		}
-		else if (pinIORole == IOR_ToggleChannelOnToggle) {
-			value = PIN_ReadDigitalInputValue_WithInversionIncluded(pinIndex);
-		
-			if (value) {
-				if (g_times[pinIndex] > debounceMS) {
-					if (g_lastValidState[pinIndex] != value) {
-						g_lastValidState[pinIndex] = value;
-		
-						if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-							CHANNEL_Toggle(g_cfg.pins.channels[pinIndex]);
-							EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, pinIndex);
-						} else {
-							ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-						}
-					}
-				} else {
-					g_times[pinIndex] += t_diff;
-				}
-				g_times2[pinIndex] = 0;
-			} else {
-				if (g_times2[pinIndex] > debounceMS) {
-					if (g_lastValidState[pinIndex] != value) {
-						g_lastValidState[pinIndex] = value;
-		
-						if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-							CHANNEL_Toggle(g_cfg.pins.channels[pinIndex]);
-							EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, pinIndex);
-						} else {
-							ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-						}
-					}
-				} else {
-					g_times2[pinIndex] += t_diff;
-				}
-				g_times[pinIndex] = 0;
-			}
-		}
-	}
-
-#ifdef PLATFORM_BEKEN
-#ifdef BEKEN_PIN_GPI_INTERRUPTS
-	// TODO: not implemented yet - this bit continues polling
-	// for a while after a GPI is fired, so that we can see long press, etc.
-	if (param) {
-		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pin intr at %d (+%d) (%08lX)", g_time, t_diff, pinvalues[0]);
-	}
-#endif
-#endif
-
-	if (activepoll_time) {
-		activepoll_time -= t_diff;
-		if (activepoll_time <= 0) {
-			activepoll_time = 0;
-		}
-	}
-	if (activepoll_time) {
-		// setup to poll in 50ms
-#ifdef PLATFORM_BEKEN
-#ifdef BEKEN_PIN_GPI_INTERRUPTS
-		PIN_TriggerPoll();
-		if (activepins) {
-			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pins active at %d (%x)", g_time, pinvalues[0]);
-		}
-		else {
-			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pins ->inactive at %d (%x)", g_time, pinvalues[0]);
-		}
-#endif
-#endif
-
-	}
-	else {
-#ifdef PLATFORM_BEKEN
-#ifdef BEKEN_PIN_GPI_INTERRUPTS
-		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "Pins inactive at %d", g_time);
-#endif      
-#endif      
-	}
-
 }
+
 const char* g_channelTypeNames[] = {
 	"Default",
 	"Error",

@@ -245,7 +245,7 @@ int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
 		
 	case OBKF_ShouldPublish:
 	case OBKF_NoOfChannels:
-		return 1;
+		return true;
 
 	default:
 		break;

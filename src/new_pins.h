@@ -1552,7 +1552,6 @@ void PIN_SetPinChannel2ForPinIndex(int index, int ch);
 void CHANNEL_Toggle(int ch);
 void CHANNEL_DoSpecialToggleAll();
 bool CHANNEL_Check(int ch);
-void PIN_SetGenericDoubleClickCallback(void (*cb)(int pinIndex));
 void CHANNEL_ClearAllChannels();
 // CHANNEL_SET_FLAG_*
 void CHANNEL_Set_Ex(int ch, int iVal, int iFlags, int ausemovingaverage);
@@ -1621,7 +1620,7 @@ extern const char* g_channelTypeNames[];
 // for drivers to register their use of a pin role
 uint32_t PIN_getDriverForRole(uint32_t pinRole);
 int* PIN_pinIORoleDriver();
-uint32_t PIN_registeredPinIndex();
+uint32_t PIN_registeredPinIndex(uint32_t usedIndex);
 extern uint32_t g_registeredPinCount;
 
 #if ALLOW_SSID2

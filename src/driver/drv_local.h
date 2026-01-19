@@ -9,6 +9,11 @@ int Output_frameworkRequest(int obkfRequest, int arg);
 void Output_QuickTick();
 uint32_t Output_relayCount();
 
+void Input_QuickTick();
+int Input_frameworkRequest(int obkfRequest, int arg);
+
+void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
+
 void DRV_DGR_Init();
 void DRV_DGR_RunQuickTick();
 void DRV_DGR_RunEverySecond();
