@@ -1000,8 +1000,8 @@ void Channel_SaveInFlashIfNeeded(int ch) {
 		//ADDLOG_INFO(LOG_FEATURE_GENERAL, "Channel_SaveInFlashIfNeeded: Channel %i is not saved to flash, state %i", ch, g_channelValues[ch]);
 	}
 }
+// all items on the channel are processed
 static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
-	int i;
 	int iVal;
 	int bOn;
 
@@ -1024,20 +1024,17 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 #if ENABLE_DRIVER_GIRIERMCU
 	GirierMCU_OnChannelChanged(ch, iVal);
 #endif
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.channels[i] == ch) {
-			if (g_cfg.pins.roles[i] == IOR_Relay || g_cfg.pins.roles[i] == IOR_LED) {
-				RAW_SetPinValue(i, bOn);
-			}
-			else if (g_cfg.pins.roles[i] == IOR_Relay_n || g_cfg.pins.roles[i] == IOR_LED_n) {
-				RAW_SetPinValue(i, !bOn);
-			}
-			else if (g_cfg.pins.roles[i] == IOR_PWM || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly) {
-				HAL_PIN_PWM_Update(i, iVal);
-			}
-			else if (g_cfg.pins.roles[i] == IOR_PWM_n || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly_n) {
-				HAL_PIN_PWM_Update(i, 100 - iVal);
-			}
+	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex];
+		if (g_cfg.pins.channels[pinIndex] == ch) {
+			if (g_cfg.pins.roles[pinIndex] == IOR_Relay || g_cfg.pins.roles[pinIndex] == IOR_LED)
+				RAW_SetPinValue(pinIndex, bOn);
+			else if (g_cfg.pins.roles[pinIndex] == IOR_Relay_n || g_cfg.pins.roles[pinIndex] == IOR_LED_n)
+				RAW_SetPinValue(pinIndex, !bOn);
+			else if (g_cfg.pins.roles[pinIndex] == IOR_PWM || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly)
+				HAL_PIN_PWM_Update(pinIndex, iVal);
+			else if (g_cfg.pins.roles[pinIndex] == IOR_PWM_n || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly_n)
+				HAL_PIN_PWM_Update(pinIndex, 100 - iVal);
 		}
 	}
 #if ENABLE_MQTT
@@ -1534,12 +1531,12 @@ bool CHANNEL_IsInUse(int ch) {
 	return false;
 }
 
-
+// if any pin on the channel is relay say yes
 bool CHANNEL_IsPowerRelayChannel(int ch) {
-	int i;
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.channels[i] == ch) {
-			int role = g_cfg.pins.roles[i];
+	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex];
+		if (g_cfg.pins.channels[pinIndex] == ch) {
+			int role = g_cfg.pins.roles[pinIndex];
 			// NOTE: do not include Battery relay
 			if (role == IOR_Relay || role == IOR_Relay_n) {
 				return true;
@@ -1556,7 +1553,6 @@ bool CHANNEL_IsPowerRelayChannel(int ch) {
 	return false;
 }
 // TODO: Again think about channels
-
 bool CHANNEL_ShouldBePublished(int ch) {
 	for (int i = 0; i < g_registeredPinCount; i++) {
 		int pinIndex = registeredPinDetails[i];
@@ -1602,30 +1598,6 @@ bool CHANNEL_ShouldBePublished(int ch) {
 	}
 	return false;
 }
-// TODO: Need to think about channels assigned to unused pins
-// first role wins so do we assign channels in the driver?
-int CHANNEL_GetRoleForOutputChannel(int ch) {
-	int i;
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.channels[i] == ch) {
-			switch (g_cfg.pins.roles[i]) {
-			case IOR_Relay:
-			case IOR_Relay_n:
-			case IOR_LED:
-			case IOR_LED_n:
-			case IOR_PWM_n:
-			case IOR_PWM:
-			case IOR_PWM_ScriptOnly:
-			case IOR_PWM_ScriptOnly_n:
-			case IOR_BridgeForward:
-			case IOR_BridgeReverse:
-				return g_cfg.pins.roles[i];
-			}
-		}
-	}
-	return IOR_None;
-}
-
 
 #define EVENT_CB(ev)   
 
@@ -2290,15 +2262,16 @@ int h_isChannelPWM(int tg_ch) {
 	}
 	return false;
 }
+// if any item on the channel is relay
 int h_isChannelRelay(int tg_ch) {
-	int i;
 	int role;
 
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		int ch = PIN_GetPinChannelForPinIndex(i);
+	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex];
+		int ch = PIN_GetPinChannelForPinIndex(pinIndex);
 		if (tg_ch != ch)
 			continue;
-		role = PIN_GetPinRoleForPinIndex(i);
+		role = PIN_GetPinRoleForPinIndex(pinIndex);
 		if (role == IOR_Relay || role == IOR_Relay_n || role == IOR_LED || role == IOR_LED_n) {
 			return true;
 		}

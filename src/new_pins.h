@@ -1564,7 +1564,6 @@ void CHANNEL_AddClamped(int ch, int iVal, int min, int max, int bWrapInsteadOfCl
 int CHANNEL_Get(int ch);
 float CHANNEL_GetFinalValue(int channel);
 float CHANNEL_GetFloat(int ch);
-int CHANNEL_GetRoleForOutputChannel(int ch);
 bool CHANNEL_ShouldBePublished(int ch);
 bool CHANNEL_IsPowerRelayChannel(int ch);
 // See: enum channelType_t
