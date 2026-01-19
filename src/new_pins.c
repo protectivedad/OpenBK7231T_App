@@ -503,6 +503,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		}
 		break;
 		break;
+#if ENABLE_DRIVER_BRIDGE
 		case IOR_BridgeForward:
 		case IOR_BridgeReverse:
 		{
@@ -516,19 +517,8 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			HAL_PIN_SetOutputValue(index, 0);
 		}
 		break;
+#endif // ENABLE_DRIVER_BRIDGE
 
-		case IOR_AlwaysHigh:
-		{
-			HAL_PIN_Setup_Output(index);
-			HAL_PIN_SetOutputValue(index, 1);
-		}
-		break;
-		case IOR_AlwaysLow:
-		{
-			HAL_PIN_Setup_Output(index);
-			HAL_PIN_SetOutputValue(index, 0);
-		}
-		break;
 		break;
 		case IOR_ADC_Button:
 		case IOR_ADC:
@@ -940,9 +930,6 @@ static void PIN_ProcessOldPinRole(int index) {
 		case IOR_Counter_f:
 		case IOR_Counter_r:
 			HAL_DetachInterrupt(index);
-			break;
-		case IOR_BridgeForward:
-		case IOR_BridgeReverse:
 			break;
 
 		default:
@@ -1557,11 +1544,13 @@ bool CHANNEL_IsPowerRelayChannel(int ch) {
 			if (role == IOR_Relay || role == IOR_Relay_n) {
 				return true;
 			}
+#if ENABLE_DRIVER_BRIDGE
 			// Also allow toggling Bridge channel
 			// https://www.elektroda.com/rtvforum/viewtopic.php?p=20906463#20906463
 			if (role == IOR_BridgeForward || role == IOR_BridgeReverse) {
 				return true;
 			}
+#endif // ENABLE_DRIVER_BRIDGE
 		}
 	}
 	return false;
@@ -2313,10 +2302,12 @@ int h_isChannelRelay(int tg_ch) {
 		if (role == IOR_Relay || role == IOR_Relay_n || role == IOR_LED || role == IOR_LED_n) {
 			return true;
 		}
+#if ENABLE_DRIVER_BRIDGE
 		if ((role == IOR_BridgeForward) || (role == IOR_BridgeReverse))
 		{
 			return true;
 		}
+#endif // ENABLE_DRIVER_BRIDGE
 	}
 	return false;
 }

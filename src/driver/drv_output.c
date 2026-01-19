@@ -106,6 +106,13 @@ static bool Output_ActivatePin(int pinIndex) {
 		HAL_PIN_SetOutputValue(pinIndex, !channelValue);
 		g_relayCount++;
 		return true;
+	case IOR_AlwaysHigh:
+		HAL_PIN_SetOutputValue(pinIndex, true);
+		break;
+	case IOR_AlwaysLow:
+		HAL_PIN_SetOutputValue(pinIndex, false);
+		break;
+	break;
 
 	default:
 		break;
@@ -143,6 +150,7 @@ int Output_frameworkRequest(int obkfRequest, int arg) {
 		g_driverIndex = PIN_pinIORoleDriver()[IOR_LED] = PIN_pinIORoleDriver()[IOR_LED_n] \
 					  = PIN_pinIORoleDriver()[IOR_Relay] = PIN_pinIORoleDriver()[IOR_Relay_n] \
 					  = PIN_pinIORoleDriver()[IOR_LED_WIFI] = PIN_pinIORoleDriver()[IOR_LED_WIFI_n] \
+					  = PIN_pinIORoleDriver()[IOR_AlwaysHigh] = PIN_pinIORoleDriver()[IOR_AlwaysLow] \
 					  = arg;
 		ADDLOG_DEBUG(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
 		break;
