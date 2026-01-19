@@ -84,10 +84,6 @@ static bool Output_noOfChannels(int pinIORole) {
 	}
 }
 
-static void Output_ChannelChange() {
-
-}
-
 // TODO: add arg so pinIORole can be passed with pinIndex
 static bool Output_ActivatePin(int pinIndex) {
 	int channelValue = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
@@ -132,13 +128,11 @@ int Output_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:
-		g_driverIndex = PIN_pinIORoleDriver()[IOR_LED] \
-		              = PIN_pinIORoleDriver()[IOR_LED_n] \
-					  = PIN_pinIORoleDriver()[IOR_Relay] \
-					  = PIN_pinIORoleDriver()[IOR_Relay_n] \
-					  = PIN_pinIORoleDriver()[IOR_LED_WIFI] \
-					  = PIN_pinIORoleDriver()[IOR_LED_WIFI_n] \
+		g_driverIndex = PIN_pinIORoleDriver()[IOR_LED] = PIN_pinIORoleDriver()[IOR_LED_n] \
+					  = PIN_pinIORoleDriver()[IOR_Relay] = PIN_pinIORoleDriver()[IOR_Relay_n] \
+					  = PIN_pinIORoleDriver()[IOR_LED_WIFI] = PIN_pinIORoleDriver()[IOR_LED_WIFI_n] \
 					  = arg;
+		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
 		break;
 	
 	case OBKF_AcquirePin:
@@ -155,8 +149,6 @@ int Output_frameworkRequest(int obkfRequest, int arg) {
 	case OBKF_ShouldPublish:
 	case OBKF_NoOfChannels:
 		return Output_noOfChannels(arg);
-
-	// case OBKF_ChannelChange:
 
 	case OBKF_Init:
 	default:
