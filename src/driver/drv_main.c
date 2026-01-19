@@ -1596,13 +1596,14 @@ int DRV_SendRequest(int driverIndex, int OBKFRequest, int arg) {
 	if (g_drivers[driverIndex].frameworkRequest)
 		return g_drivers[driverIndex].frameworkRequest(OBKFRequest, arg);
 }
-// interate through used pins and autostart any drivers associated
-// with the IORole assigned to the pin
+// interate through registered pins and autostart any drivers associated
+// with the pin
 void DRV_Autostart() {
 	if (!DRV_Mutex_Take(100)) 
 		return;
-	for (int i = 0; i < g_usedpins_index; i++) {
-		int driverIndex = PIN_pinIORoleDriver()[PIN_registeredPinDetails()[i].pinIORole];
+	for (int i = 0; i < g_registeredPinCount; i++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(i);
+		int driverIndex = PIN_pinIORoleDriver()[PIN_GetPinRoleForPinIndex(pinIndex)];
 		if (driverIndex && !g_drivers[driverIndex].bLoaded) {
 			if (g_drivers[driverIndex].frameworkRequest) {
 				g_drivers[driverIndex].bLoaded = g_drivers[driverIndex].frameworkRequest(OBKF_Init, 0);

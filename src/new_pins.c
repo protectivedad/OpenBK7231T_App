@@ -56,9 +56,9 @@ int BTN_LONG_MS;
 int BTN_HOLD_REPEAT_MS;
 byte *g_defaultWakeEdge = 0;
 
-int g_pinIORoleDriver[IOR_Total_Options];
-int g_usedpins_index;
-pinDetails_t registeredPinDetails[PLATFORM_GPIO_MAX];
+uint32_t g_pinIORoleDriver[IOR_Total_Options];
+uint32_t g_registeredPinCount;
+uint32_t registeredPinDetails[PLATFORM_GPIO_MAX];
 
 #if ALLOW_SSID2
 //20241125 XJIKKA SSID retain - last used SSID will be preserved
@@ -586,18 +586,17 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 	}
 }
 
-static void PIN_addUsedPin(int pinIndex, int role) {
-		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
-		registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
-		registeredPinDetails[g_usedpins_index].pinIORole = role;
-		g_usedpins_index++;
+static void PIN_addUsedPin(int pinIndex) {
+		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i", __func__, pinIndex);
+		registeredPinDetails[g_registeredPinCount] = pinIndex;
+		g_registeredPinCount++;
 }
 
 void PIN_SetupPins() {
 	for (int pinIndex = 0; pinIndex < PLATFORM_GPIO_MAX; pinIndex++) {
 		int role = g_cfg.pins.roles[pinIndex];
 		if (role) { // only process pins with a role
-			PIN_addUsedPin(pinIndex, role);
+			PIN_addUsedPin(pinIndex);
 			int driverIndex = g_pinIORoleDriver[role];
 			if (driverIndex) // let driver take care of pins
 				DRV_SendRequest(driverIndex, OBKF_AcquirePin, pinIndex);
@@ -952,26 +951,19 @@ static void PIN_ProcessOldPinRole(int index) {
 	}
 }
 
-static void PIN_changedUsedPin(int index, int role, int oldRole) {
+static void PIN_remUsedPin(int index) {
 	int usedIndex;
-	for (usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
-		if (registeredPinDetails[usedIndex].pinIndex != index)
+	for (usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		if (registeredPinDetails[usedIndex] != index)
 			continue;
-		if (role) {
-			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Switched entry for pin %i role %i to role %i", __func__, index, registeredPinDetails[usedIndex].pinIORole, role);
-			registeredPinDetails[usedIndex].pinIORole = role;
-			return;
-		}
 		break;
 	}
-	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin %i and role %i", __func__, usedIndex, registeredPinDetails[usedIndex].pinIORole);
-	for (usedIndex++; usedIndex < g_usedpins_index; usedIndex++) {
-		registeredPinDetails[usedIndex - 1].pinIORole = registeredPinDetails[usedIndex].pinIORole;
-		registeredPinDetails[usedIndex - 1].pinIndex = registeredPinDetails[usedIndex].pinIndex;
+	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin index %i", __func__, usedIndex);
+	for (usedIndex++; usedIndex < g_registeredPinCount; usedIndex++) {
+		registeredPinDetails[usedIndex - 1] = registeredPinDetails[usedIndex];
 	}
-	registeredPinDetails[g_usedpins_index].pinIndex = 0;
-	registeredPinDetails[g_usedpins_index].pinIORole = 0;
-	g_usedpins_index--;
+	registeredPinDetails[g_registeredPinCount] = 0;
+	g_registeredPinCount--;
 }
 
 void PIN_SetPinRoleForPinIndex(int index, int role) {
@@ -997,13 +989,13 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		return;
 
 	if (!oldRole)
-		PIN_addUsedPin(index, role);
-	else
-		PIN_changedUsedPin(index, role, oldRole);
+		PIN_addUsedPin(index);
+	else if (!role)
+		PIN_remUsedPin(index);
 }
 
-const pinDetails_t* PIN_registeredPinDetails() {
-	return registeredPinDetails;
+uint32_t PIN_registeredPinIndex(uint32_t usedIndex) {
+	return registeredPinDetails[usedIndex];
 }
 int* PIN_pinIORoleDriver() {
 	return g_pinIORoleDriver;
@@ -1577,9 +1569,9 @@ bool CHANNEL_IsPowerRelayChannel(int ch) {
 // TODO: Again think about channels
 
 bool CHANNEL_ShouldBePublished(int ch) {
-	for (int i = 0; i < g_usedpins_index; i++) {
-		int role = registeredPinDetails[i].pinIORole;
-		int pinIndex = registeredPinDetails[i].pinIndex;
+	for (int i = 0; i < g_registeredPinCount; i++) {
+		int pinIndex = registeredPinDetails[i];
+		int role = PIN_GetPinRoleForPinIndex(pinIndex);
 		int driverIndex = g_pinIORoleDriver[role];
 		if (g_cfg.pins.channels[pinIndex] == ch) {
 			if (driverIndex) {
@@ -1800,8 +1792,8 @@ void PIN_ticks(void* param)
 	uint32_t t_diff = PIN_TMR_DURATION;
 	int value;
 
-	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
+	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex];
 		if (g_counterDeltas[pinIndex]) {
 			// TODO: disable interrupts now so it won't get called in meantime?
 			CHANNEL_Add(g_cfg.pins.channels[pinIndex], g_counterDeltas[pinIndex]);
@@ -1836,9 +1828,9 @@ void PIN_ticks(void* param)
 	int activepins = 0;
 	uint32_t pinvalues[2] = { 0, 0 };
 
-	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
-		int pinIORole = registeredPinDetails[usedIndex].pinIORole;
+	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex];
+		int pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
 		if (pinIndex >= 32) {
 			if (g_gpio_index_map[1] & (1 << (pinIndex - 32))) {
 				uint32_t level = 1;
@@ -2243,8 +2235,8 @@ void PIN_get_Relay_PWM_Count(int* pwmCount, int* dInputCount) {
 	// if we have two PWMs on single channel, count it once
 	pwmBits = 0;
 
-	for (int usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex].pinIndex;
+	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		int pinIndex = registeredPinDetails[usedIndex];
 		int role = PIN_GetPinRoleForPinIndex(pinIndex);
 		switch (role) {
 		case IOR_PWM:

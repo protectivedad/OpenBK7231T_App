@@ -1245,11 +1245,6 @@ typedef struct pinsState_s {
 #error "MAX_PIN_ROLES < PLATFORM_GPIO_MAX, undefined behaviour"
 #endif
 
-typedef struct pinDetails_s {
-	int pinIndex;
-	int pinIORole;
-} pinDetails_t;
-
 // bit indexes (not values), so 0 1 2 3 4
 #define OBK_FLAG_MQTT_BROADCASTLEDPARAMSTOGETHER	0
 #define OBK_FLAG_MQTT_BROADCASTLEDFINALCOLOR		1
@@ -1626,8 +1621,8 @@ extern const char* g_channelTypeNames[];
 
 // for drivers to register their use of a pin role
 int* PIN_pinIORoleDriver();
-const pinDetails_t* PIN_registeredPinDetails();
-extern int g_usedpins_index;
+uint32_t PIN_registeredPinIndex();
+extern uint32_t g_registeredPinCount;
 
 #if ALLOW_SSID2
 int FV_GetStartupSSID_StoredValue(int adefault);
