@@ -585,13 +585,18 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 	}
 }
 
+static void PIN_addUsedPin(int pinIndex, int role) {
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
+		registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
+		registeredPinDetails[g_usedpins_index].pinIORole = role;
+		g_usedpins_index++;
+}
 
 void PIN_SetupPins() {
 	for (int pinIndex = 0; pinIndex < PLATFORM_GPIO_MAX; pinIndex++) {
 		int role = g_cfg.pins.roles[pinIndex];
 		if (role) { // only process pins with a role
-			registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
-			registeredPinDetails[g_usedpins_index].pinIORole = role;
+			PIN_addUsedPin(pinIndex, role);
 			int driverIndex = g_pinIORoleDriver[role];
 			if (driverIndex) // let driver take care of pins
 				DRV_SendRequest(driverIndex, OBKF_AcquirePin, pinIndex);
@@ -695,7 +700,7 @@ int PIN_IOR_NofChan(int role) {
 	// all others have 1 channel
 	return 1;
 }
-
+// TODO: Remove
 void RAW_SetPinValue(int index, int iVal) {
 	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
 		ADDLOG_ERROR(LOG_FEATURE_CFG, "RAW_SetPinValue: Pin index %i out of range <0,%i).", index, PLATFORM_GPIO_MAX);
@@ -946,60 +951,56 @@ static void PIN_ProcessOldPinRole(int index) {
 	}
 }
 
-void PIN_SetPinRoleForPinIndex(int index, int role) {
-	bool bDHTChange = false;
+static void PIN_changedUsedPin(int index, int role, int oldRole) {
+	int usedIndex;
+	for (usedIndex = 0; usedIndex < g_usedpins_index; usedIndex++) {
+		if (registeredPinDetails[usedIndex].pinIndex != index)
+			continue;
+		if (role) {
+			ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Switched entry for pin %i role %i to role %i", __func__, index, registeredPinDetails[usedIndex].pinIORole, role);
+			registeredPinDetails[usedIndex].pinIORole = role;
+			return;
+		}
+		break;
+	}
+	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin %i and role %i", __func__, usedIndex, registeredPinDetails[usedIndex].pinIORole);
+	for (usedIndex++; usedIndex < g_usedpins_index; usedIndex++) {
+		registeredPinDetails[usedIndex - 1].pinIORole = registeredPinDetails[usedIndex].pinIORole;
+		registeredPinDetails[usedIndex - 1].pinIndex = registeredPinDetails[usedIndex].pinIndex;
+	}
+	registeredPinDetails[g_usedpins_index].pinIndex = 0;
+	registeredPinDetails[g_usedpins_index].pinIORole = 0;
+	g_usedpins_index--;
+}
 
-	if (index < 0 || index >= PLATFORM_GPIO_MAX) {
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "%s - Pin index %i out of range <0,%i).", __func__, index, PLATFORM_GPIO_MAX);
+void PIN_SetPinRoleForPinIndex(int index, int role) {
+	int oldRole = g_cfg.pins.roles[index];
+	if (!(oldRole || role)) {
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - What a waste of time that was!", __func__);
 		return;
 	}
-	PIN_ProcessOldPinRole(index);
-	// set new role
-	if (g_cfg.pins.roles[index] != role) {
+
+	if (oldRole)
+		PIN_ProcessOldPinRole(index);
+
+	if (oldRole != role) {
 		g_cfg.pins.roles[index] = role;
 		g_cfg_pendingChanges++;
 	}
-	PIN_ProcessNewPinRole(index, role);
 
-#ifdef ENABLE_DRIVER_DHT
-	if (bDHTChange) {
-		// TODO: better place to call?
-		DHT_OnPinsConfigChanged();
-	}
-#endif
-	
-	bool pullFromNext = false;
-	int i;
-	for (i = 0; i < g_usedpins_index; i++) {
-		// previously marked used pin index
-		if (registeredPinDetails[i].pinIndex == index) {
-			if (registeredPinDetails[i].pinIORole == role) { // still has same role, break with no change
-				break;
-			} else if (role) { // different role, update driver/role
-				ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Switched entry for pin %i role %i to role %i", __func__, index, registeredPinDetails[i].pinIORole, role);
-				registeredPinDetails[i].pinIORole = role;
-				break;
-			} else { // no longer has role, compress entry
-				ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin %i and role %i", __func__, index, registeredPinDetails[i].pinIORole);
-				pullFromNext = true;
-			}
-		}
-		if (pullFromNext && ((i + 1) < g_usedpins_index)) { // pin index is no longer used
-			registeredPinDetails[i].pinIORole = registeredPinDetails[i + 1].pinIORole;
-			registeredPinDetails[i].pinIndex = registeredPinDetails[i + 1].pinIndex;
-		}
-	}
-	if (pullFromNext) { // compressed previous used pin
-		registeredPinDetails[i].pinIndex = 0;
-		registeredPinDetails[i].pinIORole = 0;
-		g_usedpins_index--;
-	} else if (i == g_usedpins_index) { // never found pin
-		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, index, g_pinIORoleDriver[role], role);
-		registeredPinDetails[i].pinIndex = index;
-		registeredPinDetails[i].pinIORole = role;
-		g_usedpins_index++;
-	}
+	if (role)
+		PIN_ProcessNewPinRole(index, role);
+
+	// used pin allocation processing
+	if (oldRole == role)
+		return;
+
+	if (!oldRole)
+		PIN_addUsedPin(index, role);
+	else
+		PIN_changedUsedPin(index, role, oldRole);
 }
+
 const pinDetails_t* PIN_registeredPinDetails() {
 	return registeredPinDetails;
 }
