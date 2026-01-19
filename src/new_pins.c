@@ -984,6 +984,10 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 uint32_t PIN_registeredPinIndex(uint32_t usedIndex) {
 	return registeredPinDetails[usedIndex];
 }
+
+uint32_t PIN_getDriverForRole(uint32_t pinRole) {
+	return g_pinIORoleDriver[pinRole];
+}
 int* PIN_pinIORoleDriver() {
 	return g_pinIORoleDriver;
 }
