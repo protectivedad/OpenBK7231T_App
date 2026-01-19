@@ -243,8 +243,11 @@ int Battery_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:
-		g_driverIndex = PIN_pinIORoleDriver()[IOR_BAT_ADC] = PIN_pinIORoleDriver()[IOR_BAT_Relay] = PIN_pinIORoleDriver()[IOR_BAT_Relay_n] = arg;
-		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
+		g_driverIndex = PIN_pinIORoleDriver()[IOR_BAT_ADC] \
+		              = PIN_pinIORoleDriver()[IOR_BAT_Relay] \
+					  = PIN_pinIORoleDriver()[IOR_BAT_Relay_n] \
+					  = arg;
+		ADDLOG_DEBUG(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
 		break;
 	
 	case OBKF_Init:

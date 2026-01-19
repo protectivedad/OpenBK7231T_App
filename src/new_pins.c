@@ -586,7 +586,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 }
 
 static void PIN_addUsedPin(int pinIndex, int role) {
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
+		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Added entry for pin %i, driver %i and role %i", __func__, pinIndex, g_pinIORoleDriver[role], role);
 		registeredPinDetails[g_usedpins_index].pinIndex = pinIndex;
 		registeredPinDetails[g_usedpins_index].pinIORole = role;
 		g_usedpins_index++;
