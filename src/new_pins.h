@@ -1610,7 +1610,7 @@ int ChannelType_GetDecimalPlaces(int type);
 
 int PIN_GetPWMIndexForPinIndex(int pin);
 
-const char* PIN_RoleToString(int role);
+const char* PIN_RoleToString(uint32_t role);
 // return number of channels used for a role
 // taken from code in http_fnc.c
 int PIN_IOR_NofChan(int test);

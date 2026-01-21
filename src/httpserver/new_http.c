@@ -566,8 +566,8 @@ const char* htmlPinRoleNames[] = {
 	"error",
 };
 
-const char* PIN_RoleToString(int role) {
-	return htmlPinRoleNames[(role < IOR_Total_Options) ? role : IOR_Total_Options];
+const char* PIN_RoleToString(uint32_t pinRole) {
+	return htmlPinRoleNames[(pinRole < IOR_Total_Options) ? pinRole : IOR_Total_Options];
 }
 
 #if ENABLE_CMD_CHANNEL
