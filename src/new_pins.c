@@ -343,7 +343,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 	if (g_enable_pins) {
 		if (!role) // no role no processing
 			return;
-		int driverIndex = g_pinIORoleDriver[role];
+		uint32_t driverIndex = g_pinIORoleDriver[role];
 		if (driverIndex) { // let driver take care of pins
 			DRV_SendRequest(driverIndex, OBKF_AcquirePin, index);
 			return;
@@ -706,7 +706,7 @@ uint32_t PIN_registeredPinIndex(uint32_t usedIndex) {
 uint32_t PIN_getDriverForRole(uint32_t pinRole) {
 	return g_pinIORoleDriver[pinRole];
 }
-int* PIN_pinIORoleDriver() {
+uint32_t* PIN_pinIORoleDriver() {
 	return g_pinIORoleDriver;
 }
 void Channel_SaveInFlashIfNeeded(int ch) {

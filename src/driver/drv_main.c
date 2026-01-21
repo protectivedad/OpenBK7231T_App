@@ -1603,7 +1603,7 @@ void DRV_Generic_Init() {
 	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopDriver", DRV_Stop, NULL);
-	for (int driverIndex = 0; driverIndex < g_numDrivers; driverIndex++) {
+	for (uint32_t driverIndex = 0; driverIndex < g_numDrivers; driverIndex++) {
 		if (g_drivers[driverIndex].frameworkRequest) {
 			g_drivers[driverIndex].frameworkRequest(OBKF_PinRoles, driverIndex);
 		}
@@ -1614,7 +1614,7 @@ void DRV_Generic_Init() {
 #endif
 }
 
-int DRV_SendRequest(int driverIndex, int OBKFRequest, int arg) {
+uint32_t DRV_SendRequest(uint32_t driverIndex, uint32_t OBKFRequest, uint32_t arg) {
 	if (g_drivers[driverIndex].frameworkRequest)
 		return g_drivers[driverIndex].frameworkRequest(OBKFRequest, arg);
 }
@@ -1623,9 +1623,9 @@ int DRV_SendRequest(int driverIndex, int OBKFRequest, int arg) {
 void DRV_Autostart() {
 	if (!DRV_Mutex_Take(100)) 
 		return;
-	for (int i = 0; i < g_registeredPinCount; i++) {
+	for (uint32_t i = 0; i < g_registeredPinCount; i++) {
 		uint32_t pinIndex = PIN_registeredPinIndex(i);
-		int driverIndex = PIN_pinIORoleDriver()[PIN_GetPinRoleForPinIndex(pinIndex)];
+		uint32_t driverIndex = PIN_pinIORoleDriver()[PIN_GetPinRoleForPinIndex(pinIndex)];
 		if (driverIndex && !g_drivers[driverIndex].bLoaded) {
 			if (g_drivers[driverIndex].frameworkRequest) {
 				g_drivers[driverIndex].bLoaded = g_drivers[driverIndex].frameworkRequest(OBKF_Init, 0);

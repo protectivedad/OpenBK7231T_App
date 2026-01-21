@@ -1619,7 +1619,7 @@ extern const char* g_channelTypeNames[];
 
 // for drivers to register their use of a pin role
 uint32_t PIN_getDriverForRole(uint32_t pinRole);
-int* PIN_pinIORoleDriver();
+uint32_t* PIN_pinIORoleDriver();
 uint32_t PIN_registeredPinIndex(uint32_t usedIndex);
 extern uint32_t g_registeredPinCount;
 
