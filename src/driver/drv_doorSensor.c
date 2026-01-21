@@ -30,24 +30,27 @@
 #include "../hal/hal_adc.h"
 #include "../hal/hal_ota.h"
 
-static int g_noChangeTimePassed; // time without change. Every event of the doorsensor channel resets it.
-static int g_emergencyTimeWithNoConnection; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
+uint32_t g_noChangeTimePassed; // time without change. Every event of the doorsensor channel resets it.
+uint32_t g_emergencyTimeWithNoConnection; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
 
-static int g_registeredPin = -1; // pin found on initialization
-static bool g_lastValidState = false;
-static int setting_automaticWakeUpAfterSleepTime = 0;
-static int setting_timeRequiredUntilDeepSleep = 60;
-static int g_driverIndex;
-static int g_defaultWakeEdge = 2;
+int32_t  g_registeredPin = -1; // pin found on initialization
+uint32_t setting_automaticWakeUpAfterSleepTime = 0;
+uint32_t setting_timeRequiredUntilDeepSleep = 60;
+uint32_t g_driverIndex;
+
+uint32_t g_ds_defaultWakeEdge = 2;
+bool g_ds_lastValidState = false;
 
 #define EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT 60 * 5
 
+#ifdef WINDOWS
 int Simulator_GetNoChangeTimePassed() {
 	return g_noChangeTimePassed;
 }
 int Simulator_GetDoorSennsorAutomaticWakeUpAfterSleepTime() {
 	return setting_automaticWakeUpAfterSleepTime;
 }
+#endif
 
 static commandResult_t DoorSensor_SetTime(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char *a;
@@ -87,7 +90,7 @@ static commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, 
 	}
 	// strlen("DoorSensor_SetEdge") == 6
 	if (Tokenizer_GetArgsCount() == 1) {
-		g_defaultWakeEdge = Tokenizer_GetArgInteger(0);
+		g_ds_defaultWakeEdge = Tokenizer_GetArgInteger(0);
 	}
 
 	return CMD_RES_OK;
@@ -107,8 +110,8 @@ static bool DoorSensor_pinValue() {
 
 // Finds associated pin, first assigned is chosen
 // returns false if no pin is found
-static bool DoorSensor_AssignPin(int pinIndex) {
-	int pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
+static bool DoorSensor_AssignPin(uint32_t pinIndex) {
+	uint32_t pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
 	switch (pinIORole) {
 	case IOR_DoorSensor:
 		g_registeredPin = pinIndex;
@@ -132,10 +135,10 @@ static bool DoorSensor_AssignPin(int pinIndex) {
 
 // assigns pin and does any activation, active status, last state, etc
 // returns true when pin is found
-static int DoorSensor_ActivatePin(int pinIndex) {
+static uint32_t DoorSensor_ActivatePin(uint32_t pinIndex) {
 	if (DoorSensor_AssignPin(pinIndex)) {
-		setGPIActive(g_registeredPin, 1, (g_defaultWakeEdge == 2) ? DoorSensor_pinValue() : g_defaultWakeEdge);
-		g_lastValidState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
+		setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? DoorSensor_pinValue() : g_ds_defaultWakeEdge);
+		g_ds_lastValidState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
 	} else {
 		g_registeredPin = -1;
 	}
@@ -159,10 +162,10 @@ static void DoorSensor_Init() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DoorSensor_SetEdge", DoorSensor_SetEdge, NULL);
 
-	ADDLOGF_TIMING("%i - %s - Pin index %i, last valid state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_lastValidState);
+	ADDLOGF_TIMING("%i - %s - Pin index %i, last valid state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_ds_lastValidState);
 }
 
-static void DoorSensor_ReleasePin(int pinIndex) {
+static void DoorSensor_ReleasePin(uint32_t pinIndex) {
 	setGPIActive(pinIndex, 0, 0);
 	if (pinIndex == g_registeredPin)
 		g_registeredPin = -1;
@@ -207,13 +210,13 @@ void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bP
 {
 	if (bPreState)
 		return;
-	int untilSleep = EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT - g_emergencyTimeWithNoConnection;
+	uint32_t untilSleep = EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT - g_emergencyTimeWithNoConnection;
 
 #if ENABLE_MQTT
 	if (Main_HasMQTTConnected())
 		untilSleep = setting_timeRequiredUntilDeepSleep - g_noChangeTimePassed;
 #endif
-	hprintf255(request, "<h2>Door %s: deep sleep: %i (s)</h2>", g_lastValidState ? "open" : "closed", untilSleep);
+	hprintf255(request, "<h2>Door %s: deep sleep: %i (s)</h2>", g_ds_lastValidState ? "open" : "closed", untilSleep);
 }
 
 // framework request function
@@ -264,9 +267,9 @@ void DoorSensor_QuickTick() {
 
 	// might need debouncing
 	bool pinValue = DoorSensor_pinValue();
-	if (pinValue != g_lastValidState) {
+	if (pinValue != g_ds_lastValidState) {
 		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), pinValue, 0);
-		g_lastValidState = pinValue;
+		g_ds_lastValidState = pinValue;
 		DoorSensor_clearTimers();
 		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, pinValue);
 	}
