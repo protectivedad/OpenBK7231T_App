@@ -68,22 +68,6 @@ pinButton_s g_buttons[PLATFORM_GPIO_MAX];
 
 uint32_t g_inputPins[PLATFORM_GPIO_MAX];
 
-static bool PIN_ReadDigitalInputValue_WithInversionIncluded(uint32_t pinIndex, uint32_t pinRole) {
-	bool pinValue = HAL_PIN_ReadDigitalInput(pinIndex);
-	switch (pinRole) {
-	case IOR_Button_n:
-	case IOR_Button_ToggleAll_n:
-	case IOR_DigitalInput_n:
-	case IOR_DigitalInput_NoPup_n:
-	case IOR_Button_ScriptOnly_n:
-	case IOR_SmartButtonForLEDs_n:
-		return !pinValue;
-	
-	default:
-		return pinValue;
-	}
-}
-
 void Button_OnPressRelease(uint32_t pinIndex) {
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
 		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
@@ -333,16 +317,17 @@ void Input_QuickTick() {
 
 		uint32_t debounceMS = CFG_HasFlag(OBK_FLAG_BTN_INSTANTTOUCH) ? 100 : 250;
 		uint32_t pinRole = PIN_GetPinRoleForPinIndex(pinIndex);
-		bool pinValue = PIN_ReadDigitalInputValue_WithInversionIncluded(pinIndex, pinRole);
+		bool pinValue = HAL_PIN_ReadDigitalInput(pinIndex);
 		switch (pinRole) {
-		case IOR_Button:
 		case IOR_Button_n:
-		case IOR_Button_ToggleAll:
 		case IOR_Button_ToggleAll_n:
-		case IOR_Button_ScriptOnly:
 		case IOR_Button_ScriptOnly_n:
-		case IOR_SmartButtonForLEDs:
 		case IOR_SmartButtonForLEDs_n:
+			pinValue = !pinValue;
+		case IOR_Button:
+		case IOR_Button_ToggleAll:
+		case IOR_Button_ScriptOnly:
+		case IOR_SmartButtonForLEDs:
 			//ticks counter working..
 			if (g_buttons[pinIndex].state)
 				g_buttons[pinIndex].ticks += QUICK_TMR_DURATION;
@@ -361,10 +346,11 @@ void Input_QuickTick() {
 
 			PIN_Input_Handler(pinIndex, pinRole, &g_buttons[pinIndex]);
 			break;
-		case IOR_DigitalInput:
 		case IOR_DigitalInput_n:
-		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
+			pinValue = !pinValue;
+		case IOR_DigitalInput:
+		case IOR_DigitalInput_NoPup:
 			// debouncing
 			if (pinValue) {
 				if (g_times[pinIndex] > debounceMS) {
