@@ -1269,10 +1269,8 @@ bool CHANNEL_ShouldBePublished(int ch) {
 				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, role);
 			} else if (role == IOR_ADC
 				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
-				|| role == IOR_DigitalInput || role == IOR_DigitalInput_n
 				|| IS_PIN_AIR_SENSOR_ROLE(role)
-				|| IS_PIN_DHT_ROLE(role)
-				|| role == IOR_DigitalInput_NoPup || role == IOR_DigitalInput_NoPup_n) {
+				|| IS_PIN_DHT_ROLE(role)) {
 				return true;
 			}
 		} else if (g_cfg.pins.channels2[pinIndex] == ch) {
@@ -1567,13 +1565,10 @@ static commandResult_t CMD_setStartupSSID(const void* context, const char* cmd, 
 #endif
 /// @brief Computes the Relay and PWM count.
 /// @param pwmCount Number of PWM channels.
-void PIN_get_Relay_PWM_Count(int* pwmCount, int* dInputCount) {
+void PIN_get_Relay_PWM_Count(int* pwmCount) {
 	int pwmBits;
 	if (pwmCount) {
 		(*pwmCount) = 0;
-	}
-	if (dInputCount) {
-		(*dInputCount) = 0;
 	}
 
 	// if we have two PWMs on single channel, count it once
@@ -1594,19 +1589,6 @@ void PIN_get_Relay_PWM_Count(int* pwmCount, int* dInputCount) {
 			// DO NOT COUNT SCRIPTONLY PWM HERE!
 			// As in title - it's only for scripts. 
 			// It should not generate lights!
-			break;
-		case IOR_DigitalInput:
-		case IOR_DigitalInput_n:
-		case IOR_DigitalInput_NoPup:
-		case IOR_DigitalInput_NoPup_n:
-// #if ENABLE_DRIVER_DOORSENSOR
-// 		case IOR_DoorSensor:
-// 		case IOR_DoorSensor_NoPup:
-// 		case IOR_DoorSensor_pd:
-// #endif
-			if (dInputCount) {
-				(*dInputCount)++;
-			}
 			break;
 		default:
 			break;

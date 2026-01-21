@@ -17,7 +17,7 @@ void Test_TwoPWMsOneChannel_Test1() {
 	PIN_SetPinChannelForPinIndex(11, 0);
 	PIN_SetPinRoleForPinIndex(11, IOR_PWM);
 
-	PIN_get_Relay_PWM_Count(&pwmCount, 0);
+	PIN_get_Relay_PWM_Count(&pwmCount);
 
 	// two PWMs on one channel counts as one PWM
 	SELFTEST_ASSERT(pwmCount == 1);
@@ -25,13 +25,13 @@ void Test_TwoPWMsOneChannel_Test1() {
 	PIN_SetPinChannelForPinIndex(12, 0);
 	PIN_SetPinRoleForPinIndex(12, IOR_PWM);
 
-	PIN_get_Relay_PWM_Count(&pwmCount, 0);
+	PIN_get_Relay_PWM_Count(&pwmCount);
 	// three PWMs on one channel counts as one PWM
 	SELFTEST_ASSERT(pwmCount == 1);
 
 	PIN_SetPinChannelForPinIndex(12, 1);
 	// now we have two channels with 3 pwms
-	PIN_get_Relay_PWM_Count(&pwmCount, 0);
+	PIN_get_Relay_PWM_Count(&pwmCount);
 	SELFTEST_ASSERT(pwmCount == 2);
 }
 void Test_TwoPWMsOneChannel() {

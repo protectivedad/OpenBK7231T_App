@@ -1799,8 +1799,8 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 		topic = "homeassistant";
 	}
 
-	PIN_get_Relay_PWM_Count(&pwmCount, &dInputCount);
-	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), pwmCount, dInputCount, excludedCount);
+	PIN_get_Relay_PWM_Count(&pwmCount);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), pwmCount, Input_digitalCount(), excludedCount);
 
 #if PLATFORM_TXW81X
 	hooks.malloc_fn = _os_malloc;
@@ -2382,7 +2382,7 @@ int http_fn_ha_cfg(http_request_t* request) {
 
 	poststr(request, "<textarea rows=\"40\" cols=\"50\">");
 
-	PIN_get_Relay_PWM_Count(&pwmCount, &dInputCount);
+	PIN_get_Relay_PWM_Count(&pwmCount);
 
 	if (Output_relayCount() > 0) {
 
@@ -2405,7 +2405,7 @@ int http_fn_ha_cfg(http_request_t* request) {
 			}
 		}
 	}
-	if (dInputCount > 0) {
+	if (Input_digitalCount() > 0) {
 		for (i = 0; i < CHANNEL_MAX; i++) {
 			if (h_isChannelDigitalInput(i)) {
 				if (mqttAdded == 0) {
