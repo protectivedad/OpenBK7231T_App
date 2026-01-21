@@ -1,6 +1,6 @@
 // Basic Output Driver
 // Grabs basic output IORoles, keeps track of pins assigned those roles
-// and processes them accordingly. A maximum of 32 LEDs, 32 Relays one WIFI_LEDs
+// and processes them accordingly.
 
 #include "../obk_config.h"
 
@@ -20,53 +20,61 @@
 #include "../quicktick.h"
 
 uint32_t g_driverIndex;
-uint32_t g_wifiLEDIndex;
-uint32_t g_ledPins;
-uint32_t g_relayPins;
 
 uint32_t g_relayCount;
+uint32_t g_wifiPins;
 
 #define WIFI_LED_FAST_BLINK_DURATION 250
 #define WIFI_LED_SLOW_BLINK_DURATION 500
 
 static void LED_QuickTick() {
-	static uint32_t wifiLedToggleTime = 0;
-	static bool wifi_ledState = false;
-
 	if (!g_enable_pins)
 		return;
+	if (!g_wifiPins)
+		return;
 
-	// WiFi LED
-	// In Open Access point mode, fast blink
-	if (Main_IsOpenAccessPointMode()) {
-		wifiLedToggleTime += QUICK_TMR_DURATION;
-		if (wifiLedToggleTime > WIFI_LED_FAST_BLINK_DURATION) {
-			wifi_ledState = !wifi_ledState;
-			wifiLedToggleTime = 0;
-			HAL_PIN_SetOutputValue(g_wifiLEDIndex, wifi_ledState);
-		}
-#if ENABLE_MQTT
-	} else if (Main_HasMQTTConnected()) {
-#else
-	} else if (Main_HasWiFiConnected()) {
-#endif // ENABLE_MQTT 
+	uint32_t wifiPins = g_wifiPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(wifiPins, pinIndex))
+			continue; // not my pin
+		static uint32_t wifiLedToggleTime = 0;
+		static bool wifi_ledState = false;
 
-		// In WiFi client success mode, just stay enabled
-		HAL_PIN_SetOutputValue(g_wifiLEDIndex, (PIN_GetPinRoleForPinIndex(g_wifiLEDIndex) == IOR_LED_WIFI_n) ? false : true);
-	} else {
-		// in connecting mode, slow blink
-		wifiLedToggleTime += QUICK_TMR_DURATION;
-		if (wifiLedToggleTime > WIFI_LED_SLOW_BLINK_DURATION) {
-			wifi_ledState = !wifi_ledState;
-			wifiLedToggleTime = 0;
-			HAL_PIN_SetOutputValue(g_wifiLEDIndex, wifi_ledState);
+		// WiFi LED
+		// In Open Access point mode, fast blink
+		if (Main_IsOpenAccessPointMode()) {
+			wifiLedToggleTime += QUICK_TMR_DURATION;
+			if (wifiLedToggleTime > WIFI_LED_FAST_BLINK_DURATION) {
+				wifi_ledState = !wifi_ledState;
+				wifiLedToggleTime = 0;
+				HAL_PIN_SetOutputValue(pinIndex, wifi_ledState);
+			}
+	#if ENABLE_MQTT
+		} else if (Main_HasMQTTConnected()) {
+	#else
+		} else if (Main_HasWiFiConnected()) {
+	#endif // ENABLE_MQTT 
+
+			// In WiFi client success mode, just stay enabled
+			HAL_PIN_SetOutputValue(pinIndex, (PIN_GetPinRoleForPinIndex(pinIndex) == IOR_LED_WIFI_n) ? false : true);
+		} else {
+			// in connecting mode, slow blink
+			wifiLedToggleTime += QUICK_TMR_DURATION;
+			if (wifiLedToggleTime > WIFI_LED_SLOW_BLINK_DURATION) {
+				wifi_ledState = !wifi_ledState;
+				wifiLedToggleTime = 0;
+				HAL_PIN_SetOutputValue(pinIndex, wifi_ledState);
+			}
 		}
+		if (!BIT_CLEAR(wifiPins, pinIndex))
+			break;
 	}
 }
 
 // basic output quick tick timer function
 void Output_QuickTick() {
-	if (g_wifiLEDIndex)
+	if (g_wifiPins)
 		LED_QuickTick();
 }
 
@@ -96,7 +104,7 @@ static bool Output_ActivatePin(int pinIndex) {
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_LED_WIFI_n:
 	case IOR_LED_WIFI:
-		g_wifiLEDIndex = pinIndex;
+		BIT_SET(g_wifiPins, pinIndex);
 		return true;
 	
 	case IOR_LED_n:
@@ -113,10 +121,9 @@ static bool Output_ActivatePin(int pinIndex) {
 	case IOR_AlwaysLow:
 		HAL_PIN_SetOutputValue(pinIndex, false);
 		break;
-	break;
 
 	default:
-		break;
+		return false;
 	}
 	return true;
 }
@@ -125,8 +132,9 @@ static void Output_ReleasePin(int pinIndex) {
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_LED_WIFI_n:
 	case IOR_LED_WIFI:
-		g_wifiLEDIndex = 0;
-		return;
+		BIT_CLEAR(g_wifiPins, pinIndex);
+		break;
+
 	case IOR_LED:
 	case IOR_LED_n:
 	case IOR_Relay:
@@ -136,8 +144,8 @@ static void Output_ReleasePin(int pinIndex) {
 }
 
 static void Output_StopDriver() {
-	g_wifiLEDIndex = 0;
 	g_relayCount = 0;
+	g_wifiPins = 0;
 }
 
 uint32_t Output_relayCount() {
