@@ -38,8 +38,10 @@ uint32_t setting_automaticWakeUpAfterSleepTime = 0;
 uint32_t setting_timeRequiredUntilDeepSleep = 60;
 uint32_t g_driverIndex;
 
+// this is the invert of the initial state of the pin on wake
 uint32_t g_ds_defaultWakeEdge = 2;
-bool g_ds_lastValidState = false;
+bool g_ds_lastPinState = false;
+bool g_ds_lastChState = false;
 
 #define EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT 60 * 5
 
@@ -102,12 +104,6 @@ static void DoorSensor_clearTimers() {
 	g_emergencyTimeWithNoConnection = 0;
 }
 
-// read and returns monitored pin value (inverted if flag is set)
-static bool DoorSensor_pinValue() {
-	bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
-	return CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !pinValue : pinValue;
-}
-
 // Finds associated pin, first assigned is chosen
 // returns false if no pin is found
 static bool DoorSensor_AssignPin(uint32_t pinIndex) {
@@ -135,10 +131,13 @@ static bool DoorSensor_AssignPin(uint32_t pinIndex) {
 
 // assigns pin and does any activation, active status, last state, etc
 // returns true when pin is found
-static uint32_t DoorSensor_ActivatePin(uint32_t pinIndex) {
+static bool DoorSensor_activatePin(uint32_t pinIndex) {
 	if (DoorSensor_AssignPin(pinIndex)) {
-		setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? DoorSensor_pinValue() : g_ds_defaultWakeEdge);
-		g_ds_lastValidState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
+		bool pinValue = !HAL_PIN_ReadDigitalInput(g_registeredPin);
+		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Activate pin %i with falling = %i", __func__, pinIndex, pinValue);
+		setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? pinValue : g_ds_defaultWakeEdge);
+		g_ds_lastChState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
+		g_ds_lastPinState = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !g_ds_lastChState : g_ds_lastChState;
 	} else {
 		g_registeredPin = -1;
 	}
@@ -162,7 +161,7 @@ static void DoorSensor_Init() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("DoorSensor_SetEdge", DoorSensor_SetEdge, NULL);
 
-	ADDLOGF_TIMING("%i - %s - Pin index %i, last valid state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_ds_lastValidState);
+	ADDLOGF_TIMING("%i - %s - Pin index %i, last pin state %i", xTaskGetTickCount(), __func__, g_registeredPin, g_ds_lastPinState);
 }
 
 static void DoorSensor_ReleasePin(uint32_t pinIndex) {
@@ -216,7 +215,7 @@ void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bP
 	if (Main_HasMQTTConnected())
 		untilSleep = setting_timeRequiredUntilDeepSleep - g_noChangeTimePassed;
 #endif
-	hprintf255(request, "<h2>Door %s: deep sleep: %i (s)</h2>", g_ds_lastValidState ? "open" : "closed", untilSleep);
+	hprintf255(request, "<h2>Door %s: deep sleep: %i (s)</h2>", g_ds_lastChState ? "open" : "closed", untilSleep);
 }
 
 // framework request function
@@ -236,7 +235,7 @@ uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 		break;
 
 	case OBKF_AcquirePin:
-		return DoorSensor_ActivatePin(arg);
+		return DoorSensor_activatePin(arg);
 
 	case OBKF_ReleasePin:
 		DoorSensor_ReleasePin(arg);
@@ -266,12 +265,13 @@ void DoorSensor_QuickTick() {
 		return;
 
 	// might need debouncing
-	bool pinValue = DoorSensor_pinValue();
-	if (pinValue != g_ds_lastValidState) {
-		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), pinValue, 0);
-		g_ds_lastValidState = pinValue;
+	if (HAL_PIN_ReadDigitalInput(g_registeredPin) != g_ds_lastPinState) {
+		g_ds_lastPinState = !g_ds_lastPinState;
+		g_ds_lastChState = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !g_ds_lastPinState : g_ds_lastPinState;
 		DoorSensor_clearTimers();
-		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, pinValue);
+		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), g_ds_lastChState, 0);
+		setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? g_ds_lastChState : g_ds_defaultWakeEdge);
+		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, g_ds_lastChState);
 	}
 }
 #endif // ENABLE_DRIVER_DOORSENSOR
