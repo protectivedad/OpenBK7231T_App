@@ -16,14 +16,22 @@
 #include "../hal/hal_adc.h"
 #include "drv_battery.h"
 
-static int g_pin_adc = -1, g_pin_rel = -1, g_val_rel = -1, g_battcycle = 1, g_battcycleref = 10;
-static float g_battvoltage = 0.0, g_battlevel = 0.0;
-static int g_lastbattvoltage = 0, g_lastbattlevel = 0;
-static float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
-static int g_driverIndex = 0;
+int32_t g_pin_adc = -1, g_pin_rel = -1, g_val_rel = -1;
+uint32_t g_battcycle = 1, g_battcycleref = 10;
+float g_battvoltage = 0.0, g_battlevel = 0.0;
+uint32_t g_lastbattvoltage = 0, g_lastbattlevel = 0;
+float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
+uint32_t g_driverIndex = 0;
+bool g_measureTrigger;
 
-static bool Battery_AssignPin(int pinIndex) {
-	int pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
+#ifdef WINDOWS
+void Simulator_Force_Batt_Measure() {
+	Battery_measure();
+}
+#endif
+
+static bool Battery_assignPin(uint32_t pinIndex) {
+	uint32_t pinIORole = PIN_GetPinRoleForPinIndex(pinIndex);
 	switch (pinIORole) {
 	case IOR_BAT_ADC:
 		g_pin_adc = pinIndex;
@@ -46,7 +54,7 @@ static bool Battery_AssignPin(int pinIndex) {
 	}
 }
 
-static void Batt_Measure() {
+static void Battery_measure() {
 	float batt_ref, batt_res, vref;
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 
@@ -55,19 +63,8 @@ static void Batt_Measure() {
 		return;
 	}
 
-	// if relay pin is registered use relay
-	if (g_pin_rel != -1) {
-		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
-		rtos_delay_milliseconds(10);
-	}
-
 	g_battvoltage = HAL_ADC_Read(g_pin_adc);
 	ADDLOG_INFO(LOG_FEATURE_DRV, "DRV_BATTERY : ADC binary Measurement : %f", g_battvoltage);
-
-	if (g_pin_rel != -1) {
-		HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
-	}
-
 	ADDLOG_DEBUG(LOG_FEATURE_DRV, "DRV_BATTERY : Calculation with param : %f %f %f", g_vref, g_adcbits, g_vdivider);
 	// batt_value = batt_value / vref / 12bits value should be 10 un doc ... but on CBU is 12 ....
 	vref = g_vref / g_adcbits;
@@ -78,7 +75,6 @@ static void Batt_Measure() {
 	// ignore values less then half the minimum but don't quit trying
 	if ((g_minbatt / 2) > g_battvoltage) {
 		ADDLOG_INFO(LOG_FEATURE_DRV, "DRV_BATTERY : Reading invalid, ignoring will try again");
-		++g_battcycle;
 		return;
 	}
 
@@ -103,24 +99,19 @@ static void Batt_Measure() {
 		MQTT_QueuePublish(CFG_GetMQTTClientId(), "battery/get", sValue, 0); // queue the publishing
 	}
 #endif
-	g_lastbattlevel = (int)g_battlevel;
-	g_lastbattvoltage = (int)g_battvoltage;
+	g_lastbattlevel = (uint32_t)g_battlevel;
+	g_lastbattvoltage = (uint32_t)g_battvoltage;
 	ADDLOG_INFO(LOG_FEATURE_DRV, "DRV_BATTERY : battery voltage : %f and percentage %f%%", g_battvoltage, g_battlevel);
-}
-void Simulator_Force_Batt_Measure() {
-	Batt_Measure();
+	g_battcycle--;
 }
 
-int Battery_lastreading(int type)
+uint32_t Battery_lastreading(uint32_t type)
 {
 	if (type == OBK_BATT_VOLTAGE)
-	{
 		return g_lastbattvoltage;
-	}
 	else if (type == OBK_BATT_LEVEL)
-	{
 		return g_lastbattlevel;
-	}
+
 	return 0;
 }
 commandResult_t Battery_Setup(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -162,7 +153,7 @@ commandResult_t Battery_cycle(const void* context, const char* cmd, const char* 
 	{
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
-	g_battcycleref = Tokenizer_GetArgFloat(0);
+	g_battcycleref = Tokenizer_GetArgInteger(0);
 
 	ADDLOG_INFO(LOG_FEATURE_CMD, "Battery Cycle : Measurement will run every %i seconds", g_battcycleref);
 
@@ -170,7 +161,7 @@ commandResult_t Battery_cycle(const void* context, const char* cmd, const char* 
 }
 
 // startDriver Battery
-static void Battery_Init() {
+static void Battery_init() {
 
 	//cmddetail:{"name":"Battery_Setup","args":"[minbatt][maxbatt][V_divider][Vref][AD Bits]",
 	//cmddetail:"descr":"measure battery based on ADC. <br />req. args: minbatt in mv, maxbatt in mv. <br />optional: V_divider(2), Vref(default 2400), ADC bits(4096)",
@@ -193,42 +184,60 @@ static void Battery_Init() {
 	ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
 }
 
-void Batt_OnEverySecond() {
-
-	// Do nothing if cycle is set to zero and the last cycle is complete
-	if ((g_battcycleref == 0) && (g_battcycle == 0)) {
+void Battery_quickTick() {
+	static bool enabledRelay;
+	if (!g_measureTrigger)
 		return;
-	}
 
-	ADDLOG_DEBUG(LOG_FEATURE_DRV, "DRV_BATTERY : Measurement will run in %i cycle(s)", g_battcycle - 1);
-	if (g_battcycle == 1) {
-		// End of the cycle, poll battery
-		Batt_Measure();
-	}
-	if (g_battcycle > 1) {
-		// In middle of cycle, reduce counter
-		--g_battcycle;
-	} else {
-		// Cycle changed/ended, start new cycle
-		g_battcycle = g_battcycleref;
+	if (!enabledRelay && (g_pin_rel != -1)) {
+		enabledRelay = true;
+		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
+	} else if (enabledRelay || (g_pin_rel == -1)) {
+		Battery_measure();
+		if (enabledRelay)
+			HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
+		enabledRelay = false;
+		g_measureTrigger = false;
 	}
 }
 
-static void Battery_ReleasePin(int pinIndex) {
+void Battery_onEverySecond() {
+	if (OTA_GetProgress() >= 0)
+		return;
+
+	if (g_pin_adc == -1)
+		return;
+
+	// Do nothing if cycle is set to zero and the last cycle is complete
+	if (!g_battcycleref && !g_battcycle)
+		return;
+
+	if (!g_battcycle)
+		g_battcycle = g_battcycleref;
+
+	ADDLOG_DEBUG(LOG_FEATURE_DRV, "%s - Measurement will run in %i cycle(s)", __func__, g_battcycle - 1);
+	if (!g_measureTrigger) {
+		if (g_battcycle == 1)
+			g_measureTrigger = true;
+		else
+			g_battcycle--;
+	}
+}
+
+static void Battery_releasePin(uint32_t pinIndex) {
 	setGPIActive(pinIndex, 0, 0);
-	if (pinIndex = g_pin_adc) {
+	if (pinIndex == g_pin_adc) {
 		HAL_ADC_Deinit(g_pin_adc);
 		g_pin_adc = -1;
-	} else if (pinIndex = g_pin_rel)
+	} else if (pinIndex == g_pin_rel)
 		g_pin_rel = -1;
 }
 
-static void Battery_StopDriver() {
+static void Battery_stopDriver() {
 	if (g_pin_adc != -1)
-		Battery_ReleasePin(g_pin_adc);
+		Battery_releasePin(g_pin_adc);
 	if (g_pin_rel != -1)
-		Battery_ReleasePin(g_pin_rel);
-	g_val_rel = -1;
+		Battery_releasePin(g_pin_rel);
 }
 
 void Batt_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
@@ -251,21 +260,23 @@ int Battery_frameworkRequest(int obkfRequest, int arg) {
 		break;
 	
 	case OBKF_Init:
-		Battery_Init();
+		Battery_init();
 		break;
 
 	case OBKF_AcquirePin:
-		return Battery_AssignPin(arg);
+		return Battery_assignPin(arg);
 
 	case OBKF_ReleasePin:
-		Battery_ReleasePin(arg);
+		Battery_releasePin(arg);
 		break;
 
 	case OBKF_Stop:
-		Battery_StopDriver();
+		Battery_stopDriver();
 		break;
 		
 	case OBKF_ShouldPublish:
+		return false;
+
 	case OBKF_NoOfChannels:
 		return 0;
 

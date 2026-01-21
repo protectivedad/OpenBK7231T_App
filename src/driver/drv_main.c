@@ -1336,9 +1336,9 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"Custom mechanism to measure battery level with ADC and an optional relay. See [example here](https://www.elektroda.com/rtvforum/topic3959103.html).",
 	//drvdetail:"requires":""}
 	{ "Battery",                             // Driver Name
-	Batt_OnEverySecond,                      // onEverySecond
+	Battery_onEverySecond,                   // onEverySecond
 	Batt_AppendInformationToHTTPIndexPage,   // appendInformationToHTTPIndexPage
-	NULL,                                    // runQuickTick
+	Battery_quickTick,                       // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	Battery_frameworkRequest,                // frameworkRequest

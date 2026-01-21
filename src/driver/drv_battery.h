@@ -2,11 +2,12 @@
 #define __DRV_BATTERY_H__
 
 int Battery_frameworkRequest(int obkfRequest, int arg);
-void Batt_OnEverySecond();
+void Battery_onEverySecond();
+void Battery_quickTick();
 void Batt_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 
 // battery public void 
-int Battery_lastreading(int type);
+uint32_t Battery_lastreading(uint32_t type);
 
 // read last value of battery driver value
 enum {
