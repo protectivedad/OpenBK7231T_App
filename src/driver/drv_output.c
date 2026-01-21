@@ -155,8 +155,8 @@ uint32_t Output_relayCount() {
 static void Output_init() {
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 }
-// framework request function
-int Output_frameworkRequest(int obkfRequest, int arg) {
+// framework request function arg can be driver index, pin role or pin index
+uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:

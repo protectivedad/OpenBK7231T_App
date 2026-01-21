@@ -1800,7 +1800,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	}
 
 	PIN_get_Relay_PWM_Count(&pwmCount);
-	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), pwmCount, Input_digitalCount(), excludedCount);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), pwmCount, Digital_digitalCount(), excludedCount);
 
 #if PLATFORM_TXW81X
 	hooks.malloc_fn = _os_malloc;
@@ -2405,7 +2405,7 @@ int http_fn_ha_cfg(http_request_t* request) {
 			}
 		}
 	}
-	if (Input_digitalCount() > 0) {
+	if (Digital_digitalCount() > 0) {
 		for (i = 0; i < CHANNEL_MAX; i++) {
 			if (h_isChannelDigitalInput(i)) {
 				if (mqttAdded == 0) {
@@ -2647,7 +2647,10 @@ int http_fn_cfg_pins(http_request_t* request) {
 			poststr(request, ",");
 		}
 		// print array with ["name_of_role",<Number of channnels for this role>]
-		hprintf255(request, "[\"%s\",%i]", htmlPinRoleNames[i],PIN_IOR_NofChan(i));
+		if (PIN_getDriverForRole(i))
+			hprintf255(request, "[\"%s\",%i]", htmlPinRoleNames[i],PIN_IOR_NofChan(i));
+		else
+			hprintf255(request, "[\"~%s\",%i]", htmlPinRoleNames[i],PIN_IOR_NofChan(i));
 	}
 	poststr(request, "];");
 

@@ -248,7 +248,7 @@ void Batt_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreStat
 	hprintf255(request, "<h2>Battery level=%.2f%%, voltage=%.2fmV</h2>", g_battlevel, g_battvoltage);
 }
 
-int Battery_frameworkRequest(int obkfRequest, int arg) {
+uint32_t Battery_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:

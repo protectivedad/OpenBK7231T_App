@@ -10,15 +10,15 @@ typedef enum obkFramework_e {
 	OBKF_Init,
 	// no arg, no return
 	OBKF_Stop,
-	// requires driver index as arg, no return
+	// accepts: driver index, no return
 	OBKF_PinRoles,
-	// no arg, returns false if pin not found
+	// accepts: pin index, returns false if pin not found
 	OBKF_AcquirePin,
-	// no arg
+	// accepts: pin index
 	OBKF_ReleasePin,
-	// no arg, returns number of channels
+	// accepts: pin role, returns number of channels
 	OBKF_NoOfChannels,
-	// optional channel as arg, returns true to publish
+	// accepts: pin role, returns true to publish
 	OBKF_ShouldPublish
 } obkFramework_t;
 

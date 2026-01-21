@@ -3,16 +3,22 @@
 #include "../httpserver/new_http.h"
 #include "../cmnds/cmd_public.h"
 
-int Output_frameworkRequest(int obkfRequest, int arg);
-// void LED_OnEverySecond();
-// void LED_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
+uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Output_QuickTick();
 uint32_t Output_relayCount();
 
+uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Input_QuickTick();
-int Input_frameworkRequest(int obkfRequest, int arg);
 void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
-uint32_t Input_digitalCount();
+
+uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void Digital_quickTick();
+uint32_t Digital_digitalCount();
+
+uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void DoorSensor_OnEverySecond();
+void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
+void DoorSensor_QuickTick();
 
 void DRV_DGR_Init();
 void DRV_DGR_RunQuickTick();
@@ -29,11 +35,6 @@ void DRV_DDP_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreS
 void BMP280_Init();
 void BMP280_OnEverySecond();
 void BMP280_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
-
-int DoorSensor_frameworkRequest(int obkfRequest, int arg);
-void DoorSensor_OnEverySecond();
-void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
-void DoorSensor_QuickTick();
 
 void DRV_MAX72XX_Clock_OnEverySecond();
 void DRV_MAX72XX_Clock_RunFrame();

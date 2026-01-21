@@ -30,7 +30,7 @@ typedef struct driver_s {
 	void(*runQuickTick)();
 	void(*onChannelChanged)(int ch, int val);
 	void(*onHassDiscovery)(const char *topic);
-	int(*frameworkRequest)(int obkfRequest, int arg);
+	uint32_t(*frameworkRequest)(uint32_t obkfRequest, uint32_t arg);
 	bool bLoaded;
 } driver_t;
 
@@ -77,6 +77,15 @@ static driver_t g_drivers[] = {
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	Input_frameworkRequest,                  // frameworkRequest
+	false,                                   // loaded
+	},
+	{ "Digital",                               // Driver Name
+	NULL,                                    // onEverySecond
+	NULL,                                    // appendInformationToHTTPIndexPage
+	Digital_quickTick,                         // runQuickTick
+	NULL,                                    // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	Digital_frameworkRequest,                  // frameworkRequest
 	false,                                   // loaded
 	},
 #if ENABLE_DRIVER_TUYAMCU

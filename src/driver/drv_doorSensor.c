@@ -220,7 +220,7 @@ void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bP
 }
 
 // framework request function
-int DoorSensor_frameworkRequest(int obkfRequest, int arg) {
+uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	switch (obkfRequest)
 	{
 	case OBKF_PinRoles:

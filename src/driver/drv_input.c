@@ -29,7 +29,6 @@ uint32_t BTN_HOLD_REPEAT_MS;
 uint32_t g_lastValidState;
 uint32_t g_driverPins;
 uint32_t g_driverIndex;
-uint32_t g_digitalCount;
 
 #define BTN_DEBOUNCE_MS         50
 
@@ -66,8 +65,6 @@ typedef struct pinButton_ {
 } pinButton_s;
 
 pinButton_s g_buttons[PLATFORM_GPIO_MAX];
-
-uint32_t g_inputPins[PLATFORM_GPIO_MAX];
 
 void Button_OnPressRelease(uint32_t pinIndex) {
 	if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
@@ -286,70 +283,6 @@ void Input_QuickTick() {
 
 			PIN_Input_Handler(pinIndex, pinRole, &g_buttons[pinIndex]);
 			break;
-		case IOR_DigitalInput_n:
-		case IOR_DigitalInput_NoPup_n:
-			pinValue = !pinValue;
-		case IOR_DigitalInput:
-		case IOR_DigitalInput_NoPup:
-			// debouncing
-			if (pinValue) {
-				if (g_times[pinIndex] > debounceMS) {
-					if (!BIT_CHECK(g_lastValidState,pinIndex)) {
-						BIT_TGL(g_lastValidState, pinIndex);
-						CHANNEL_Set(g_cfg.pins.channels[pinIndex], pinValue, 0);
-					}
-				}
-				else {
-					g_times[pinIndex] += QUICK_TMR_DURATION;
-				}
-				g_times2[pinIndex] = 0;
-			} else {
-				if (g_times2[pinIndex] > debounceMS) {
-					if (BIT_CHECK(g_lastValidState,pinIndex)) {
-						BIT_TGL(g_lastValidState, pinIndex);
-						CHANNEL_Set(g_cfg.pins.channels[pinIndex], pinValue, 0);
-					}
-				}
-				else {
-					g_times2[pinIndex] += QUICK_TMR_DURATION;
-				}
-				g_times[pinIndex] = 0;
-			}
-			break;
-
-		case IOR_ToggleChannelOnToggle:
-			if (pinValue) {
-				if (g_times[pinIndex] > debounceMS) {
-					if (!BIT_CHECK(g_lastValidState,pinIndex)) {
-						BIT_TGL(g_lastValidState, pinIndex);
-						if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-							CHANNEL_Toggle(g_cfg.pins.channels[pinIndex]);
-							EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, pinIndex);
-						} else {
-							ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-						}
-					}
-				} else {
-					g_times[pinIndex] += QUICK_TMR_DURATION;
-				}
-				g_times2[pinIndex] = 0;
-			} else {
-				if (g_times2[pinIndex] > debounceMS) {
-					if (BIT_CHECK(g_lastValidState,pinIndex)) {
-						BIT_TGL(g_lastValidState, pinIndex);
-						if (!CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
-							CHANNEL_Toggle(g_cfg.pins.channels[pinIndex]);
-							EventHandlers_FireEvent(CMD_EVENT_PIN_ONTOGGLE, pinIndex);
-						} else {
-							ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
-						}
-					}
-				} else {
-					g_times2[pinIndex] += QUICK_TMR_DURATION;
-				}
-				g_times[pinIndex] = 0;
-			}
-			break;
 
 		default:
 			{
@@ -382,10 +315,6 @@ static uint32_t Input_noOfChannels(uint32_t pinRole) {
 	}
 }
 
-uint32_t Input_digitalCount() {
-	return g_digitalCount;
-}
-
 static bool Input_ActivatePin(uint32_t pinIndex) {
 	bool channelValue = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
 	uint32_t falling = 0;
@@ -410,38 +339,6 @@ static bool Input_ActivatePin(uint32_t pinIndex) {
 		g_buttons[pinIndex].button_level = channelValue;
 		break;
 
-	case IOR_ToggleChannelOnToggle:
-		setGPIActive(pinIndex, 1, 1);
-		HAL_PIN_Setup_Input_Pullup(pinIndex);
-		// otherwise we get a toggle on start			
-#ifdef PLATFORM_BEKEN
-		//20231217 XJIKKA
-		//On the BK7231N Mini WiFi Smart Switch, the correct state of the ADC input pin
-		//can be readed 1000us after the pin is initialized. Maybe there is a capacitor?
-		//Without delay, g_lastValidState is after restart set to 0, so the light will toggle, if the switch on input pin is on (1).
-		//To be sure, we will wait for 20000 us.
-		usleep(20000);
-#endif
-
-		BIT_SET_TO(g_lastValidState, pinIndex, channelValue);
-		break;
-
-	case IOR_DigitalInput_n:
-		falling = 1;
-	case IOR_DigitalInput:
-		setGPIActive(pinIndex, 1, falling);
-		HAL_PIN_Setup_Input_Pullup(pinIndex);
-		BIT_SET_TO(g_lastValidState, pinIndex, channelValue);
-		g_digitalCount++;
-		break;
-
-	case IOR_DigitalInput_NoPup_n:
-	case IOR_DigitalInput_NoPup:
-		HAL_PIN_Setup_Input(pinIndex);
-		BIT_SET_TO(g_lastValidState, pinIndex, channelValue);
-		g_digitalCount++;
-		break;
-
 	default:
 		return false;
 	}
@@ -452,25 +349,7 @@ static bool Input_ActivatePin(uint32_t pinIndex) {
 static void Input_ReleasePin(uint32_t pinIndex) {
 	BIT_CLEAR(g_driverPins, pinIndex);
 	setGPIActive(pinIndex, 0, 0);
-	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
-	case IOR_DigitalInput:
-	case IOR_DigitalInput_n:
-	case IOR_DigitalInput_NoPup:
-	case IOR_DigitalInput_NoPup_n:
-		g_digitalCount--;
-		break;
-		
-	case IOR_Button:
-	case IOR_Button_n:
-	case IOR_Button_ToggleAll:
-	case IOR_Button_ToggleAll_n:
-	case IOR_Button_ScriptOnly:
-	case IOR_Button_ScriptOnly_n:
-	case IOR_SmartButtonForLEDs:
-	case IOR_SmartButtonForLEDs_n:
-		memset(&g_buttons[pinIndex], 0, sizeof(pinButton_s));
-		break;
-	}
+	memset(&g_buttons[pinIndex], 0, sizeof(pinButton_s));
 }
 
 static void Input_StopDriver() {
@@ -490,28 +369,15 @@ static void Input_init() {
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 }
 
-static bool Input_shouldPublish(uint32_t pinRole) {
-	switch (pinRole) {
-	case IOR_DigitalInput:
-	case IOR_DigitalInput_n:
-	case IOR_DigitalInput_NoPup:
-	case IOR_DigitalInput_NoPup_n:
-		return true;
-	}
-	return false;	
-}
-
 // framework request function
-int Input_frameworkRequest(int obkfRequest, int arg) {
+uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	switch (obkfRequest) {
 	case OBKF_PinRoles:
 		g_driverIndex = PIN_pinIORoleDriver()[IOR_Button] = PIN_pinIORoleDriver()[IOR_Button_n] \
 		              = PIN_pinIORoleDriver()[IOR_Button_ToggleAll] = PIN_pinIORoleDriver()[IOR_Button_ToggleAll_n] \
 		              = PIN_pinIORoleDriver()[IOR_Button_ScriptOnly] = PIN_pinIORoleDriver()[IOR_Button_ScriptOnly_n] \
 		              = PIN_pinIORoleDriver()[IOR_SmartButtonForLEDs] = PIN_pinIORoleDriver()[IOR_SmartButtonForLEDs_n] \
-		              = PIN_pinIORoleDriver()[IOR_DigitalInput] = PIN_pinIORoleDriver()[IOR_DigitalInput_n] \
-		              = PIN_pinIORoleDriver()[IOR_DigitalInput_NoPup] = PIN_pinIORoleDriver()[IOR_DigitalInput_NoPup_n] \
-					  = PIN_pinIORoleDriver()[IOR_ToggleChannelOnToggle] = arg;
+		              = arg;
 		ADDLOG_DEBUG(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
 		break;
 	
@@ -527,7 +393,7 @@ int Input_frameworkRequest(int obkfRequest, int arg) {
 		break;
 		
 	case OBKF_ShouldPublish:
-		return Input_shouldPublish(arg);
+		return false;
 
 	case OBKF_NoOfChannels:
 		return Input_noOfChannels(arg);
