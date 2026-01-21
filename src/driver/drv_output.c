@@ -143,6 +143,10 @@ static void Output_StopDriver() {
 uint32_t Output_relayCount() {
 	return g_relayCount;
 }
+
+static void Output_init() {
+	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
+}
 // framework request function
 int Output_frameworkRequest(int obkfRequest, int arg) {
 	switch (obkfRequest)
@@ -172,6 +176,9 @@ int Output_frameworkRequest(int obkfRequest, int arg) {
 		return Output_noOfChannels(arg);
 
 	case OBKF_Init:
+		Output_init();
+		break;
+
 	default:
 		break;
 	}
