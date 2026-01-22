@@ -878,40 +878,6 @@ commandResult_t CMD_FindPattern(const void *context, const char *cmd, const char
 	return CMD_RES_OK;
 }*/
 
-#define PWM_FREQUENCY_DEFAULT 1000 //Default Frequency
-
-int g_pwmFrequency = PWM_FREQUENCY_DEFAULT;
-
-commandResult_t CMD_PWMFrequency(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1))
-	{
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-	
-	g_pwmFrequency = Tokenizer_GetArgInteger(0);
-
-#ifdef PLATFORM_ESPIDF
-	esp_err_t err = ledc_set_freq(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, (uint32_t)g_pwmFrequency);
-	if(err == ESP_ERR_INVALID_ARG)
-	{
-		ADDLOG_ERROR(LOG_FEATURE_CMD, "ledc_set_freq: invalid arg");
-		return CMD_RES_BAD_ARGUMENT;
-	}
-	else if(err == ESP_FAIL)
-	{
-		ADDLOG_ERROR(LOG_FEATURE_CMD, "ledc_set_freq: Can not find a proper pre-divider number base on the given frequency and the current duty_resolution");
-		return CMD_RES_ERROR;
-	}
-#endif
-	// reapply PWM settings
-	PIN_SetupPins();
-
-	return CMD_RES_OK;
-}
 commandResult_t CMD_IndexRefreshInterval(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, 0);
 	// following check must be done after 'Tokenizer_TokenizeString',
@@ -1075,11 +1041,6 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_Choice","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("Choice", CMD_Choice, NULL);
-	//cmddetail:{"name":"PWMFrequency","args":"[FrequencyInHz]",
-	//cmddetail:"descr":"Sets the global PWM frequency.",
-	//cmddetail:"fn":"CMD_PWMFrequency","file":"cmnds/cmd_main.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("PWMFrequency", CMD_PWMFrequency, NULL);
 
 	//cmddetail:{"name":"IndexRefreshInterval","args":"[Interval]",
 	//cmddetail:"descr":"",

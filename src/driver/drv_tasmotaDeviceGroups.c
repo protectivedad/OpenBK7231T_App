@@ -344,9 +344,7 @@ void DRV_DGR_processPower(int relayStates, byte relaysCount) {
 			bOn = BIT_CHECK(relayStates,i);
 			ch = startIndex+i;
 			if(bOn) {
-				if(CHANNEL_HasChannelPinWithRoleOrRole(ch,IOR_PWM,IOR_PWM_n)) {
-
-				} else {
+				if(!PWM_isPWM(ch)) {
 					CHANNEL_Set(ch,1,0);
 				}
 			} else {
@@ -368,7 +366,7 @@ static struct sockaddr_in addr;
 dgrMember_t *findMember() {
 	int i, ip;
 
-	ip = addr.sin_addr.s_addr;;
+	ip = addr.sin_addr.s_addr;
 
 	for(i = 0; i < g_curDGRMembers; i++) {
 		if(g_dgrMembers[i].ip == ip) {

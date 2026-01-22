@@ -21,6 +21,12 @@ void Digital_quickTick();
 void Digital_setEdges();
 bool Digital_isDigital(uint32_t channelIndex);
 
+uint32_t PWM_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+uint32_t PWM_countChannels();
+uint32_t PWM_countPins();
+uint32_t PWM_maxPWM(uint32_t channelIndex);
+bool PWM_isPWM(uint32_t channelIndex);
+
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void DoorSensor_OnEverySecond();
 void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);

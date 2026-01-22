@@ -631,12 +631,12 @@ int http_fn_index(http_request_t* request) {
 		else if (Output_isRelay(i) || channelType == ChType_Toggle || channelType == ChType_Toggle_Inv) {
 			// HANDLED ABOVE in previous loop
 		}
-		else if ((bRawPWMs && h_isChannelPWM(i)) ||
+		else if ((bRawPWMs && PWM_isPWM(i)) ||
 			(channelType == ChType_Dimmer) || (channelType == ChType_Dimmer256) || (channelType == ChType_Dimmer1000)
 			|| channelType == ChType_Percent) {
 			int maxValue;
 			// PWM and dimmer both use a slider control
-			inputName = h_isChannelPWM(i) ? "pwm" : "dim";
+			inputName = PWM_isPWM(i) ? "pwm" : "dim";
 			int pwmValue;
 
 			if (channelType == ChType_Dimmer256) {
@@ -1769,7 +1769,6 @@ HassDeviceInfo *hass_createEnumChannelInfo(int i) {
 }
 void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	int i;
-	int pwmCount;
 	int dInputCount;
 	int excludedCount = 0;
 	HassDeviceInfo* dev_info = NULL;
@@ -1799,8 +1798,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 		topic = "homeassistant";
 	}
 
-	PIN_get_Relay_PWM_Count(&pwmCount);
-	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), pwmCount, Digital_digitalCount(), excludedCount);
+	ADDLOG_INFO(LOG_FEATURE_HTTP, "HASS counts: %i rels, %i pwms, %i inps, %i excluded", Output_relayCount(), PWM_countChannels(), Digital_digitalCount(), excludedCount);
 
 #if PLATFORM_TXW81X
 	hooks.malloc_fn = _os_malloc;
@@ -2357,7 +2355,6 @@ void hprintf_qos_payload(http_request_t* request, const char* clientId) {
 #endif
 #if ENABLE_HA_DISCOVERY
 int http_fn_ha_cfg(http_request_t* request) {
-	int pwmCount;
 	int dInputCount;
 	const char* shortDeviceName;
 	const char* clientId;
@@ -2381,8 +2378,6 @@ int http_fn_ha_cfg(http_request_t* request) {
 	poststr(request, "<h5>You can also use \"switch MyDeviceName:\" to avoid keyword duplication!</h5>");
 
 	poststr(request, "<textarea rows=\"40\" cols=\"50\">");
-
-	PIN_get_Relay_PWM_Count(&pwmCount);
 
 	if (Output_relayCount() > 0) {
 

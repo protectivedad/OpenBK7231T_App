@@ -258,7 +258,6 @@ void PIN_TriggerPoll() {
 }
 #endif
 #endif
-extern int g_pwmFrequency;
 unsigned short g_counterDeltas[PLATFORM_GPIO_MAX];
 void PIN_InterruptHandler(int gpio) {
 	g_counterDeltas[gpio]++;
@@ -315,38 +314,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			HAL_PIN_Setup_Input_Pullup(index);
 			HAL_AttachInterrupt(index, INTERRUPT_RISING, PIN_InterruptHandler);
 			break;
-		case IOR_PWM_n:
-		case IOR_PWM_ScriptOnly:
-		case IOR_PWM_ScriptOnly_n:
-		case IOR_PWM:
-		{
-			int channelIndex;
-			float channelValue;
-
-			channelIndex = PIN_GetPinChannelForPinIndex(index);
-			channelValue = g_channelValuesFloats[channelIndex];
-
-			//100hz to 20000hz according to tuya code
-#define PWM_FREQUENCY_SLOW 600 //Slow frequency for LED Drivers requiring slower PWM Freq
-
-			int useFreq;
-			useFreq = g_pwmFrequency;
-			//Use slow pwm if user has set checkbox in webif
-			if (CFG_HasFlag(OBK_FLAG_SLOW_PWM))
-				useFreq = PWM_FREQUENCY_SLOW;
-
-			HAL_PIN_PWM_Start(index, useFreq);
-
-			if (role == IOR_PWM_n
-				|| role == IOR_PWM_ScriptOnly_n) {
-				// inversed PWM
-				HAL_PIN_PWM_Update(index, 100.0f - channelValue);
-			}
-			else {
-				HAL_PIN_PWM_Update(index, channelValue);
-			}
-		}
-		break;
 
 		default:
 			break;
@@ -404,12 +371,15 @@ void PIN_SetupPins() {
 	ADDLOG_INFO(LOG_FEATURE_GENERAL, "PIN_SetupPins pins have been set up.\r\n");
 }
 
+// simple pin index lookup
 int PIN_GetPinRoleForPinIndex(int index) {
 	return g_cfg.pins.roles[index];
 }
+// simple pin index lookup
 int PIN_GetPinChannelForPinIndex(int index) {
 	return g_cfg.pins.channels[index];
 }
+// costly pin loop lookup
 int PIN_CountPinsWithRoleOrRole(int role, int role2) {
 	int i;
 	int r = 0;
@@ -422,6 +392,7 @@ int PIN_CountPinsWithRoleOrRole(int role, int role2) {
 	}
 	return r;
 }
+// costly pin loop lookup
 int PIN_CountPinsWithRole(int role) {
 	int i;
 	int r = 0;
@@ -432,6 +403,7 @@ int PIN_CountPinsWithRole(int role) {
 	}
 	return r;
 }
+// costly pin loop lookup
 int PIN_FindPinIndexForRole(int role, int defaultIndexToReturnIfNotFound) {
 	int i;
 
@@ -441,12 +413,16 @@ int PIN_FindPinIndexForRole(int role, int defaultIndexToReturnIfNotFound) {
 	}
 	return defaultIndexToReturnIfNotFound;
 }
+// simple pin index lookup
 int PIN_GetPinChannel2ForPinIndex(int index) {
 	return g_cfg.pins.channels2[index];
 }
 // return number of channels used for a role
 // taken from code in http_fnc.c
 int PIN_IOR_NofChan(int role) {
+	if (!role)
+		return 0;
+
 	int driverIndex = g_pinIORoleDriver[role];
 	if (driverIndex) {
 		return DRV_SendRequest(driverIndex, OBKF_NoOfChannels, role);
@@ -559,12 +535,6 @@ static void PIN_ProcessOldPinRole(int index) {
 		setGPIActive(index, 0, 0);
 		switch (role)
 		{
-		case IOR_PWM_n:
-		case IOR_PWM_ScriptOnly:
-		case IOR_PWM_ScriptOnly_n:
-		case IOR_PWM:
-			HAL_PIN_PWM_Stop(index);
-			break;
 		case IOR_ADC_Button:
 		case IOR_ADC:
 			HAL_ADC_Deinit(index);
@@ -623,6 +593,7 @@ void PIN_SetPinRoleForPinIndex(int index, int role) {
 		PIN_remUsedPin(index);
 }
 
+// simple used index lookup
 uint32_t PIN_registeredPinIndex(uint32_t usedIndex) {
 	return registeredPinDetails[usedIndex];
 }
@@ -667,15 +638,6 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 #if ENABLE_DRIVER_GIRIERMCU
 	GirierMCU_OnChannelChanged(ch, iVal);
 #endif
-	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex];
-		if (g_cfg.pins.channels[pinIndex] == ch) {
-			if (g_cfg.pins.roles[pinIndex] == IOR_PWM || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly)
-				HAL_PIN_PWM_Update(pinIndex, iVal);
-			else if (g_cfg.pins.roles[pinIndex] == IOR_PWM_n || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly_n)
-				HAL_PIN_PWM_Update(pinIndex, 100 - iVal);
-		}
-	}
 #if ENABLE_MQTT
 	if ((iFlags & CHANNEL_SET_FLAG_SKIP_MQTT) == 0) {
 		if (CHANNEL_ShouldBePublished(ch)) {
@@ -912,16 +874,8 @@ void CHANNEL_Set_FloatPWM(int ch, float fVal, int iFlags) {
 	g_channelValues[ch] = (int)fVal;
 	g_channelValuesFloats[ch] = fVal;
 
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (g_cfg.pins.channels[i] == ch) {
-			if (g_cfg.pins.roles[i] == IOR_PWM || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly) {
-				HAL_PIN_PWM_Update(i, fVal);
-			}
-			else if (g_cfg.pins.roles[i] == IOR_PWM_n || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly_n) {
-				HAL_PIN_PWM_Update(i, 100.0f - fVal);
-			}
-		}
-	}
+	PWM_onChanged(ch, fVal);
+
 	// TODO: support float
 	EventHandlers_FireEvent(CMD_EVENT_CHANNEL_ONCHANGE, ch);
 	EventHandlers_ProcessVariableChange_Integer(CMD_EVENT_CHANGE_CHANNEL0 + ch, prevValue, fVal);
@@ -1052,19 +1006,10 @@ void CHANNEL_Add(int ch, int iVal) {
 }
 
 int CHANNEL_FindMaxValueForChannel(int ch) {
-	int i;
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		// is pin tied to this channel?
-		if (g_cfg.pins.channels[i] == ch) {
-			// is it PWM?
-			if (g_cfg.pins.roles[i] == IOR_PWM || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly) {
-				return 100;
-			}
-			if (g_cfg.pins.roles[i] == IOR_PWM_n || g_cfg.pins.roles[i] == IOR_PWM_ScriptOnly_n) {
-				return 100;
-			}
-		}
-	}
+	uint32_t maxPWM = PWM_maxPWM(ch);
+
+	if (maxPWM)
+		return maxPWM;
 	if (g_cfg.pins.channelTypes[ch] == ChType_Dimmer)
 		return 100;
 	if (g_cfg.pins.channelTypes[ch] == ChType_Dimmer256)
@@ -1462,70 +1407,6 @@ static commandResult_t CMD_setStartupSSID(const void* context, const char* cmd, 
 	return CMD_RES_OK;
 }
 #endif
-/// @brief Computes the Relay and PWM count.
-/// @param pwmCount Number of PWM channels.
-void PIN_get_Relay_PWM_Count(int* pwmCount) {
-	int pwmBits;
-	if (pwmCount) {
-		(*pwmCount) = 0;
-	}
-
-	// if we have two PWMs on single channel, count it once
-	pwmBits = 0;
-
-	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex];
-		int role = PIN_GetPinRoleForPinIndex(pinIndex);
-		switch (role) {
-		case IOR_PWM:
-		case IOR_PWM_n:
-			// if we have two PWMs on single channel, count it once
-			BIT_SET(pwmBits, g_cfg.pins.channels[pinIndex]);
-			//(*pwmCount)++;
-			break;
-		case IOR_PWM_ScriptOnly:
-		case IOR_PWM_ScriptOnly_n:
-			// DO NOT COUNT SCRIPTONLY PWM HERE!
-			// As in title - it's only for scripts. 
-			// It should not generate lights!
-			break;
-		default:
-			break;
-		}
-	}
-	if (pwmCount) {
-		// if we have two PWMs on single channel, count it once
-		for (int i = 0; i < 32; i++) {
-			if (BIT_CHECK(pwmBits, i)) {
-				(*pwmCount)++;
-			}
-		}
-	}
-}
-
-
-int h_isChannelPWM(int tg_ch) {
-	int i;
-	int role;
-	int ch;
-
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		ch = PIN_GetPinChannelForPinIndex(i);
-		if (tg_ch != ch)
-			continue;
-		role = PIN_GetPinRoleForPinIndex(i);
-		if (role == IOR_PWM || role == IOR_PWM_n) {
-			return true;
-		}
-		// DO NOT COUNT SCRIPTONLY PWM HERE!
-		// As in title - it's only for scripts. 
-		// It should not generate lights!
-		//if (role == IOR_PWM_ScriptOnly) {
-		//	return true;
-		//}
-	}
-	return false;
-}
 static commandResult_t showgpi(const void* context, const char* cmd, const char* args, int cmdFlags)
 {
 	int i;

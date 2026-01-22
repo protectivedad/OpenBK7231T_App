@@ -79,7 +79,7 @@ static int http_tasmota_json_power(void* request, jsonCb_t printer) {
 	}
 
 	// try to return status
-	numPWMs = PIN_CountPinsWithRoleOrRole(IOR_PWM, IOR_PWM_n);
+	numPWMs = PWM_countPins();
 	numRelays = 0;
 
 	{
@@ -570,7 +570,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 	const char* friendlyName;
 	const char* clientId;
 	int powerCode;
-	int pwmCount, i;
+	int i;
 	bool bRelayIndexingStartsWithZero;
 
 	deviceName = CFG_GetShortDeviceName();
@@ -581,8 +581,6 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 	//friendlyName - "Tasmota";
 
 	bRelayIndexingStartsWithZero = Output_isPowerRelay(0);
-
-	PIN_get_Relay_PWM_Count(&pwmCount);
 
 	{
 		powerCode = 0;

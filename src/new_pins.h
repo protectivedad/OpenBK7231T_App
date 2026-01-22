@@ -1596,9 +1596,6 @@ int PIN_ParsePinRoleName(const char* name);
 #endif
 //ledRemap_t *CFG_GetLEDRemap();
 
-void PIN_get_Relay_PWM_Count(int* pwmCount);
-int h_isChannelPWM(int tg_ch);
-
 int CHANNEL_ParseChannelType(const char* s);
 const char *ChannelType_GetTitle(int type);
 const char *ChannelType_GetUnit(int type);
