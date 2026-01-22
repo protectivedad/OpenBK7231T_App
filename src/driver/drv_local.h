@@ -17,6 +17,7 @@ void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Digital_quickTick();
 uint32_t Digital_digitalCount();
+void Digital_setEdges();
 
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void DoorSensor_OnEverySecond();

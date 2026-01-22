@@ -21,9 +21,99 @@
 
 uint32_t g_driverIndex;
 
-uint32_t g_lastValidState;
 uint32_t g_driverPins;
+uint32_t g_lastValidState;
 uint32_t g_digitalCount;
+uint32_t g_dynamicWakeEdge = 0xFFFFFFFF;
+uint32_t g_defaultWakeEdge = 0x00000000;
+
+#if ENABLE_DEEPSLEEP
+void Digital_setWakeUpEdge(uint32_t pinIndex, uint32_t edgeCode) {
+	if (edgeCode == 2) {
+		BIT_CLEAR(g_defaultWakeEdge, pinIndex);
+		BIT_SET(g_dynamicWakeEdge, pinIndex);
+	} else {
+		BIT_CLEAR(g_dynamicWakeEdge, pinIndex);
+		BIT_SET_TO(g_defaultWakeEdge, pinIndex, edgeCode);
+	}
+}
+void Digital_setAllWakeUpEdges(uint32_t edgeCode) {
+	g_dynamicWakeEdge = g_defaultWakeEdge = 0x00000000;
+	if (edgeCode == 0)
+		return;
+	if (edgeCode == 2)
+		g_dynamicWakeEdge = 0xFFFFFFFF;
+	else if (edgeCode == 1)
+		g_defaultWakeEdge = 0xFFFFFFFF;
+}
+
+void Digital_setEdges() {
+	if (!g_driverPins)
+		return;
+
+	uint32_t driverPins = g_driverPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(driverPins, pinIndex))
+			continue; // not my pin
+		uint32_t pinRole = PIN_GetPinRoleForPinIndex(pinIndex);
+		bool falling = false;
+		switch (pinRole) {
+		case IOR_DigitalInput:
+		case IOR_DigitalInput_n:
+		case IOR_DigitalInput_NoPup:
+		case IOR_DigitalInput_NoPup_n:
+			if (BIT_CHECK(g_dynamicWakeEdge, pinIndex))
+				falling = HAL_PIN_ReadDigitalInput(pinIndex);
+			else
+				falling = BIT_CHECK(g_defaultWakeEdge, pinIndex);
+			break;
+		}
+// #if PLATFORM_XRADIO
+// 			int pull = 1;
+// 			if(
+// #if ENABLE_DRIVER_DOORSENSOR
+// 				g_cfg.pins.roles[i] == IOR_DoorSensor_NoPup ||
+// #endif
+// 				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
+// 				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n)
+// 			{
+// 				pull = 0;
+// 			}
+// #if ENABLE_DRIVER_DOORSENSOR
+// 			else if(g_cfg.pins.roles[i] == IOR_DoorSensor_pd)
+// 			{
+// 				pull = 2;
+// 			}
+// #endif
+// 			SetWUPIO(i, pull, falling);
+// #else
+		setGPIActive(pinIndex, 1, falling);
+// #endif
+		if (!BIT_CLEAR(driverPins, pinIndex))
+			break;
+	}
+}
+
+commandResult_t CMD_Digital_setEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
+
+	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1))
+	{
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+	// strlen("DSEdge") == 6
+	if (Tokenizer_GetArgsCount() > 1) // Digital_setEdge [Edge] [Pin]
+		Digital_setWakeUpEdge(Tokenizer_GetArgInteger(1),Tokenizer_GetArgInteger(0));
+	else // Digital_setEdge [Edge]
+		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0));
+
+	return CMD_RES_OK;
+}
+#endif
 
 // reads, debounces and set channels for digital input pins
 void Digital_quickTick() {
@@ -166,7 +256,14 @@ static bool Digital_activatePin(uint32_t pinIndex) {
 static void Digital_releasePin(uint32_t pinIndex) {
 	BIT_CLEAR(g_driverPins, pinIndex);
 	setGPIActive(pinIndex, 0, 0);
-	g_digitalCount--;
+	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+	case IOR_DigitalInput_n:
+	case IOR_DigitalInput:
+	case IOR_DigitalInput_NoPup_n:
+	case IOR_DigitalInput_NoPup:
+		g_digitalCount--;
+		break;
+	}
 }
 
 static void Digital_stopDriver() {
@@ -178,9 +275,18 @@ static void Digital_stopDriver() {
 	}
 	g_driverPins = 0;
 	g_digitalCount = 0;
+	g_dynamicWakeEdge = 0xFFFFFFFF;
+	g_defaultWakeEdge = 0x00000000;
 }
 
 static void Digital_init() {
+#if ENABLE_DEEPSLEEP
+	//cmddetail:{"name":"Digital_setEdge","args":"[edgeCode][optionalPinIndex]",
+	//cmddetail:"descr":"Deep sleep (PinDeepSleep) wake configuration command. 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising. Default is 2. Second argument is optional and allows to set per-pin DSEdge instead of setting it for all pins.",
+	//cmddetail:"fn":"CMD_Digital_setEdge","file":"driver/drv_digital.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("Digital_setEdge", CMD_Digital_setEdge, NULL);
+#endif
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 }
 

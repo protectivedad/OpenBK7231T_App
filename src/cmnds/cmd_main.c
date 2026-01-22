@@ -925,30 +925,6 @@ commandResult_t CMD_IndexRefreshInterval(const void* context, const char* cmd, c
 	g_indexAutoRefreshInterval = Tokenizer_GetArgInteger(0);
 	return CMD_RES_OK;
 }
-#if ENABLE_DEEPSLEEP
-commandResult_t CMD_DeepSleep_SetEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
-
-	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1))
-	{
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-	// strlen("DSEdge") == 6
-	if (Tokenizer_GetArgsCount() > 1) {
-		// DSEdge [Edge] [Pin]
-		PIN_DeepSleep_SetWakeUpEdge(Tokenizer_GetArgInteger(1),Tokenizer_GetArgInteger(0));
-	}
-	else {
-		// DSEdge [Edge]
-		PIN_DeepSleep_SetAllWakeUpEdges(Tokenizer_GetArgInteger(0));
-	}
-
-	return CMD_RES_OK;
-}
-#endif
 #if MQTT_USE_TLS
 static commandResult_t CMD_WebServer(const void* context, const char* cmd, const char* args, int cmdFlags) {	
 	int arg_count;
@@ -1072,13 +1048,6 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_OpenAP","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("OpenAP", CMD_OpenAP, NULL);
-#if ENABLE_DEEPSLEEP
-	//cmddetail:{"name":"DSEdge","args":"[edgeCode][optionalPinIndex]",
-	//cmddetail:"descr":"DeepSleep (PinDeepSleep) wake configuration command. 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising. Default is 2. Second argument is optional and allows to set per-pin DSEdge instead of setting it for all pins.",
-	//cmddetail:"fn":"CMD_DeepSleep_SetEdge","file":"cmnds/cmd_main.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("DSEdge", CMD_DeepSleep_SetEdge, NULL);
-#endif
 	//cmddetail:{"name":"SafeMode","args":"[OptionalDelayBeforeRestart]",
 	//cmddetail:"descr":"Forces device reboot into safe mode (open ap with disabled drivers). Argument is a delay to restart in seconds, optional, minimal delay is 1",
 	//cmddetail:"fn":"CMD_SafeMode","file":"cmnds/cmd_main.c","requires":"",

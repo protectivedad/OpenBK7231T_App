@@ -44,8 +44,6 @@
 #include "manual_ps_pub.h"
 #endif
 
-byte *g_defaultWakeEdge = 0;
-
 uint32_t g_pinIORoleDriver[IOR_Total_Options];
 uint32_t g_registeredPinCount;
 uint32_t registeredPinDetails[PLATFORM_GPIO_MAX];
@@ -73,29 +71,6 @@ void FV_UpdateStartupSSIDIfChanged_StoredValue(int assidindex) {
 	HAL_FlashVars_SaveChannel(g_StartupSSIDRetainChannel,assidindex);
 }
 #endif
-
-#if ENABLE_DEEPSLEEP
-void PIN_DeepSleep_MakeSureEdgesAreAlloced() {
-	int i;
-	if (g_defaultWakeEdge == 0) {
-		g_defaultWakeEdge = (byte*)malloc(PLATFORM_GPIO_MAX);
-		for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-			g_defaultWakeEdge[i] = 2;//default
-		}
-	}
-}
-void PIN_DeepSleep_SetWakeUpEdge(int pin, byte edgeCode) {
-	PIN_DeepSleep_MakeSureEdgesAreAlloced();
-	g_defaultWakeEdge[pin] = edgeCode;
-}
-void PIN_DeepSleep_SetAllWakeUpEdges(byte edgeCode) {
-	int i;
-	PIN_DeepSleep_MakeSureEdgesAreAlloced();
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		g_defaultWakeEdge[i] = edgeCode;
-	}
-}
-#endif // ENABLE_DEEPSLEEP
 
 // overall pins enable.
 // if zero, all hardware action is disabled.
@@ -168,58 +143,7 @@ void setGPIActive(int index, int active, int falling) {
 }
 #if ENABLE_DEEPSLEEP
 void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
-	int i;
-	int value;
-	int falling;
-
-	// door input always uses opposite level for wakeup
-	for (i = 0; i < PLATFORM_GPIO_MAX; i++) {
-		if (
-			g_cfg.pins.roles[i] == IOR_DigitalInput
-			|| g_cfg.pins.roles[i] == IOR_DigitalInput_n
-			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
-			|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n) {
-			// added per request
-			// https://www.elektroda.pl/rtvforum/viewtopic.php?p=20543190#20543190
-			// forcing a certain edge for both states helps on some door sensors, somehow
-			// 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising
-			if (g_defaultWakeEdge == NULL || g_defaultWakeEdge[i] == 2) {
-				value = HAL_PIN_ReadDigitalInput(i);
-				if (value) {
-					// on falling edge wake up
-					falling = 1;
-				}
-				else {
-					// on rising edge wake up
-					falling = 0;
-				}
-			}
-			else {
-				falling = g_defaultWakeEdge[i];
-			}
-// #if PLATFORM_XRADIO
-// 			int pull = 1;
-// 			if(
-// #if ENABLE_DRIVER_DOORSENSOR
-// 				g_cfg.pins.roles[i] == IOR_DoorSensor_NoPup ||
-// #endif
-// 				g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup
-// 				|| g_cfg.pins.roles[i] == IOR_DigitalInput_NoPup_n)
-// 			{
-// 				pull = 0;
-// 			}
-// #if ENABLE_DRIVER_DOORSENSOR
-// 			else if(g_cfg.pins.roles[i] == IOR_DoorSensor_pd)
-// 			{
-// 				pull = 2;
-// 			}
-// #endif
-// 			SetWUPIO(i, pull, falling);
-// #else
-			setGPIActive(i, 1, falling);
-// #endif
-		}
-	}
+	Digital_setEdges();
 	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map[0], g_gpio_edge_map[0]);
 #ifdef PLATFORM_BEKEN_NEW
 	PS_DEEP_CTRL_PARAM params;
