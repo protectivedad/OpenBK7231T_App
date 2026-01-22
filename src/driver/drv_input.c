@@ -318,7 +318,6 @@ static uint32_t Input_noOfChannels(uint32_t pinRole) {
 }
 
 static bool Input_activatePin(uint32_t pinIndex) {
-	bool channelValue = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
 	uint32_t falling = 0;
 
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
@@ -338,7 +337,7 @@ static bool Input_activatePin(uint32_t pinIndex) {
 
 		// init button after initializing pin role
 		g_buttons[pinIndex].event = BTN_NONE_PRESS;
-		g_buttons[pinIndex].button_level = channelValue;
+		g_buttons[pinIndex].button_level = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
 		break;
 
 	case IOR_Counter_f:

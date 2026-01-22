@@ -252,11 +252,13 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		// init new role
 		switch (role)
 		{
+#if defined(ENABLE_DRIVER_IR) || defined(ENABLE_DRIVER_IRREMOTEESP)
 		case IOR_IRRecv:
 			falling = 1;
 			// add to active inputs
 			setGPIActive(index, 1, falling);
 			break;
+#endif
 #if ENABLE_DRIVER_BRIDGE
 		case IOR_BridgeForward:
 		case IOR_BridgeReverse:
@@ -405,7 +407,7 @@ int PIN_IOR_NofChan(int role) {
 			|| (role >= IOR_IRRecv && role <= IOR_DHT11)
 			|| (role >= IOR_SM2135_DAT && role <= IOR_BP1658CJ_CLK)
 			|| (role == IOR_HLW8112_SCSN)
-			|| (role == IOR_TuyaMCU)) {
+			|| (role == IOR_TuyaMCU_TX) || (role == IOR_TuyaMCU_RX)) {
 			return 0;
 	}
 	// all others have 1 channel

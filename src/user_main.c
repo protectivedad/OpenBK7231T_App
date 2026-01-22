@@ -1405,16 +1405,10 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 			}
 #endif
 #if ENABLE_DRIVER_TUYAMCU
-			if (PIN_FindPinIndexForRole(IOR_TuyaMCU, -1) != -1) {
+			if (PIN_FindPinIndexForRole(IOR_TuyaMCU_RX, -1) != -1) {
 				DRV_StartDriver("TuyaMCU");
 			}
 #endif
-//			if ((PIN_FindPinIndexForRole(IOR_TM1638_CLK, -1) != -1) &&
-//				(PIN_FindPinIndexForRole(IOR_TM1638_DAT, -1) != -1) &&
-//				(PIN_FindPinIndexForRole(IOR_TM1638_STB, -1) != -1))
-//			{
-//				DRV_StartDriver("TM1638");
-//			}
 		}
 #endif
 	}

@@ -647,13 +647,20 @@ typedef enum ioRole_e {
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":"RC"}
 	IOR_RCRecv_nPup,
-	//iodetail:{"name":"TuyaMCU_dummy",
+	//iodetail:{"name":"TuyaMCU_RX",
 	//iodetail:"title":"TuyaMCU Dummy Pin",
 	//iodetail:"descr":"Dummy pin to trigger driver autoload.",
-	//iodetail:"enum":"IOR_TuyaMCU",
+	//iodetail:"enum":"IOR_TuyaMCU_RX",
 	//iodetail:"file":"new_pins.h",
 	//iodetail:"driver":"TuyaMCU"}
-	IOR_TuyaMCU,
+	IOR_TuyaMCU_RX,
+	//iodetail:{"name":"TuyaMCU_TX",
+	//iodetail:"title":"TuyaMCU Dummy Pin",
+	//iodetail:"descr":"Dummy pin to trigger driver autoload.",
+	//iodetail:"enum":"IOR_TuyaMCU_TX",
+	//iodetail:"file":"new_pins.h",
+	//iodetail:"driver":"TuyaMCU"}
+	IOR_TuyaMCU_TX,
 	//iodetail:{"name":"Total_Options",
 	//iodetail:"title":"TODO",
 	//iodetail:"descr":"Current total number of available IOR roles",
