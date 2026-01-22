@@ -90,8 +90,8 @@ float g_channelValuesFloats[CHANNEL_MAX] = { 0 };
  *              0:rising,1:falling.
  */
  // these map directly to void bk_enter_deep_sleep(uint32_t gpio_index_map,uint32_t gpio_edge_map);
-uint32_t g_gpio_index_map[2] = { 0, 0 };
-uint32_t g_gpio_edge_map[2] = { 0, 0 }; // note: 0->rising, 1->falling
+uint32_t g_gpio_index_map;
+uint32_t g_gpio_edge_map; // note: 0->rising, 1->falling
 
 #if PLATFORM_XRADIO
 void SetWUPIO(int index, int pull, int edge)
@@ -115,40 +115,19 @@ void SetWUPIO(int index, int pull, int edge)
 }
 #endif
 
-void setGPIActive(int index, int active, int falling) {
-	if (active) {
-		if (index >= 32)
-			g_gpio_index_map[1] |= (1 << (index - 32));
-		else
-			g_gpio_index_map[0] |= (1 << index);
-	}
-	else {
-		if (index >= 32)
-			g_gpio_index_map[1] &= ~(1 << (index - 32));
-		else
-			g_gpio_index_map[0] &= ~(1 << index);
-	}
-	if (falling) {
-		if (index >= 32)
-			g_gpio_edge_map[1] |= (1 << (index - 32));
-		else
-			g_gpio_edge_map[0] |= (1 << index);
-	}
-	else {
-		if (index >= 32)
-			g_gpio_edge_map[1] &= ~(1 << (index - 32));
-		else
-			g_gpio_edge_map[0] &= ~(1 << index);
-	}
+void setGPIActive(uint32_t pinIndex, int active, int falling) {
+	BIT_SET_TO(g_gpio_index_map, pinIndex, active);
+	BIT_SET_TO(g_gpio_edge_map, pinIndex, falling);
 }
+
 #if ENABLE_DEEPSLEEP
 void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	Digital_setEdges();
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map[0], g_gpio_edge_map[0]);
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map, g_gpio_edge_map);
 #ifdef PLATFORM_BEKEN_NEW
 	PS_DEEP_CTRL_PARAM params;
-	params.gpio_index_map = g_gpio_index_map[0];
-	params.gpio_edge_map = g_gpio_edge_map[0];
+	params.gpio_index_map = g_gpio_index_map;
+	params.gpio_edge_map = g_gpio_edge_map;
 	params.sleep_mode = MANUAL_MODE_IDLE;
 	if(wakeUpTime)
 	{
@@ -167,18 +146,18 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	// will set a internal pullup or internall pulldown
 #ifdef PLATFORM_BK7231T
 	extern void deep_sleep_wakeup_with_gpio(UINT32 gpio_index_map, UINT32 gpio_edge_map);
-	deep_sleep_wakeup_with_gpio(g_gpio_index_map[0], g_gpio_edge_map[0]);
+	deep_sleep_wakeup_with_gpio(g_gpio_index_map, g_gpio_edge_map);
 #else
 	extern void bk_enter_deep_sleep(UINT32 g_gpio_index_map, UINT32 g_gpio_edge_map);
 	extern void deep_sleep_wakeup(const UINT32* g_gpio_index_map,
 		const UINT32* g_gpio_edge_map, const UINT32* sleep_time);
 	if (wakeUpTime) {
-		deep_sleep_wakeup(&g_gpio_index_map[0],
-			&g_gpio_edge_map[0],
+		deep_sleep_wakeup(&g_gpio_index_map,
+			&g_gpio_edge_map,
 			&wakeUpTime);
 	}
 	else {
-		bk_enter_deep_sleep(g_gpio_index_map[0], g_gpio_edge_map[0]);
+		bk_enter_deep_sleep(g_gpio_index_map, g_gpio_edge_map);
 	}
 #endif
 #elif PLATFORM_XRADIO
@@ -203,10 +182,10 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 #elif PLATFORM_BL602
 	uint8_t wkup = HBN_WAKEUP_GPIO_NONE;
 	HBN_GPIO_INT_Trigger_Type edge = HBN_GPIO_INT_TRIGGER_ASYNC_RISING_EDGE;
-	uint8_t g7 = (g_gpio_index_map[0] >> 7) & 1;
-	uint8_t g8 = (g_gpio_index_map[0] >> 8) & 1;
-	uint8_t gf7 = (g_gpio_edge_map[0] >> 7) & 1;
-	uint8_t gf8 = (g_gpio_edge_map[0] >> 8) & 1;
+	uint8_t g7 = (g_gpio_index_map >> 7) & 1;
+	uint8_t g8 = (g_gpio_index_map >> 8) & 1;
+	uint8_t gf7 = (g_gpio_edge_map >> 7) & 1;
+	uint8_t gf8 = (g_gpio_edge_map >> 8) & 1;
 	if(g7) wkup |= HBN_WAKEUP_GPIO_7;
 	if(g8) wkup |= HBN_WAKEUP_GPIO_8;
 	// only one edge setting
@@ -345,9 +324,9 @@ void PIN_SetupPins() {
 	// TODO: EXAMPLE of edge based interrupt handling
 	// NOT YET ENABLED
 	for (int i = 0; i < 32; i++) {
-		if (g_gpio_index_map[0] & (1 << i)) {
+		if (g_gpio_index_map & (1 << i)) {
 			uint32_t mode = GPIO_INT_LEVEL_RISING;
-			if (g_gpio_edge_map[0] & (1 << i)) {
+			if (g_gpio_edge_map & (1 << i)) {
 				mode = GPIO_INT_LEVEL_FALLING;
 			}
 			if (g_cfg.pins.roles[i] == IOR_IRRecv) {
