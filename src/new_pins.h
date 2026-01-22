@@ -1598,7 +1598,6 @@ int PIN_ParsePinRoleName(const char* name);
 
 void PIN_get_Relay_PWM_Count(int* pwmCount);
 int h_isChannelPWM(int tg_ch);
-int h_isChannelDigitalInput(int tg_ch);
 
 int CHANNEL_ParseChannelType(const char* s);
 const char *ChannelType_GetTitle(int type);

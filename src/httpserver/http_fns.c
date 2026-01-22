@@ -2242,7 +2242,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 	}
 	if (dInputCount > 0) {
 		for (i = 0; i < CHANNEL_MAX; i++) {
-			if (h_isChannelDigitalInput(i)) {
+			if (Digital_isDigital(i)) {
 				if (BIT_CHECK(flagsChannelPublished, i)) {
 					continue;
 				}
@@ -2407,7 +2407,7 @@ int http_fn_ha_cfg(http_request_t* request) {
 	}
 	if (Digital_digitalCount() > 0) {
 		for (i = 0; i < CHANNEL_MAX; i++) {
-			if (h_isChannelDigitalInput(i)) {
+			if (Digital_isDigital(i)) {
 				if (mqttAdded == 0) {
 					poststr(request, "mqtt:\n");
 					mqttAdded = 1;

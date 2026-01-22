@@ -4,8 +4,8 @@
 #include "../cmnds/cmd_public.h"
 
 uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-void Output_quickTick();
 uint32_t Output_relayCount();
+void Output_quickTick();
 void Output_onChanged(uint32_t channel, uint32_t iVal);
 bool Output_isPowerRelay(uint32_t channel);
 bool Output_isRelay(uint32_t channel);
@@ -13,11 +13,13 @@ bool Output_isRelay(uint32_t channel);
 uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Input_QuickTick();
 void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
+bool Input_isButton(uint32_t channelIndex);
 
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-void Digital_quickTick();
 uint32_t Digital_digitalCount();
+void Digital_quickTick();
 void Digital_setEdges();
+bool Digital_isDigital(uint32_t channelIndex);
 
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void DoorSensor_OnEverySecond();

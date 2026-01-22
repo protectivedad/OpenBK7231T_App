@@ -267,16 +267,22 @@ static void Digital_releasePin(uint32_t pinIndex) {
 }
 
 static void Digital_stopDriver() {
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(g_driverPins, pinIndex))
-			continue;
-		setGPIActive(pinIndex, 0, 0);
-	}
-	g_driverPins = 0;
 	g_digitalCount = 0;
 	g_dynamicWakeEdge = 0xFFFFFFFF;
 	g_defaultWakeEdge = 0x00000000;
+	if (!g_driverPins)
+		return;
+
+	uint32_t driverPins = g_driverPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(driverPins, pinIndex))
+			continue;
+		setGPIActive(pinIndex, 0, 0);
+		if (!BIT_CLEAR(driverPins, pinIndex))
+			break;
+	}
+	g_driverPins = 0;
 }
 
 static void Digital_init() {
@@ -326,4 +332,27 @@ uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	}
 
 	return true;
+}
+
+bool Digital_isDigital(uint32_t channelIndex) {
+	if (!g_driverPins)
+		return false;
+
+	uint32_t driverPins = g_driverPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(g_driverPins, pinIndex))
+			continue;
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channelIndex)
+			continue;
+		switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+		case IOR_DigitalInput_n:
+		case IOR_DigitalInput:
+		case IOR_DigitalInput_NoPup_n:
+		case IOR_DigitalInput_NoPup:
+			return true;
+		}
+
+	}
+
 }

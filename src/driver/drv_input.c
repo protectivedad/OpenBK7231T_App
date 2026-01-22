@@ -358,7 +358,8 @@ static void Input_StopDriver() {
 		if (!BIT_CHECK(g_driverPins, pinIndex))
 			continue;
 		setGPIActive(pinIndex, 0, 0);
-		BIT_CLEAR(g_driverPins, pinIndex);
+		if (!BIT_CLEAR(g_driverPins, pinIndex))
+			break;
 	}
 }
 
@@ -411,4 +412,24 @@ uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 
 void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex)) {
 	g_doubleClickCallback = cb;
+}
+
+bool Input_isButton(uint32_t channelIndex) {
+	if (!g_driverPins)
+		return false;
+	
+	uint32_t driverPins = g_driverPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+	uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+	if (!BIT_CHECK(driverPins, pinIndex))
+		continue;
+	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+	case IOR_Button:
+	case IOR_Button_n:
+		return true;
+	}
+	if (!BIT_CLEAR(driverPins, pinIndex))
+		break;
+	}
+	return false;
 }

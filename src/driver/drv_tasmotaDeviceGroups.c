@@ -644,8 +644,7 @@ void DRV_DGR_OnChannelChanged(int ch, int value) {
 
 	for(i = 0; i < CHANNEL_MAX-1; i++) {
 		int chIndex = i + firstChannelOffset;
-		if(Output_isRelay(chIndex)
-			|| CHANNEL_HasChannelPinWithRole(chIndex, IOR_Button) || CHANNEL_HasChannelPinWithRole(chIndex, IOR_Button_n)) {
+		if(Output_isRelay(chIndex) || Input_isButton(chIndex)) {
 			channelsCount = i + 1;
 			if(CHANNEL_Get(chIndex)) {
 				BIT_SET(channelValues ,i);
