@@ -32,8 +32,9 @@ static void LED_quickTick() {
 	if (!g_wifiPins || !g_enable_pins)
 		return;
 
+	uint32_t usedIndex;
 	uint32_t wifiPins = g_wifiPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+	for (usedIndex = 0; wifiPins && (usedIndex < g_registeredPinCount); usedIndex++) {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
 		if (!BIT_CHECK(wifiPins, pinIndex))
 			continue; // not my pin
@@ -66,8 +67,12 @@ static void LED_quickTick() {
 				HAL_PIN_SetOutputValue(pinIndex, wifi_ledState);
 			}
 		}
-		if (!BIT_CLEAR(wifiPins, pinIndex))
-			break;
+		BIT_CLEAR(wifiPins, pinIndex);
+	}
+	static bool printedOnce = false;
+	if (!printedOnce) {
+		printedOnce = false;
+		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Looped %i times.", __func__, usedIndex);
 	}
 }
 

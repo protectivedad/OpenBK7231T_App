@@ -225,7 +225,6 @@ void Battery_onEverySecond() {
 }
 
 static void Battery_releasePin(uint32_t pinIndex) {
-	setGPIActive(pinIndex, 0, 0);
 	if (pinIndex == g_pin_adc) {
 		HAL_ADC_Deinit(g_pin_adc);
 		g_pin_adc = -1;

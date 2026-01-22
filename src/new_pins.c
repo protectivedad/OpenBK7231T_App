@@ -237,10 +237,6 @@ void PIN_TriggerPoll() {
 }
 #endif
 #endif
-unsigned short g_counterDeltas[PLATFORM_GPIO_MAX];
-void PIN_InterruptHandler(int gpio) {
-	g_counterDeltas[gpio]++;
-}
 static void PIN_ProcessNewPinRole(int index, int role) {
 	if (g_enable_pins) {
 		if (!role) // no role no processing
@@ -285,14 +281,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			HAL_ADC_Init(index);
 #endif
 			break; 
-		case IOR_Counter_f:
-			HAL_PIN_Setup_Input_Pullup(index);
-			HAL_AttachInterrupt(index, INTERRUPT_FALLING, PIN_InterruptHandler);
-			break;
-		case IOR_Counter_r:
-			HAL_PIN_Setup_Input_Pullup(index);
-			HAL_AttachInterrupt(index, INTERRUPT_RISING, PIN_InterruptHandler);
-			break;
 
 		default:
 			break;
@@ -517,10 +505,6 @@ static void PIN_ProcessOldPinRole(int index) {
 		case IOR_ADC_Button:
 		case IOR_ADC:
 			HAL_ADC_Deinit(index);
-			break;
-		case IOR_Counter_f:
-		case IOR_Counter_r:
-			HAL_DetachInterrupt(index);
 			break;
 
 		default:
@@ -1131,15 +1115,6 @@ void PIN_ticks(void* param)
 	static uint32_t g_time = 0, g_last_time = 0;
 	uint32_t t_diff = QUICK_TMR_DURATION;
 	int value;
-
-	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex];
-		if (g_counterDeltas[pinIndex]) {
-			// TODO: disable interrupts now so it won't get called in meantime?
-			CHANNEL_Add(g_cfg.pins.channels[pinIndex], g_counterDeltas[pinIndex]);
-			g_counterDeltas[pinIndex] = 0;
-		}
-	}
 
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
 	g_time = rtos_get_time();

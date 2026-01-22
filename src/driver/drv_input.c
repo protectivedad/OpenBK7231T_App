@@ -1,6 +1,4 @@
 // Basic Input Driver
-// Grabs basic input IORoles, keeps track of pins assigned those roles
-// and processes them accordingly.
 
 #include "../obk_config.h"
 
@@ -239,13 +237,19 @@ static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton
 	}
 }
 
+uint32_t g_counterDeltas[PLATFORM_GPIO_MAX];
+void PIN_InterruptHandler(int gpio) {
+	g_counterDeltas[gpio]++;
+}
+
 // basic input quick tick timer function
 void Input_QuickTick() {
-	if (!g_driverPins)
+	if (!g_driverPins || !g_enable_pins)
 		return;
 
+	uint32_t usedIndex;
 	uint32_t driverPins = g_driverPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+	for (usedIndex = 0; driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
 		if (!BIT_CHECK(driverPins, pinIndex))
 			continue; // not my pin
@@ -256,6 +260,15 @@ void Input_QuickTick() {
 		uint32_t pinRole = PIN_GetPinRoleForPinIndex(pinIndex);
 		bool pinValue = HAL_PIN_ReadDigitalInput(pinIndex);
 		switch (pinRole) {
+		case IOR_Counter_f:
+		case IOR_Counter_r:
+			if (g_counterDeltas[pinIndex]) {
+				// TODO: disable interrupts now so it won't get called in meantime?
+				CHANNEL_Add(PIN_GetPinChannelForPinIndex(pinIndex), g_counterDeltas[pinIndex]);
+				g_counterDeltas[pinIndex] = 0;
+			}
+			break;
+
 		case IOR_Button_n:
 		case IOR_Button_ToggleAll_n:
 		case IOR_Button_ScriptOnly_n:
@@ -283,20 +296,14 @@ void Input_QuickTick() {
 
 			PIN_Input_Handler(pinIndex, pinRole, &g_buttons[pinIndex]);
 			break;
-
-		default:
-			{
-			static bool printedOnce = false;
-			if (!printedOnce) {
-				printedOnce = false;
-				ADDLOG_ERROR(LOG_FEATURE_DRV, "%s - Error pin role %i not accounted for.", __func__, pinRole);
-			}
-			break;
-			}
 		}
 		// clear processed pin and exit if no more left to process
-		if (!BIT_CLEAR(driverPins, pinIndex))
-			break;
+		BIT_CLEAR(driverPins, pinIndex);
+	}
+	static bool printedOnce = false;
+	if (!printedOnce) {
+		printedOnce = false;
+		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Looped %i times.", __func__, usedIndex);
 	}
 }
 
@@ -315,7 +322,7 @@ static uint32_t Input_noOfChannels(uint32_t pinRole) {
 	}
 }
 
-static bool Input_ActivatePin(uint32_t pinIndex) {
+static bool Input_activatePin(uint32_t pinIndex) {
 	bool channelValue = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
 	uint32_t falling = 0;
 
@@ -339,6 +346,15 @@ static bool Input_ActivatePin(uint32_t pinIndex) {
 		g_buttons[pinIndex].button_level = channelValue;
 		break;
 
+	case IOR_Counter_f:
+		HAL_PIN_Setup_Input_Pullup(pinIndex);
+		HAL_AttachInterrupt(pinIndex, INTERRUPT_FALLING, PIN_InterruptHandler);
+		break;
+	case IOR_Counter_r:
+		HAL_PIN_Setup_Input_Pullup(pinIndex);
+		HAL_AttachInterrupt(pinIndex, INTERRUPT_RISING, PIN_InterruptHandler);
+		break;
+
 	default:
 		return false;
 	}
@@ -347,19 +363,32 @@ static bool Input_ActivatePin(uint32_t pinIndex) {
 }
 
 static void Input_ReleasePin(uint32_t pinIndex) {
+	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+	case IOR_Counter_f:
+	case IOR_Counter_r:
+		HAL_DetachInterrupt(pinIndex);
+		break;
+	case IOR_Button:
+	case IOR_Button_ToggleAll:
+	case IOR_Button_ScriptOnly:
+	case IOR_SmartButtonForLEDs:
+	case IOR_Button_n:
+	case IOR_Button_ToggleAll_n:
+	case IOR_Button_ScriptOnly_n:
+	case IOR_SmartButtonForLEDs_n:
+		setGPIActive(pinIndex, 0, 0);
+		memset(&g_buttons[pinIndex], 0, sizeof(pinButton_s));
+		break;
+	}
 	BIT_CLEAR(g_driverPins, pinIndex);
-	setGPIActive(pinIndex, 0, 0);
-	memset(&g_buttons[pinIndex], 0, sizeof(pinButton_s));
 }
 
 static void Input_StopDriver() {
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+	for (uint32_t usedIndex = 0; g_driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
 		if (!BIT_CHECK(g_driverPins, pinIndex))
 			continue;
-		setGPIActive(pinIndex, 0, 0);
-		if (!BIT_CLEAR(g_driverPins, pinIndex))
-			break;
+		Input_ReleasePin(pinIndex);
 	}
 }
 
@@ -378,12 +407,13 @@ uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 		              = PIN_pinIORoleDriver()[IOR_Button_ToggleAll] = PIN_pinIORoleDriver()[IOR_Button_ToggleAll_n] \
 		              = PIN_pinIORoleDriver()[IOR_Button_ScriptOnly] = PIN_pinIORoleDriver()[IOR_Button_ScriptOnly_n] \
 		              = PIN_pinIORoleDriver()[IOR_SmartButtonForLEDs] = PIN_pinIORoleDriver()[IOR_SmartButtonForLEDs_n] \
+		              = PIN_pinIORoleDriver()[IOR_Counter_f] = PIN_pinIORoleDriver()[IOR_Counter_r] \
 		              = arg;
 		ADDLOG_DEBUG(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
 		break;
 	
 	case OBKF_AcquirePin:
-		return Input_ActivatePin(arg);
+		return Input_activatePin(arg);
 
 	case OBKF_ReleasePin:
 		Input_ReleasePin(arg);
