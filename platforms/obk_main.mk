@@ -168,6 +168,7 @@ OBKM_SRC  += $(OBK_SRCS)driver/drv_widget.c
 OBKM_SRC  += $(OBK_SRCS)driver/drv_digital.c
 OBKM_SRC  += $(OBK_SRCS)driver/drv_input.c
 OBKM_SRC  += $(OBK_SRCS)driver/drv_output.c
+OBKM_SRC  += $(OBK_SRCS)driver/drv_PWM.c
 
 OBKM_SRC  += $(OBK_SRCS)i2c/drv_i2c_ads1115.c
 OBKM_SRC  += $(OBK_SRCS)i2c/drv_i2c_lcd_pcf8574t.c
