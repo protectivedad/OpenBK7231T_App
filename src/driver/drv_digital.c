@@ -1,6 +1,4 @@
-// Basic Input Driver
-// Grabs basic input IORoles, keeps track of pins assigned those roles
-// and processes them accordingly.
+// Basic Digital Input Driver
 
 #include "../obk_config.h"
 
@@ -270,19 +268,13 @@ static void Digital_stopDriver() {
 	g_digitalCount = 0;
 	g_dynamicWakeEdge = 0xFFFFFFFF;
 	g_defaultWakeEdge = 0x00000000;
-	if (!g_driverPins)
-		return;
-
-	uint32_t driverPins = g_driverPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+	for (uint32_t usedIndex = 0; g_driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(driverPins, pinIndex))
+		if (!BIT_CHECK(g_driverPins, pinIndex))
 			continue;
 		setGPIActive(pinIndex, 0, 0);
-		if (!BIT_CLEAR(driverPins, pinIndex))
-			break;
+		BIT_CLEAR(g_driverPins, pinIndex);
 	}
-	g_driverPins = 0;
 }
 
 static void Digital_init() {
