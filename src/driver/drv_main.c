@@ -79,15 +79,28 @@ static driver_t g_drivers[] = {
 	Input_frameworkRequest,                  // frameworkRequest
 	false,                                   // loaded
 	},
-	{ "Digital",                               // Driver Name
+#if ENABLE_DRIVER_DIGITAL
+	{ "Digital",                             // Driver Name
 	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
-	Digital_quickTick,                         // runQuickTick
+	Digital_quickTick,                       // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	Digital_frameworkRequest,                  // frameworkRequest
+	Digital_frameworkRequest,                // frameworkRequest
 	false,                                   // loaded
 	},
+#endif ENABLE_DRIVER_DIGITAL
+#if ENABLE_DRIVER_PWM
+	{ "PWM",                                 // Driver Name
+	NULL,                                    // onEverySecond
+	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // runQuickTick
+	PWM_onChanged,                           // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	PWM_frameworkRequest,                    // frameworkRequest
+	false,                                   // loaded
+	},
+#endif // ENABLE_DRIVER_PWM
 #if ENABLE_DRIVER_TUYAMCU
 	//drvdetail:{"name":"TuyaMCU",
 	//drvdetail:"title":"TODO",

@@ -1,6 +1,7 @@
 // Basic Digital Input Driver
 
 #include "../obk_config.h"
+#if ENABLE_DRIVER_DIGITAL
 
 #include "../new_common.h"
 #include "../new_pins.h"
@@ -348,3 +349,9 @@ bool Digital_isDigital(uint32_t channelIndex) {
 	}
 
 }
+#else
+void Digital_setEdges() {
+	// silently ignore the command
+}
+
+#endif // ENABLE_DRIVER_DIGITAL

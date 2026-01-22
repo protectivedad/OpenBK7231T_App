@@ -15,15 +15,19 @@ void Input_QuickTick();
 void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
 bool Input_isButton(uint32_t channelIndex);
 
+#if ENABLE_DRIVER_DIGITAL
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t Digital_digitalCount();
 void Digital_quickTick();
-void Digital_setEdges();
 bool Digital_isDigital(uint32_t channelIndex);
+#endif // ENABLE_DRIVER_DIGITAL
+void Digital_setEdges();
 
+#if ENABLE_DRIVER_PWM
 uint32_t PWM_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t PWM_countChannels();
 uint32_t PWM_countPins();
+#endif // ENABLE_DRIVER_PWM
 uint32_t PWM_maxPWM(uint32_t channelIndex);
 bool PWM_isPWM(uint32_t channelIndex);
 

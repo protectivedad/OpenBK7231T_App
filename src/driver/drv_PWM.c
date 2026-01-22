@@ -1,6 +1,9 @@
 // Driver PWM Not for Compiling
 
 #include "../obk_config.h"
+#include "../new_common.h"
+
+#if ENABLE_DRIVER_PWM
 
 #include "drv_local.h"
 #include "../new_common.h"
@@ -261,3 +264,12 @@ uint32_t PWM_countChannels() {
 	}
 	return pwmCount;
 }
+#else
+uint32_t PWM_maxPWM(uint32_t channelIndex) {
+	return false;
+}
+
+bool PWM_isPWM(uint32_t channelIndex) {
+	return false;
+}
+#endif // ENABLE_DRIVER_PWM
