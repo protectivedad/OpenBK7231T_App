@@ -560,8 +560,8 @@ const char* htmlPinRoleNames[] = {
 	"HLW_8112_SCSN",
 	"RCRecv",
 	"RCRecv_nPup",
-	"TuyaMCU",
-	"error",
+	"TuyaMCU,RX",
+	"TuyaMCU,TX",
 	"error",
 	"error",
 };

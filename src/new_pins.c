@@ -597,9 +597,6 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 	DRV_OnChannelChanged(ch, iVal);
 #endif
 
-#if ENABLE_DRIVER_TUYAMCU
-	TuyaMCU_OnChannelChanged(ch, iVal);
-#endif
 #if ENABLE_DRIVER_GIRIERMCU
 	GirierMCU_OnChannelChanged(ch, iVal);
 #endif

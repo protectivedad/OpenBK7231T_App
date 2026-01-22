@@ -107,25 +107,12 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"TuyaMCU is a protocol used for communication between WiFI module and external MCU. This protocol is using usually RX1/TX1 port of BK chips. See [TuyaMCU dimmer example](https://www.elektroda.com/rtvforum/topic3929151.html), see [TH06 LCD humidity/temperature sensor example](https://www.elektroda.com/rtvforum/topic3942730.html), see [fan controller example](https://www.elektroda.com/rtvforum/topic3908093.html), see [simple switch example](https://www.elektroda.com/rtvforum/topic3906443.html)",
 	//drvdetail:"requires":""}
 	{ "TuyaMCU",                             // Driver Name
-	TuyaMCU_RunEverySecond,                  // onEverySecond
+	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
-	TuyaMCU_RunFrame,                        // runQuickTick
+	TuyaMCU_quickTick,                       // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	NULL,                                    // frameworkRequest
-	false,                                   // loaded
-	},
-	//drvdetail:{"name":"tmSensor",
-	//drvdetail:"title":"TODO",
-	//drvdetail:"descr":"The tmSensor must be used only when TuyaMCU is already started. tmSensor is a TuyaMcu Sensor, it's used for Low Power TuyaMCU communication on devices like TuyaMCU door sensor, or TuyaMCU humidity sensor. After device reboots, tmSensor uses TuyaMCU to request data update from the sensor and reports it on MQTT. Then MCU turns off WiFi module again and goes back to sleep. See an [example door sensor here](https://www.elektroda.com/rtvforum/topic3914412.html).",
-	//drvdetail:"requires":""}
-	{ "tmSensor",                            // Driver Name
-	TuyaMCU_Sensor_RunEverySecond,           // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
-	NULL,                                    // runQuickTick
-	NULL,                                    // onChannelChanged
-	NULL,                                    // onHassDiscovery
-	NULL,                                    // frameworkRequest
+	TuyaMCU_frameworkRequest,                // frameworkRequest
 	false,                                   // loaded
 	},
 #endif

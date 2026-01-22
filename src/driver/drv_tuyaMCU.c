@@ -47,24 +47,12 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 #define TUYA_CMD_NETWORK_STATUS 0x2B
 #define TUYA_CMD_REPORT_STATUS_RECORD_TYPE		0x34 
 
-#define TUYA_V0_CMD_PRODUCTINFORMATION      0x01
-#define TUYA_V0_CMD_NETWEORKSTATUS          0x02
-#define TUYA_V0_CMD_RESETWIFI               0x03
-#define TUYA_V0_CMD_RESETWIFI_AND_SEL_CONF  0x04
-#define TUYA_V0_CMD_REALTIMESTATUS          0x05
-#define TUYA_V0_CMD_OBTAINLOCALTIME         0x06
-#define TUYA_V0_CMD_RECORDSTATUS            0x08
-#define TUYA_V0_CMD_OBTAINDPCACHE           0x10
-#define TUYA_V0_CMD_QUERYSIGNALSTRENGTH		0x0B
-
 #define TUYA_NETWORK_STATUS_SMART_CONNECT_SETUP 0x00
 #define TUYA_NETWORK_STATUS_AP_MODE             0x01
 #define TUYA_NETWORK_STATUS_NOT_CONNECTED       0x02
 #define TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER 0x03
 #define TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD  0x04
 #define TUYA_NETWORK_STATUS_LOW_POWER_MODE      0x05
-
-void TuyaMCU_RunFrame();
 
 static byte g_tuyaMCUConfirmationsToSend_0x08 = 0;
 static byte g_tuyaMCUConfirmationsToSend_0x05 = 0;
@@ -107,57 +95,6 @@ const char* TuyaMCU_GetDataTypeString(int dpId) {
 		return "bitmap";
 	return "error";
 }
-
-
-
-
-const char* TuyaMCU_GetCommandTypeLabel(int t) {
-	if (t == TUYA_CMD_HEARTBEAT)
-		return "Hearbeat";
-	if (t == TUYA_CMD_QUERY_PRODUCT)
-		return "QueryProductInformation";
-	if (t == TUYA_CMD_MCU_CONF)
-		return "MCUconf";
-	if (t == TUYA_CMD_WIFI_STATE)
-		return "WiFiState";
-	if (t == TUYA_CMD_WIFI_RESET)
-		return "WiFiReset";
-	if (t == TUYA_CMD_WIFI_SELECT)
-		return "WiFiSelect";
-	if (t == TUYA_CMD_SET_DP)
-		return "SetDP";
-	if (t == TUYA_CMD_STATE)
-		return "State";
-	if (t == TUYA_CMD_QUERY_STATE)
-		return "QueryState";
-	if (t == TUYA_CMD_SET_TIME)
-		return "SetTime";
-	if (t == TUYA_CMD_WEATHERDATA)
-		return "WeatherData";
-	if (t == TUYA_CMD_NETWORK_STATUS)
-		return "NetworkStatus";
-	if (t == TUYA_CMD_SET_RSSI)
-		return "SetRSSI";
-	if (t == TUYA_V0_CMD_QUERYSIGNALSTRENGTH)
-		return "QuerySignalStrngth";
-	if (t == TUYA_CMD_REPORT_STATUS_RECORD_TYPE)
-		return "TUYA_CMD_REPORT_STATUS_RECORD_TYPE";
-	return "Unknown";
-}
-
-typedef struct rtcc_s {
-	uint8_t       second;
-	uint8_t       minute;
-	uint8_t       hour;
-	uint8_t       day_of_week;               // sunday is day 1
-	uint8_t       day_of_month;
-	uint8_t       month;
-	char          name_of_month[4];
-	uint16_t      day_of_year;
-	uint16_t      year;
-	uint32_t      days;
-	uint32_t      valid;
-} rtcc_t;
 
 typedef struct tuyaMCUMapping_s {
 	// internal Tuya variable index
@@ -202,14 +139,7 @@ static int g_dimmerRangeMax = 100;
 
 // serial baud rate used to communicate with the TuyaMCU
 // common baud rates are 9600 bit/s and 115200 bit/s
-static int g_baudRate = 9600;
-
-// global mcu time
-static int g_tuyaNextRequestDelay;
-static bool g_sensorMode = 0;
-
-// Flag to prevent automatic sending during boot/initialization
-static bool g_tuyaMCU_allowAutomaticSending = true;
+static uint32_t g_baudRate = 9600;
 
 static bool heartbeat_valid = false;
 static int heartbeat_timer = 0;
@@ -243,16 +173,6 @@ static short g_tuyaMCUled_id_cw_temperature = -1;
 static byte *g_tuyaMCUpayloadBuffer = 0;
 static int g_tuyaMCUpayloadBufferSize = 0;
 
-// battery powered device state
-enum TuyaMCUV0State {
-	TM0_STATE_AWAITING_INFO,
-	TM0_STATE_AWAITING_WIFI,
-	TM0_STATE_AWAITING_MQTT,
-	TM0_STATE_AWAITING_STATES,
-};
-static byte g_tuyaBatteryPoweredState = 0;
-static byte g_hello[] = { 0x55, 0xAA, 0x00, 0x01, 0x00, 0x00, 0x00 };
-//static byte g_request_state[] = { 0x55, 0xAA, 0x00, 0x02, 0x00, 0x01, 0x04, 0x06 };
 static bool g_tuyaMCU_batteryPoweredMode = false;
 
 typedef struct tuyaMCUPacket_s {
@@ -264,6 +184,9 @@ typedef struct tuyaMCUPacket_s {
 
 tuyaMCUPacket_t *tm_emptyPackets = 0;
 tuyaMCUPacket_t *tm_sendPackets = 0;
+
+uint32_t g_driverIndex;
+uint32_t g_driverPins;
 
 tuyaMCUPacket_t *TUYAMCU_AddToQueue(int len) {
 	tuyaMCUPacket_t *toUse;
@@ -457,7 +380,6 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 	
 	byte check_sum = (0xFF + cmdType + (payload_len >> 8) + (payload_len & 0xFF));
 
-	//UART_InitUART(g_baudRate, 0, false);
 	if (CFG_HasFlag(OBK_FLAG_TUYAMCU_USE_QUEUE)) {
 		tuyaMCUPacket_t *p = TUYAMCU_AddToQueue(payload_len + 4);
 		p->data[0] = cmdType;
@@ -469,8 +391,7 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 			check_sum += b;
 		}
 		p->data[3+payload_len] = check_sum;
-	}
-	else {
+	} else {
 		UART_SendByte(0x55);
 		UART_SendByte(0xAA);
 		UART_SendByte(0x00);         // version 00
@@ -636,19 +557,6 @@ void TuyaMCU_SendRaw(uint8_t id, char data[]) {
 	TuyaMCU_SendCommandWithData(TUYA_CMD_SET_DP, g_tuyaMCUpayloadBuffer, payload_len);
 }
 
-/*
-For setting the Wifi Signal Strength. I tested by using the following.
-Take the RSSI for the front web interface (eg -54), calculate the 2's complement (0xCA),
-and manually calculate the checksum and it works.
-"uartSendHex 55AA 00 24 0001 CA EE"
-*/
-void TuyaMCU_Send_RSSI(int rssi) {
-	char payload_signedByte;
-
-	payload_signedByte = rssi;
-
-	TuyaMCU_SendCommandWithData(TUYA_CMD_SET_RSSI, (byte*)&payload_signedByte, 1);
-}
 // See this post to find about about arguments of WiFi state
 // https://www.elektroda.com/rtvforum/viewtopic.php?p=20483899#20483899
 commandResult_t Cmd_TuyaMCU_Set_DefaultWiFiState(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -725,64 +633,6 @@ commandResult_t Cmd_TuyaMCU_SetupLED(const void* context, const char* cmd, const
 
 	return CMD_RES_OK;
 }
-commandResult_t Cmd_TuyaMCU_Send_RSSI(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	int toSend;
-
-	Tokenizer_TokenizeString(args, 0);
-
-	if (Tokenizer_GetArgsCount() < 1) {
-		toSend = HAL_GetWifiStrength();
-	}
-	else {
-		toSend = Tokenizer_GetArgInteger(0);
-	}
-	TuyaMCU_Send_RSSI(toSend);
-	return CMD_RES_OK;
-}
-void TuyaMCU_Send_SignalStrength(byte state, byte strength) {
-	byte payload_buffer[2];
-	payload_buffer[0] = state;
-	payload_buffer[1] = strength;
-	TuyaMCU_SendCommandWithData(TUYA_V0_CMD_QUERYSIGNALSTRENGTH, payload_buffer, sizeof(payload_buffer));
-}
-void TuyaMCU_Send_SetTime(struct tm* pTime, bool bSensorMode) {
-	byte payload_buffer[8];
-
-	if (pTime == 0) {
-		memset(payload_buffer, 0, sizeof(payload_buffer));
-	}
-	else {
-		byte tuya_day_of_week;
-
-		// convert from [0, 6] days since Sunday range to [1, 7] where 1 indicates monday
-		if (pTime->tm_wday == 0) {
-			tuya_day_of_week = 7;
-		}
-		else {
-			tuya_day_of_week = pTime->tm_wday;
-		}
-		// valid flag
-		payload_buffer[0] = 0x01;
-		// datetime
-		payload_buffer[1] = pTime->tm_year % 100;
-		// tm uses: int tm_mon;   // months since January - [0, 11]
-		// Tuya uses:  Data[1] indicates the month, ranging from 1 to 12.
-		payload_buffer[2] = pTime->tm_mon + 1;
-		payload_buffer[3] = pTime->tm_mday;
-		payload_buffer[4] = pTime->tm_hour;
-		payload_buffer[5] = pTime->tm_min;
-		payload_buffer[6] = pTime->tm_sec;
-		// Data[7]: indicates the week, ranging from 1 to 7. 1 indicates Monday.
-		payload_buffer[7] = tuya_day_of_week; //1 for Monday in TUYA Doc
-	}
-	if (bSensorMode) {
-		// https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccessprotocol?id=K95afs9h4tjjh
-		TuyaMCU_SendCommandWithData(0x06, payload_buffer, 8);
-	}
-	else {
-		TuyaMCU_SendCommandWithData(TUYA_CMD_SET_TIME, payload_buffer, 8);
-	}
-}
 struct tm* TuyaMCU_Get_NTP_Time() {
 	struct tm* ptm;
 	time_t ntpTime;
@@ -815,10 +665,6 @@ Info:TuyaMCU:TUYAMCU received: 55 AA 00 08 00 0C 00 02 02 02 02 02 02 01 04 00 0
 
 Info:TuyaMCU:TuyaMCU_ProcessIncoming: processing V0 command 8 with 19 bytes
 
-Info:TuyaMCU:TuyaMCU_V0_ParseRealTimeWithRecordStorage: processing dpId 1, dataType 4-DP_TYPE_ENUM and 1 data bytes
-
-Info:TuyaMCU:TuyaMCU_V0_ParseRealTimeWithRecordStorage: raw data 1 byte:
-Info:GEN:No change in channel 1 (still set to 0) - ignoring
 */
 
 int TuyaMCU_ParseDPType(const char *dpTypeString) {
@@ -916,27 +762,6 @@ commandResult_t TuyaMCU_LinkTuyaMCUOutputToChannel(const void* context, const ch
 	return CMD_RES_OK;
 }
 
-commandResult_t TuyaMCU_Send_SetTime_Current(const void* context, const char* cmd, const char* args, int cmdFlags) {
-
-	TuyaMCU_Send_SetTime(TuyaMCU_Get_NTP_Time(),g_sensorMode);
-
-	return CMD_RES_OK;
-}
-commandResult_t TuyaMCU_Send_SetTime_Example(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	struct tm testTime;
-
-	testTime.tm_year = 2012;
-	testTime.tm_mon = 7;
-	testTime.tm_mday = 15;
-	testTime.tm_wday = 4;
-	testTime.tm_hour = 6;
-	testTime.tm_min = 54;
-	testTime.tm_sec = 32;
-
-	TuyaMCU_Send_SetTime(&testTime,g_sensorMode);
-	return CMD_RES_OK;
-}
-
 void TuyaMCU_Send(byte* data, int size) {
 	int i;
 	unsigned char check_sum;
@@ -950,21 +775,6 @@ void TuyaMCU_Send(byte* data, int size) {
 	UART_SendByte(check_sum);
 
 	ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "\nWe sent %i bytes to Tuya MCU\n", size + 1);
-}
-
-commandResult_t TuyaMCU_SetDimmerRange(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	Tokenizer_TokenizeString(args, 0);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 2)) {
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-
-	g_dimmerRangeMin = Tokenizer_GetArgInteger(0);
-	g_dimmerRangeMax = Tokenizer_GetArgInteger(1);
-
-	return CMD_RES_OK;
 }
 
 commandResult_t TuyaMCU_SendHeartbeat(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -1074,11 +884,6 @@ void Tuya_SetWifiState(uint8_t state)
 {
 	TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
 }
-void Tuya_SetWifiState_V0(uint8_t state)
-{
-	TuyaMCU_SendCommandWithData(0x02, &state, 1);
-}
-
 void TuyaMCU_SendNetworkStatus()
 {
 	uint8_t state = TUYA_NETWORK_STATUS_NOT_CONNECTED;
@@ -1101,28 +906,6 @@ void TuyaMCU_SendNetworkStatus()
 	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "SendNetworkStatus: sending status 0x%X to MCU \n", state);
 	TuyaMCU_SendCommandWithData(0x2B, &state, 1);
 }
-void TuyaMCU_ForcePublishChannelValues() {
-#if ENABLE_MQTT
-	tuyaMCUMapping_t* cur;
-
-	cur = g_tuyaMappings;
-	while (cur) {
-		MQTT_ChannelPublish(cur->channel, 0);
-		cur = cur->next;
-	}
-#endif
-}
-// ntp_timeZoneOfs 2
-// addRepeatingEvent 10 -1 uartSendHex 55AA0008000007
-// setChannelType 1 temperature_div10
-// setChannelType 2 humidity
-// linkTuyaMCUOutputToChannel 1 1
-// linkTuyaMCUOutputToChannel 2 2
-// addRepeatingEvent 10 -1 tuyaMcu_sendCurTime
-//
-// same as above but merged
-// backlog ntp_timeZoneOfs 2; addRepeatingEvent 10 -1 uartSendHex 55AA0008000007; setChannelType 1 temperature_div10; setChannelType 2 humidity; linkTuyaMCUOutputToChannel 1 1; linkTuyaMCUOutputToChannel 2 2; addRepeatingEvent 10 -1 tuyaMcu_sendCurTime
-//
 void TuyaMCU_ApplyMapping(tuyaMCUMapping_t* mapping, int dpID, int value) {
 	int mappedValue = value;
 
@@ -1168,7 +951,6 @@ void TuyaMCU_ApplyMapping(tuyaMCUMapping_t* mapping, int dpID, int value) {
 
 	CHANNEL_Set(mapping->channel, ((mappedValue + mapping->delta) * mapping->mult), 0);
 }
-
 bool TuyaMCU_IsChannelUsedByTuyaMCU(int channel) {
 	tuyaMCUMapping_t* mapping;
 
@@ -1180,76 +962,6 @@ bool TuyaMCU_IsChannelUsedByTuyaMCU(int channel) {
 	}
 	return true;
 }
-void TuyaMCU_OnChannelChanged(int channel, int iVal) {
-	tuyaMCUMapping_t* mapping;
-	int mappediVal = iVal;
-
-	// find mapping
-	mapping = TuyaMCU_FindDefForChannel(channel);
-
-	if (mapping == 0) {
-		return;
-	}
-
-	if (mapping->inv) {
-		iVal = !iVal;
-	}
-
-	// this might be a callback from CHANNEL_Set in TuyaMCU_ApplyMapping. If we should set exactly the
-	// same value, skip it
-	if (mapping->prevValue == iVal) {
-		return;
-	}
-
-	// dpCaches are sent when requested - TODO - is it correct?
-	if (mapping->obkFlags & OBKTM_FLAG_DPCACHE) {
-		return;
-	}
-
-	// map value depending on channel type
-	switch (CHANNEL_GetType(mapping->channel))
-	{
-	case ChType_Dimmer:
-		// map OpenBK7231T_App's dimmer range 0..100 to TuyaMCU's dimmer range
-		mappediVal = (((g_dimmerRangeMax - g_dimmerRangeMin) * iVal) / 100) + g_dimmerRangeMin;
-		break;
-	case ChType_Dimmer256:
-		// map OpenBK7231T_App's dimmer range 0..256 to TuyaMCU's dimmer range
-		mappediVal = (((g_dimmerRangeMax - g_dimmerRangeMin) * iVal) / 256) + g_dimmerRangeMin;
-		break;
-	case ChType_Dimmer1000:
-		// map OpenBK7231T_App's dimmer range 0..256 to TuyaMCU's dimmer range
-		mappediVal = (((g_dimmerRangeMax - g_dimmerRangeMin) * iVal) / 1000) + g_dimmerRangeMin;
-		break;
-	default:
-		break;
-	}
-
-	if (iVal != mappediVal) {
-		ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "OnChannelChanged: mapped value %d (OpenBK7231T_App range) to %d (TuyaMCU range)\n", iVal, mappediVal);
-	}
-	// send value to TuyaMCU
-	switch (mapping->dpType)
-	{
-	case DP_TYPE_BOOL:
-		TuyaMCU_SendBool(mapping->dpId, mappediVal != 0);
-		break;
-
-	case DP_TYPE_ENUM:
-		TuyaMCU_SendEnum(mapping->dpId, mappediVal);
-		break;
-
-	case DP_TYPE_VALUE:
-		TuyaMCU_SendValue(mapping->dpId, mappediVal);
-		break;
-
-	default:
-		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "OnChannelChanged: channel %d: unsupported data point type %d-%s\n", channel, mapping->dpType, TuyaMCU_GetDataTypeString(mapping->dpType));
-		break;
-	}
-	//mapping->prevValue = iVal;
-}
-
 void TuyaMCU_ParseQueryProductInformation(const byte* data, int len) {
 	char name[256];
 	int useLen;
@@ -1261,66 +973,7 @@ void TuyaMCU_ParseQueryProductInformation(const byte* data, int len) {
 	name[useLen] = 0;
 
 	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ParseQueryProductInformation: received %s\n", name);
-
-	if (g_sensorMode) {
-		if (g_tuyaBatteryPoweredState == TM0_STATE_AWAITING_INFO) {
-			g_tuyaBatteryPoweredState = TM0_STATE_AWAITING_WIFI;
-			g_tuyaNextRequestDelay = 0;
-		}
-	}
 }
-// See: https://www.elektroda.com/rtvforum/viewtopic.php?p=20345606#20345606
-void TuyaMCU_ParseWeatherData(const byte* data, int len) {
-	int ofs;
-	byte bValid;
-	//int checkLen;
-	int iValue;
-	byte stringLen;
-	byte varType;
-	char buffer[64];
-	const char* stringData;
-	//const char *stringDataValue;
-	ofs = 0;
-
-	while (ofs + 4 < len) {
-		bValid = data[ofs];
-		stringLen = data[ofs + 1];
-		stringData = (const char*)(data + (ofs + 2));
-		if (stringLen >= (sizeof(buffer) - 1))
-			stringLen = sizeof(buffer) - 2;
-		memcpy(buffer, stringData, stringLen);
-		buffer[stringLen] = 0;
-		varType = data[ofs + 2 + stringLen];
-		// T: 0x00 indicates an integer and 0x01 indicates a string.
-		ofs += (2 + stringLen);
-		ofs++;
-		stringLen = data[ofs];
-		stringData = (const char*)(data + (ofs + 1));
-		if (varType == 0x00) {
-			// integer
-			if (stringLen == 4) {
-				iValue = data[ofs + 1] << 24 | data[ofs + 2] << 16 | data[ofs + 3] << 8 | data[ofs + 4];
-			}
-			else if (stringLen == 2) {
-				iValue = data[ofs + 1] << 8 | data[ofs + 2];
-			}
-			else if (stringLen == 1) {
-				iValue = data[ofs + 1];
-			}
-			else {
-				iValue = 0;
-			}
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ParseWeatherData: key %s, val integer %i\n", buffer, iValue);
-		}
-		else {
-			// string
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ParseWeatherData: key %s, string not yet handled\n", buffer);
-		}
-		ofs += stringLen;
-	}
-}
-
-
 
 int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
 	int i;
@@ -1382,82 +1035,6 @@ int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
 	return 0;
 }
 
-// Protocol version - 0x00 (not 0x03)
-// Used for battery powered devices, eg. door sensor.
-// Packet ID: 0x08
-
-
-// When bIncludesDate = true
-//55AA 00 08 000C  00 02 02 02 02 02 02 01 01 00 01 01 23
-//Head v0 ID lengh bV YY MM DD HH MM SS                CHKSUM
-// after that, there are status data uniys
-// 01   01   0001   01
-// dpId Type Len    Value
-//
-// When bIncludesDate = false
-// 55AA 00 06 0005  10   0100 01 00 1C
-// Head v0 ID lengh dpId leen tp vl CHKSUM
-
-void TuyaMCU_V0_ParseRealTimeWithRecordStorage(const byte* data, int len, bool bIncludesDate) {
-	int ofs;
-	int sectorLen;
-	int dpId;
-	int dataType;
-	tuyaMCUMapping_t* mapping;
-
-	if (bIncludesDate) {
-		//data[0]; // bDateValid
-		//data[1]; //  year
-		//data[2]; //  month
-		//data[3]; //  day
-		//data[4]; //  hour
-		//data[5]; //  minute
-		//data[6]; //  second
-
-		ofs = 7;
-	}
-	else {
-		ofs = 0;
-	}
-
-	while (ofs + 4 < len) {
-		sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
-		dpId = data[ofs];
-		dataType = data[ofs + 1];
-		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "V0_ParseRealTimeWithRecordStorage: processing id %i, dataType %i-%s and %i data bytes\n",
-			dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen);
-
-		// find mapping (where to save received data)
-		mapping = TuyaMCU_FindDefForID(dpId);
-
-		if (sectorLen == 1) {
-			int iVal = (int)data[ofs + 4];
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "V0_ParseRealTimeWithRecordStorage: byte %i\n", iVal);
-			// apply to channels
-			TuyaMCU_ApplyMapping(mapping, dpId, iVal);
-		}
-		if (sectorLen == 4) {
-			int iVal = data[ofs + 4] << 24 | data[ofs + 5] << 16 | data[ofs + 6] << 8 | data[ofs + 7];
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "V0_ParseRealTimeWithRecordStorage: int32 %i\n", iVal);
-			// apply to channels
-			TuyaMCU_ApplyMapping(mapping, dpId, iVal);
-		}
-
-		// size of header (type, datatype, len 2 bytes) + data sector size
-		ofs += (4 + sectorLen);
-	}
-	if (g_sensorMode) {
-		if (g_tuyaBatteryPoweredState == TM0_STATE_AWAITING_STATES) {
-			if (bIncludesDate) {
-				g_tuyaMCUConfirmationsToSend_0x08++;
-			}
-			else {
-				g_tuyaMCUConfirmationsToSend_0x05++;
-			}
-			g_tuyaNextRequestDelay++;
-		}
-	}
-}
 void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 	int sectorLen;
 	int dpId;
@@ -1481,10 +1058,7 @@ void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 	s = (char*)g_tuyaMCUpayloadBuffer;
 	*s = 0;
 
-	const char *typeStr;
-	typeStr = TuyaMCU_GetDataTypeString(dataType);
-
-	sprintf(sName, "tm/%s/%i", typeStr, dpId);
+	sprintf(sName, "/%i", dpId);
 	payload = data + (ofs + 4);
 	switch (dataType) 
 	{
@@ -1535,61 +1109,6 @@ void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 	MQTT_PublishMain_StringString(sName, s, OBK_PUBLISH_FLAG_FORCE_REMOVE_GET);
 #endif
 }
-void TuyaMCU_PublishDPToBerry(const byte *data, int ofs) {
-	int sectorLen;
-	int dpId;
-	int dataType;
-	int strLen;
-	char *s;
-	const byte *payload;
-	int index;
-
-	sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
-	dpId = data[ofs];
-	dataType = data[ofs + 1];
-
-	// really it's just +1 for NULL character but let's keep more space
-	strLen = sectorLen * 2 + 16;
-	if (g_tuyaMCUpayloadBufferSize < strLen) {
-		g_tuyaMCUpayloadBuffer = realloc(g_tuyaMCUpayloadBuffer, strLen);
-		g_tuyaMCUpayloadBufferSize = strLen;
-	}
-	s = (char*)g_tuyaMCUpayloadBuffer;
-
-	payload = data + (ofs + 4);
-	switch (dataType)
-	{
-	case DP_TYPE_BOOL:
-	case DP_TYPE_VALUE:
-	case DP_TYPE_ENUM:
-		if (sectorLen == 4) {
-			index = payload[0] << 24 | payload[1] << 16 | payload[2] << 8 | payload[3];
-		}
-		else if (sectorLen == 1) {
-			index = (int)payload[0];
-		}
-		else if (sectorLen == 2) {
-			index = payload[1] << 8 | payload[0];
-		}
-		else {
-			index = 0;
-		}
-		CMD_Berry_RunEventHandlers_IntInt(CMD_EVENT_ON_DP, dpId, index);
-		break;
-	case DP_TYPE_STRING:
-		memcpy(s, payload, sectorLen);
-		s[sectorLen] = 0;
-		//CMD_Berry_RunEventHandlers_IntStr(CMD_EVENT_ON_DP, dpId, s);
-		break;
-	case DP_TYPE_RAW:
-	case DP_TYPE_BITMAP:
-		CMD_Berry_RunEventHandlers_IntBytes(CMD_EVENT_ON_DP, dpId, payload, sectorLen);
-		break;
-
-	}
-}
-#define CALIB_IF_NONZERO(x,d) if(x) { x += d; }
-
 void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 	tuyaMCUMapping_t* mapping;
 	int ofs;
@@ -1610,6 +1129,9 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 			dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen);
 
 		mapping = TuyaMCU_FindDefForID(dpId);
+		if (!mapping)
+			mapping = TuyaMCU_MapIDToChannel(dpId, dataType, dpId, 0, 1.0f, 0, 0, 0, 0);
+
 		if (mapping && mapping->dpType == DP_TYPE_PUBLISH_TO_MQTT) {
 			TuyaMCU_PublishDPToMQTT(data, ofs);
 		}
@@ -1649,280 +1171,10 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 			// apply to channels
 			TuyaMCU_ApplyMapping(mapping, dpId, iVal);
 		}
-		else {
-
-			if (mapping != 0) {
-				switch (mapping->dpType) {
-				case DP_TYPE_RAW_TAC2121C_YESTERDAY:
-				{
-					if (sectorLen != 8) {
-
-					}
-					else {
-						month = data[ofs + 4];
-						day = data[ofs + 4 + 1];
-						// consumption
-						iVal = data[ofs + 6 + 4] << 8 | data[ofs + 7 + 4];
-						ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "TAC2121C_YESTERDAY: day %i, month %i, val %i\n",
-							day, month, iVal);
-
-					}
-				}
-				break;
-				case DP_TYPE_RAW_TAC2121C_LASTMONTH:
-				{
-					if (sectorLen != 8) {
-
-					}
-					else {
-						year = data[ofs + 4];
-						month = data[ofs + 4 + 1];
-						// consumption
-						iVal = data[ofs + 6 + 4] << 8 | data[ofs + 7 + 4];
-						ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "DP_TYPE_RAW_TAC2121C_LASTMONTH: month %i, year %i, val %i\n",
-							month, year, iVal);
-
-					}
-				}
-				break;
-				case DP_TYPE_RAW_V2C3P3:
-				{
-					// see: https://www.elektroda.com/rtvforum/viewtopic.php?p=21569350#21569350
-					if (sectorLen == 8) {
-						int iV, iC, iP;
-						iV = data[ofs + 4] << 8 | data[ofs + 5];
-						iC = (data[ofs + 6] << 16) | (data[ofs + 7] << 8) | data[ofs + 8];
-						iP = (data[ofs + 9] << 16) | (data[ofs + 10] << 8) | data[ofs + 11];
-						// calibration
-						CALIB_IF_NONZERO(iV, mapping->delta);
-						CALIB_IF_NONZERO(iC, mapping->delta2);
-						CALIB_IF_NONZERO(iP, mapping->delta3);
-						if (mapping->channel < 0) {
-							CHANNEL_SetFirstChannelByType(ChType_Voltage_div10, iV);
-							CHANNEL_SetFirstChannelByType(ChType_Current_div1000, iC);
-							CHANNEL_SetFirstChannelByType(ChType_Power, iP);
-						}
-						else {
-							CHANNEL_Set(mapping->channel, iV, 0);
-							CHANNEL_Set(mapping->channel + 1, iC, 0);
-							CHANNEL_Set(mapping->channel + 2, iP, 0);
-						}
-					}
-					else {
-
-					}
-				}
-				break;
-				case DP_TYPE_RAW_VCPPfF:
-				{
-					if (sectorLen == 15) {
-						int iV, iC, iP, iPf, iF;
-						// voltage
-						iV = data[ofs + 0 + 4] << 8 | data[ofs + 1 + 4];
-						// current
-						iC = data[ofs + 3 + 4] << 8 | data[ofs + 4 + 4];
-						// power
-						iP = data[ofs + 6 + 4] << 8 | data[ofs + 7 + 4];
-						// pf
-						iPf = data[ofs + 11 + 4] << 8 | data[ofs + 12 + 4];
-						// freq
-						iF = data[ofs + 13 + 4] << 8 | data[ofs + 14 + 4];
-						// calibration
-						CALIB_IF_NONZERO(iV, mapping->delta);
-						CALIB_IF_NONZERO(iC, mapping->delta2);
-						CALIB_IF_NONZERO(iP, mapping->delta3);
-						if (mapping->channel < 0) {
-							CHANNEL_SetFirstChannelByType(ChType_Voltage_div10, iV);
-							CHANNEL_SetFirstChannelByType(ChType_Current_div1000, iC);
-							CHANNEL_SetFirstChannelByType(ChType_Power, iP);
-							CHANNEL_SetFirstChannelByType(ChType_PowerFactor_div1000, iPf);
-							CHANNEL_SetFirstChannelByType(ChType_Frequency_div1000, iF);
-						}
-						else {
-							CHANNEL_Set(mapping->channel, iV, 0);
-							CHANNEL_Set(mapping->channel + 1, iC, 0);
-							CHANNEL_Set(mapping->channel + 2, iP, 0);
-							CHANNEL_Set(mapping->channel + 3, iPf, 0);
-							CHANNEL_Set(mapping->channel + 4, iF, 0);
-						}
-					}
-					else {
-
-					}
-				}
-				break;
-				case DP_TYPE_RAW_TAC2121C_VCP:
-				{
-					if (sectorLen == 6) {
-						int iV, iC, iP;
-						// voltage
-						iV = data[ofs + 0 + 4] << 8 | data[ofs + 1 + 4];
-						// current
-						iC = data[ofs + 2 + 4] << 8 | data[ofs + 3 + 4];
-						// power
-						iP = data[ofs + 4 + 4] << 8 | data[ofs + 5 + 4];
-						// calibration
-						CALIB_IF_NONZERO(iV, mapping->delta);
-						CALIB_IF_NONZERO(iC, mapping->delta2);
-						CALIB_IF_NONZERO(iP, mapping->delta3);
-						if (mapping->channel < 0) {
-							CHANNEL_SetFirstChannelByType(ChType_Voltage_div10, iV);
-							CHANNEL_SetFirstChannelByType(ChType_Current_div10, iC);
-							CHANNEL_SetFirstChannelByType(ChType_Power_div10, iP);
-						}
-						else {
-							CHANNEL_Set(mapping->channel, iV, 0);
-							CHANNEL_Set(mapping->channel + 1, iC, 0);
-							CHANNEL_Set(mapping->channel + 2, iP, 0);
-						}
-					}
-					else if (sectorLen == 8 || sectorLen == 10) {
-						int iV, iC, iP;
-						// voltage
-						iV = data[ofs + 0 + 4] << 8 | data[ofs + 1 + 4];
-						// current
-						iC = data[ofs + 3 + 4] << 8 | data[ofs + 4 + 4];
-						// power
-						iP = data[ofs + 6 + 4] << 8 | data[ofs + 7 + 4];
-						// calibration
-						CALIB_IF_NONZERO(iV, mapping->delta);
-						CALIB_IF_NONZERO(iC, mapping->delta2);
-						CALIB_IF_NONZERO(iP, mapping->delta3);
-						if (mapping->channel < 0) {
-							CHANNEL_SetFirstChannelByType(ChType_Voltage_div10, iV);
-							CHANNEL_SetFirstChannelByType(ChType_Current_div1000, iC);
-							CHANNEL_SetFirstChannelByType(ChType_Power, iP);
-						}
-						else {
-							CHANNEL_Set(mapping->channel, iV, 0);
-							CHANNEL_Set(mapping->channel+1, iC, 0);
-							CHANNEL_Set(mapping->channel+2, iP, 0);
-						}
-					}
-					else {
-
-					}
-				}
-				break;
-				case DP_TYPE_RAW_DDS238Packet:
-				{
-					if (sectorLen != 15) {
-
-					}
-					else {
-						// FREQ??
-						iVal = data[ofs + 8 + 4] << 8 | data[ofs + 9 + 4];
-						//CHANNEL_SetFirstChannelByType(QQQQQQ, iVal);
-						// 06 46 = 1606 => A x 100? ?
-						iVal = data[ofs + 11 + 4] << 8 | data[ofs + 12 + 4];
-						CHANNEL_SetFirstChannelByType(ChType_Current_div1000, iVal);
-						// Voltage?
-						iVal = data[ofs + 13 + 4] << 8 | data[ofs + 14 + 4];
-						CHANNEL_SetFirstChannelByType(ChType_Voltage_div10, iVal);
-					}
-				}
-				break;
-				}
-			}
-		}
 
 		// size of header (type, datatype, len 2 bytes) + data sector size
 		ofs += (4 + sectorLen);
 	}
-
-}
-
-int TuyaMCU_WiFiInReset() {
-	return g_resetWiFiEvents >= 3;
-}
-
-void TuyaMCU_ResetWiFi() {
-	g_resetWiFiEvents++;
-
-	if (TuyaMCU_WiFiInReset()) {
-		g_openAP = 1;
-	}
-}
-void TuyaMCU_V0_SendDPCacheReply() {
-#if 0
-	// send empty?
-	byte dat = 0x00;
-	TuyaMCU_SendCommandWithData(0x10, &dat, 1);
-#else
-	int dataLen;
-	int value;
-	int writtenCount;
-	byte *p;
-	byte buffer[64];
-	tuyaMCUMapping_t *map;
-
-	buffer[0] = 0x01; // OK
-	buffer[1] = 0x00; // number of variables, will update later
-
-	writtenCount = 0;
-	dataLen = 2;
-	p = buffer + dataLen;
-
-	map = g_tuyaMappings;
-	// packet is the following:
-	// 01 02 
-	// result 1 (OK), numVars 2
-	// 11 02 0004 00000001  		
-	// dpId = 17 Len = 0004 Val V = 1
-	// 12 02 0004 00000001
-	// dpId = 18 Len = 0004 Val V = 1	
-	// 
-	while (map) {
-		if (map->obkFlags & OBKTM_FLAG_DPCACHE) {
-			writtenCount++;
-			// dpID
-			*p = map->dpId;
-			p++;
-			// type
-			*p = map->dpType;
-			p++;
-			// lenght
-			*p = 0;
-			p++;
-			value = CHANNEL_Get(map->channel);
-			switch (map->dpType) {
-			case DP_TYPE_ENUM:
-				// set len
-				*p = 1;
-				p++;
-				// set data 
-				*p = value;
-				p++;
-				break;
-			case DP_TYPE_VALUE:
-				// set len
-				*p = 4;
-				p++;
-				// set data 
-				p[3] = (value >> 0) & 0xFF; // first byte (lowest bits)
-				p[2] = (value >> 8) & 0xFF; // first byte (lowest bits)
-				p[1] = (value >> 16) & 0xFF; // first byte (lowest bits)
-				p[0] = (value >> 24) & 0xFF; // first byte (lowest bits)
-				p += 4;
-				break;
-			default:
-			case DP_TYPE_BOOL:
-				// set len
-				*p = 1;
-				p++;
-				// set data 
-				*p = value;
-				p++;
-				break;
-			}
-		}
-		map = map->next;
-	}
-	dataLen = p - buffer;
-	buffer[1] = writtenCount;
-
-	TuyaMCU_SendCommandWithData(0x10, buffer, dataLen);
-#endif
 }
 void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 	int subcommand = value[0];
@@ -1979,9 +1231,9 @@ void TuyaMCU_ProcessIncoming(const byte* data, int len) {
 	}
 	cmd = data[3];
 #if OBK_TIMING_LOGGING_ENABLED
-	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i (%s) len %i", xTaskGetTickCount(), __func__, version, cmd, TuyaMCU_GetCommandTypeLabel(cmd), len);
+	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i, len %i", xTaskGetTickCount(), __func__, version, cmd, len);
 #else
-	ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming[v=%i]: cmd %i (%s) len %i\n", version, cmd, TuyaMCU_GetCommandTypeLabel(cmd), len);
+	ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming[v=%i]: cmd %i (%s) len %i\n", version, cmd, len);
 #endif
 	switch (cmd)
 	{
@@ -2020,42 +1272,15 @@ void TuyaMCU_ProcessIncoming(const byte* data, int len) {
 		else {
 			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming: TUYA_CMD_MCU_CONF, TODO!");
 		}
-		if (g_sensorMode) {
-			if (g_tuyaBatteryPoweredState == TM0_STATE_AWAITING_WIFI) {
-				g_tuyaBatteryPoweredState = TM0_STATE_AWAITING_MQTT;
-			}
-			else if (g_tuyaBatteryPoweredState == TM0_STATE_AWAITING_MQTT) {
-				g_tuyaBatteryPoweredState = TM0_STATE_AWAITING_STATES;
-				g_tuyaNextRequestDelay = 0;
-			}
-		}
 		break;
 	case TUYA_CMD_WIFI_STATE:
-		if (g_sensorMode) {
-			// for TuyaMCU v0, 0x03 is a pair button hold event
-			TuyaMCU_ResetWiFi();
-		}
-		else {
-			wifi_state_valid = true;
-		}
+		wifi_state_valid = true;
 		break;
 	case TUYA_CMD_WIFI_SELECT:
-		{
-			// This was added for this user:
-			// https://www.elektroda.com/rtvforum/topic3937723.html
-			if (version == 0) {
-				// 0x05 packet for version 0 (not 0x03) of TuyaMCU
-				// This packet has no datetime stamp
-				TuyaMCU_V0_ParseRealTimeWithRecordStorage(data + 6, len - 6, false);
-			}
-			else {
-				// TUYA_CMD_WIFI_SELECT
-				// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
-				g_openAP = 1;
-			}
-			break;
-		}
-		break;
+		// TUYA_CMD_WIFI_SELECT
+		// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
+		g_openAP = 1;
+
 	case TUYA_CMD_WIFI_RESET:
 		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming: 0x04 replying");
 		// added for https://www.elektroda.com/rtvforum/viewtopic.php?p=21095905#21095905
@@ -2078,64 +1303,9 @@ void TuyaMCU_ProcessIncoming(const byte* data, int len) {
 		state_updated = true;
 		g_sendQueryStatePackets = 0;
 		break;
-	case TUYA_CMD_SET_TIME:
-		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming: received TUYA_CMD_SET_TIME, so sending back time");
-		TuyaMCU_Send_SetTime(TuyaMCU_Get_NTP_Time(), false);
-		break;
-		// 55 AA 00 01 00 ${"p":"e7dny8zvmiyhqerw","v":"1.0.0"}$
-		// uartFakeHex 55AA000100247B2270223A226537646E79387A766D69796871657277222C2276223A22312E302E30227D24
 	case TUYA_CMD_QUERY_PRODUCT:
 		TuyaMCU_ParseQueryProductInformation(data + 6, len - 6);
 		product_information_valid = true;
-		break;
-		// this name seems invalid for Version 0 of TuyaMCU
-	case TUYA_CMD_QUERY_STATE:
-		if (version == 0) {
-			// 0x08 packet for version 0 (not 0x03) of TuyaMCU
-			// This packet includes first a DateTime, then RealTimeDataStorage
-			TuyaMCU_V0_ParseRealTimeWithRecordStorage(data + 6, len - 6, true);
-		}
-		else {
-
-		}
-		break;
-	case TUYA_V0_CMD_QUERYSIGNALSTRENGTH:
-		if (version == 0) {
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming: received TUYA_V0_CMD_QUERYSIGNALSTRENGTH, so sending back signal");
-
-			TuyaMCU_Send_SignalStrength(1,80);
-		}
-		else {
-
-		}
-		break;
-	case TUYA_V0_CMD_OBTAINLOCALTIME:
-		if (version == 0) {
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming: received TUYA_V0_CMD_OBTAINLOCALTIME, so sending back time");
-			TuyaMCU_Send_SetTime(TuyaMCU_Get_NTP_Time(),true);
-		}
-		else {
-
-		}
-		break;
-	case TUYA_V0_CMD_OBTAINDPCACHE:
-		// This is sent by TH01
-		// Info:TuyaMCU:TUYAMCU received: 55 AA 00 10 00 02 01 09 1B
-	{
-		TuyaMCU_V0_SendDPCacheReply();
-	}
-	break;
-	case TUYA_CMD_WEATHERDATA:
-		TuyaMCU_ParseWeatherData(data + 6, len - 6);
-		break;
-
-	case TUYA_CMD_SET_RSSI:
-		// This is send by TH06, S09
-		// Info:TuyaMCU:TUYAMCU received: 55 AA 03 24 00 00 26
-		if (version == 3) {
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ProcessIncoming: received TUYA_CMD_SET_RSSI, so sending back signal strength");
-			TuyaMCU_Send_RSSI(HAL_GetWifiStrength());
-		}
 		break;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
 		//This is sent by https://www.elektroda.pl/rtvforum/viewtopic.php?p=20941591#20941591
@@ -2238,28 +1408,8 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 	return CMD_RES_OK;
 }
 
-commandResult_t Cmd_TuyaMCU_EnableAutoSend(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	int enable;
-
-	Tokenizer_TokenizeString(args, 0);
-	Tokenizer_CheckArgsCountAndPrintWarning(args, 1);
-
-	enable = Tokenizer_GetArgInteger(0);
-
-	if (!Tokenizer_IsArgInteger(0)) {
-		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "EnableAutoSend: requires 1 argument [0/1]\n");
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-
-	if (enable != 0 && enable != 1) {
-		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "EnableAutoSend: argument must be 0 or 1\n");
-		return CMD_RES_BAD_ARGUMENT;
-	}
-
-	TuyaMCU_EnableAutomaticSending(enable != 0);
-	ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "TuyaMCU automatic sending %s\n", enable ? "enabled" : "disabled");
-
-	return CMD_RES_OK;
+void TuyaMCU_BatteryPoweredMode(bool enable) {
+	g_tuyaMCU_batteryPoweredMode = enable;
 }
 
 commandResult_t Cmd_TuyaMCU_BatteryPoweredMode(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -2336,7 +1486,7 @@ void TuyaMCU_PrintPacket(byte *data, int len) {
 }
 void TuyaMCU_RunReceive() {
 	byte data[192];
-	int len;
+	uint32_t len;
 	while (1)
 	{
 		len = UART_TryToGetNextTuyaPacket(data, sizeof(data));
@@ -2391,169 +1541,8 @@ bool TuyaMCU_RunBattery() {
 	return false;
 }
 
-void TuyaMCU_RunStateMachine_V3() {
-
-	/* For battery powered mode */
-	/* Devices are powered by the TuyaMCU, transmit information and get turned off */
-	/* Use the minimal amount of communications */
-	if (g_tuyaMCU_batteryPoweredMode) {
-		TuyaMCU_RunBattery();
-		return;
-	}
-
-	//ADDLOG_INFO(LOG_FEATURE_TUYAMCU,"UART ring buffer state: %i %i\n",g_recvBufIn,g_recvBufOut);
-
-	// extraDebug log level
-	ADDLOG_EXTRADEBUG(LOG_FEATURE_TUYAMCU, "TuyaMCU heartbeat_valid = %i, product_information_valid=%i,"
-		" self_processing_mode = %i, wifi_state_valid = %i, wifi_state_timer=%i\n",
-		(int)heartbeat_valid, (int)product_information_valid, (int)self_processing_mode,
-		(int)wifi_state_valid, (int)wifi_state_timer);
-	/* Command controll */
-	if (heartbeat_timer == 0)
-	{
-		/* Generate heartbeat to keep communication alove */
-		TuyaMCU_SendCommandWithData(TUYA_CMD_HEARTBEAT, NULL, 0);
-		heartbeat_timer = 3;
-		TuyaMCU_SetHeartbeatCounter(heartbeat_counter+1);
-		if (heartbeat_counter >= 4)
-		{
-			/* unanswerred heartbeats -> lost communication */
-			heartbeat_valid = false;
-			product_information_valid = false;
-			working_mode_valid = false;
-			wifi_state_valid = false;
-			state_updated = false;
-			g_sendQueryStatePackets = 0;
-		}
-		//ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "WFS: %d H%d P%d M%d W%d S%d", wifi_state_timer,
-		//        heartbeat_valid, product_information_valid, working_mode_valid, wifi_state_valid,
-		//        state_updated);
-	}
-	else {
-		/* Heartbeat timer - sent every 3 seconds */
-		if (heartbeat_timer > 0)
-		{
-			heartbeat_timer--;
-		}
-		else {
-			heartbeat_timer = 0;
-		}
-		if (heartbeat_valid == true)
-		{
-			/* Connection Active */
-			if (product_information_valid == false)
-			{
-				ADDLOG_EXTRADEBUG(LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_QUERY_PRODUCT.\n");
-				/* Request production information */
-				TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-			}
-			else if (working_mode_valid == false)
-			{
-				ADDLOG_EXTRADEBUG(LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_MCU_CONF.\n");
-				/* Request working mode */
-				TuyaMCU_SendCommandWithData(TUYA_CMD_MCU_CONF, NULL, 0);
-			}
-			else if ((wifi_state_valid == false) && (self_processing_mode == false))
-			{
-				/* Reset wifi state -> Aquirring network connection */
-				Tuya_SetWifiState(g_defaultTuyaMCUWiFiState);
-				ADDLOG_EXTRADEBUG(LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_WIFI_STATE.\n");
-				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, NULL, 0);
-			}
-			else if (state_updated == false)
-			{
-				// fix for this device getting stuck?
-				// https://www.elektroda.com/rtvforum/topic3936455.html
-				if (g_sendQueryStatePackets > 1 && (g_sendQueryStatePackets % 2 == 0)) {
-					TuyaMCU_RunWiFiUpdateAndPackets();
-				}
-				else {
-					/* Request first state of all DP - this should list all existing DP */
-					ADDLOG_EXTRADEBUG(LOG_FEATURE_TUYAMCU, "Will send TUYA_CMD_QUERY_STATE (state_updated==false, try %i).\n",
-						g_sendQueryStatePackets);
-					TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_STATE, NULL, 0);
-				}
-				g_sendQueryStatePackets++;
-			}
-			else
-			{
-				TuyaMCU_RunWiFiUpdateAndPackets();
-			}
-		}
-	}
-}
-void TuyaMCU_RunStateMachine_BatteryPowered() {
-	if (TuyaMCU_WiFiInReset()) {
-		ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "User requested Reset - Operating Open AP\n");
-		/* Set current state to Setup */
-		Tuya_SetWifiState_V0(TUYA_NETWORK_STATUS_SMART_CONNECT_SETUP);
-
-		/* Don't interact further with MCU when in reset */
-		return;
-	}
-
-	g_tuyaNextRequestDelay--;
-	switch (g_tuyaBatteryPoweredState) {
-	case TM0_STATE_AWAITING_INFO:
-		if (g_tuyaNextRequestDelay <= 0) {
-			TuyaMCU_Send_RawBuffer(g_hello, sizeof(g_hello));
-			// retry 
-			g_tuyaNextRequestDelay = 3;
-		}
-		break;
-	case TM0_STATE_AWAITING_WIFI:
-		if (g_tuyaNextRequestDelay <= 0) {
-			if (Main_HasWiFiConnected()) {
-				Tuya_SetWifiState_V0(TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER);
-				// retry
-				g_tuyaNextRequestDelay = 3;
-			}
-		}
-		break;
-	case TM0_STATE_AWAITING_MQTT:
-		if (g_tuyaNextRequestDelay <= 0) {
-			
-#if WINDOWS
-			if (true)
-#else
-			if (Main_HasMQTTConnected()
-				||
-				g_defaultTuyaMCUWiFiState == 0x04
-				||
-				g_cfg.mqtt_host[0] == 0
-				)
-#endif
-			{
-				Tuya_SetWifiState_V0(TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD);
-				// retry
-				g_tuyaNextRequestDelay = 3;
-			}
-		}
-		break;
-	case TM0_STATE_AWAITING_STATES:
-		if (g_tuyaNextRequestDelay <= 0) {
-			if (g_tuyaMCUBatteryAckDelay > 0) {
-				g_tuyaMCUBatteryAckDelay--;
-				break;
-			}
-
-			byte dat = 0x00;
-			if (g_tuyaMCUConfirmationsToSend_0x08 > 0) {
-				g_tuyaMCUConfirmationsToSend_0x08--;
-				TuyaMCU_SendCommandWithData(0x08, &dat, 1);
-				g_tuyaNextRequestDelay = 2;
-			}
-			else if (g_tuyaMCUConfirmationsToSend_0x05 > 0) {
-				g_tuyaMCUConfirmationsToSend_0x05--;
-				TuyaMCU_SendCommandWithData(0x05, &dat, 1);
-				g_tuyaNextRequestDelay = 2;
-			}
-			break;
-		}
-	}
-}
 int timer_send = 0;
-void TuyaMCU_RunFrame() {
+void TuyaMCU_quickTick() {
 	TuyaMCU_RunReceive();
 
 	if (g_tuyaMCU_batteryPoweredMode) {
@@ -2574,18 +1563,6 @@ void TuyaMCU_RunFrame() {
 		}
 	}
 }
-void TuyaMCU_RunEverySecond() {
-	g_sensorMode = DRV_IsRunning("tmSensor");
-	if (g_sensorMode) {
-		TuyaMCU_RunStateMachine_BatteryPowered();
-	}
-	else {
-		TuyaMCU_RunStateMachine_V3();
-	}
-}
-
-
-
 
 commandResult_t TuyaMCU_SetBaudRate(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	Tokenizer_TokenizeString(args, 0);
@@ -2603,78 +1580,8 @@ commandResult_t TuyaMCU_SetBaudRate(const void* context, const char* cmd, const 
 }
 
 static SemaphoreHandle_t g_mutex = 0;
-static int g_previousLEDPower = -1;
 
-void TuyaMCU_EnableAutomaticSending(bool enable) {
-	g_tuyaMCU_allowAutomaticSending = enable;
-}
-
-void TuyaMCU_BatteryPoweredMode(bool enable) {
-	g_tuyaMCU_batteryPoweredMode = enable;
-}
-
-void TuyaMCU_OnRGBCWChange(const float *rgbcw, int bLightEnableAll, int iLightMode, float brightnessRange01, float temperatureRange01) {
-	if (g_tuyaMCUled_id_color == -1) {
-		return;
-	}
-	
-	// Only send commands if automatic sending is enabled
-	if (!g_tuyaMCU_allowAutomaticSending) {
-		return;
-	}
-	if (g_mutex == 0)
-	{
-		g_mutex = xSemaphoreCreateMutex();
-	}
-	// temporary fix?
-	bool taken = xSemaphoreTake(g_mutex, 1000);
-	if (taken == false) {
-		return;
-	}
-	if (g_previousLEDPower != bLightEnableAll) {
-		rtos_delay_milliseconds(50);
-		// dpID 20: switch light on and off
-		TuyaMCU_SendBool(g_tuyaMCUled_id_power, bLightEnableAll);
-		g_previousLEDPower = bLightEnableAll;
-	}
-	if (bLightEnableAll == false) {
-		xSemaphoreGive(g_mutex);
-		// nothing else to do!
-		return;
-	}
-	rtos_delay_milliseconds(50);
-	if (iLightMode == Light_RGB) {
-		// dpID 21: switch between RGB and white mode : 0->white, 1->RGB
-		TuyaMCU_SendBool(21, 1);
-		rtos_delay_milliseconds(50);
-
-		// dpID 24: color(and indirectly brightness) in RGB mode, handled by your code already fine
-		TuyaMCU_SendColor(g_tuyaMCUled_id_color, rgbcw[0] / 255.0f, rgbcw[1] / 255.0f, rgbcw[2] / 255.0f, g_tuyaMCUled_format);
-	}
-	else {
-		// dpID 21: switch between RGB and white mode : 0->white, 1->RGB
-		//TuyaMCU_SendBool(21, 0);
-		// dpID 22: brightness only in white mode: The range is from 50 (dark) to 1000 (light), 
-		// NOTE: when changing this value, dpID 21 is set to 0 -> white automatically
-		int mcu_brightness = brightnessRange01 * 1000.0f;
-		TuyaMCU_SendValue(g_tuyaMCUled_id_cw_brightness, mcu_brightness);
-		rtos_delay_milliseconds(50);
-		// dpID 23: Kelvin value of white : The range is from 10 (ww)to 990 (cw), 
-		// NOTE : when changing this value, dpID 21 is set to 0->white automatically
-		int mcu_temperature = 10 + (1.0f - temperatureRange01) * 980.0f;
-		TuyaMCU_SendValue(g_tuyaMCUled_id_cw_temperature, mcu_temperature);
-		//TuyaMCU_SendTwoVals(22, mcu_brightness, 23, mcu_temperature);
-	}
-	xSemaphoreGive(g_mutex);
-
-
-}
-bool TuyaMCU_IsLEDRunning() {
-	if (g_tuyaMCUled_id_color == -1)
-		return false;
-	return true;
-}
-void TuyaMCU_Shutdown() {
+static void TuyaMCU_Shutdown() {
 	tuyaMCUMapping_t *tmp, *nxt;
 	tuyaMCUPacket_t *packet, *next_packet;
 
@@ -2737,11 +1644,8 @@ void TuyaMCU_Shutdown() {
 		g_mutex = NULL;
 	}
 }
-void TuyaMCU_Init()
-{
+static void TuyaMCU_init() {
 	g_resetWiFiEvents = 0;
-	g_tuyaNextRequestDelay = 1;
-	g_tuyaBatteryPoweredState = 0;
 	g_tuyaMCUConfirmationsToSend_0x05 = 0;
 	g_tuyaMCUConfirmationsToSend_0x08 = 0;
 	if (g_tuyaMCUpayloadBuffer == 0) {
@@ -2751,27 +1655,11 @@ void TuyaMCU_Init()
 
 	UART_InitUART(g_baudRate, 0, false);
 	UART_InitReceiveRingBuffer(1024);
-	// uartSendHex 55AA0008000007
-	//cmddetail:{"name":"tuyaMcu_testSendTime","args":"",
-	//cmddetail:"descr":"Sends a example date by TuyaMCU to clock/callendar MCU",
-	//cmddetail:"fn":"TuyaMCU_Send_SetTime_Example","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_testSendTime", TuyaMCU_Send_SetTime_Example, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendCurTime","args":"",
-	//cmddetail:"descr":"Sends a current date by TuyaMCU to clock/callendar MCU. Time is taken from NTP driver, so NTP also should be already running.",
-	//cmddetail:"fn":"TuyaMCU_Send_SetTime_Current","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendCurTime", TuyaMCU_Send_SetTime_Current, NULL);
 	//cmddetail:{"name":"linkTuyaMCUOutputToChannel","args":"[dpId][varType][channelID][obkFlags-Optional][mult-optional][bInverse-Optional][delta-Optional][delta2][delta3]",
 	//cmddetail:"descr":"Used to map between TuyaMCU dpIDs and our internal channels. Mult, inverse and delta are for calibration, they are optional. obkFlags is also optional, you can set it to 1 for battery powered devices, so a variable is set with DPCache, for example a sampling interval for humidity/temperature sensor. Mapping works both ways. DpIDs are per-device, you can get them by sniffing UART communication. Vartypes can also be sniffed from Tuya. VarTypes can be following: 0-raw, 1-bool, 2-value, 3-string, 4-enum, 5-bitmap. Please see [Tuya Docs](https://developer.tuya.com/en/docs/iot/tuya-cloud-universal-serial-port-access-protocol?id=K9hhi0xxtn9cb) for info about TuyaMCU. You can also see our [TuyaMCU Analyzer Tool](https://www.elektroda.com/rtvforum/viewtopic.php?p=20528459#20528459)",
 	//cmddetail:"fn":"TuyaMCU_LinkTuyaMCUOutputToChannel","file":"driver/drv_tuyaMCU.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("linkTuyaMCUOutputToChannel", TuyaMCU_LinkTuyaMCUOutputToChannel, NULL);
-	//cmddetail:{"name":"tuyaMcu_setDimmerRange","args":"[Min][Max]",
-	//cmddetail:"descr":"Set dimmer range used by TuyaMCU",
-	//cmddetail:"fn":"TuyaMCU_SetDimmerRange","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_setDimmerRange", TuyaMCU_SetDimmerRange, NULL);
 	//cmddetail:{"name":"tuyaMcu_sendHeartbeat","args":"",
 	//cmddetail:"descr":"Send heartbeat to TuyaMCU",
 	//cmddetail:"fn":"TuyaMCU_SendHeartbeat","file":"driver/drv_tuyaMCU.c","requires":"",
@@ -2812,11 +1700,6 @@ void TuyaMCU_Init()
 	//cmddetail:"fn":"TuyaMCU_SetBaudRate","file":"driver/drv_tuyaMCU.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("tuyaMcu_setBaudRate", TuyaMCU_SetBaudRate, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendRSSI","args":"",
-	//cmddetail:"descr":"Command sends the specific RSSI value to TuyaMCU (it will send current RSSI if no argument is set)",
-	//cmddetail:"fn":"Cmd_TuyaMCU_Send_RSSI","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendRSSI", Cmd_TuyaMCU_Send_RSSI, NULL);
 	//cmddetail:{"name":"tuyaMcu_defWiFiState","args":"",
 	//cmddetail:"descr":"Command sets the default WiFi state for TuyaMCU when device is not online. It may be required for some devices to work, because Tuya designs them to ignore touch buttons or beep when not paired. Please see [values table and description here](https://www.elektroda.com/rtvforum/viewtopic.php?p=20483899#20483899).",
 	//cmddetail:"fn":"Cmd_TuyaMCU_Set_DefaultWiFiState","file":"driver/drv_tuyaMCU.c","requires":"",
@@ -2841,12 +1724,6 @@ void TuyaMCU_Init()
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("tuyaMcu_setBatteryAckDelay", Cmd_TuyaMCU_SetBatteryAckDelay, NULL);
 	
-	//cmddetail:{"name":"tuyaMcu_enableAutoSend","args":"[0/1]",
-	//cmddetail:"descr":"Enable or disable automatic sending of commands to TuyaMCU during boot/initialization. Use 0 to disable, 1 to enable.",
-	//cmddetail:"fn":"Cmd_TuyaMCU_EnableAutoSend","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":"tuyaMcu_enableAutoSend 0"}
-	CMD_RegisterCommand("tuyaMcu_enableAutoSend", Cmd_TuyaMCU_EnableAutoSend, NULL);
-
 	//cmddetail:{"name":"tuyaMcu_batteryPoweredMode","args": "[Optional 1 or 0, by default 1 is assumed]",
 	//cmddetail:"descr":"Enables battery mode communications for version 3 TuyaMCU. tuyaMcu_batteryPoweredMode 0 can be used to disable the mode.",
 	//cmddetail:"fn":"Cmd_TuyaMCU_BatteryPoweredMode","file":"driver/drv_tuyaMCU.c","requires":"",
@@ -2855,8 +1732,6 @@ void TuyaMCU_Init()
 
 	ADDLOGF_TIMING("%i - %s - Initialization of TuyaMCU", xTaskGetTickCount(), __func__);
 }
-
-
 
 // Door sensor with TuyaMCU version 0 (not 3), so all replies have x00 and not 0x03 byte
 // fakeTuyaPacket 55AA0008000C00010101010101030400010223
@@ -2871,5 +1746,92 @@ void TuyaMCU_Init()
 // TP = 0x01    bool    1   Value range: 0x00/0x01.
 // TP = 0x04    enum    1   Enumeration type, ranging from 0 to 255.
 
-#endif // ENABLE_DRIVER_TUYAMCU
+static bool TuyaMCU_activatePin(uint32_t pinIndex) {
+	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+	case IOR_TuyaMCU_RX:
+	case IOR_TuyaMCU_TX:
+		BIT_SET(g_driverPins, pinIndex);
+		break;
 
+	default:
+		return false;
+	}
+	return true;
+}
+
+static void TuyaMCU_releasePin(uint32_t pinIndex) {
+	BIT_CLEAR(g_driverPins, pinIndex);
+}
+
+static void TuyaMCU_stopDriver() {
+	TuyaMCU_Shutdown();
+	g_driverPins = 0;
+}
+
+static bool TuyaMCU_shouldPublish(uint32_t pinRole) {
+	return false;
+}
+
+static uint32_t TuyaMCU_noOfChannels(uint32_t pinRole) {
+	return 0;
+}
+
+// framework request function
+uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
+	switch (obkfRequest) {
+	case OBKF_PinRoles:
+		// replace with real values for this driver
+		g_driverIndex = PIN_pinIORoleDriver()[IOR_TuyaMCU_RX] = PIN_pinIORoleDriver()[IOR_TuyaMCU_TX] \
+		              = arg;
+		ADDLOG_DEBUG(LOG_FEATURE_DRV, "%s - Driver index %i", __func__, g_driverIndex);
+		break;
+	
+	case OBKF_AcquirePin:
+		return TuyaMCU_activatePin(arg);
+
+	case OBKF_ReleasePin:
+		TuyaMCU_releasePin(arg);
+		break;
+
+	case OBKF_Stop:
+		TuyaMCU_stopDriver();
+		break;
+		
+	case OBKF_ShouldPublish:
+		return TuyaMCU_shouldPublish(arg);
+
+	case OBKF_NoOfChannels:
+		return TuyaMCU_noOfChannels(arg);
+
+	case OBKF_Init:
+		TuyaMCU_init();
+		break;
+
+	default:
+		break;
+	}
+
+	return true;
+}
+
+// lookup channel and determine is a TuyaMCU pin is assigned to it
+bool TuyaMCU_isTuyaMCU(uint32_t channelIndex) {
+	uint32_t driverPins = g_driverPins;
+
+	for (uint32_t usedIndex = 0; driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(driverPins, pinIndex))
+			continue; // not my pin
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channelIndex)
+			continue; // channel not assigned to pin
+		switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+		case IOR_TuyaMCU_RX:
+		case IOR_TuyaMCU_TX:
+			return true;
+		}
+		BIT_CLEAR(driverPins, pinIndex);
+	}
+	return false;
+}
+
+#endif // ENABLE_DRIVER_TUYAMCU

@@ -31,6 +31,9 @@ uint32_t PWM_countPins();
 uint32_t PWM_maxPWM(uint32_t channelIndex);
 bool PWM_isPWM(uint32_t channelIndex);
 
+uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void TuyaMCU_quickTick();
+
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void DoorSensor_OnEverySecond();
 void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
