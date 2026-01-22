@@ -69,11 +69,6 @@ static void LED_quickTick() {
 		}
 		BIT_CLEAR(wifiPins, pinIndex);
 	}
-	static bool printedOnce = false;
-	if (!printedOnce) {
-		printedOnce = false;
-		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Looped %i times.", __func__, usedIndex);
-	}
 }
 
 // basic output quick tick timer function

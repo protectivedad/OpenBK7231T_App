@@ -73,7 +73,7 @@ static driver_t g_drivers[] = {
 	{ "Input",                               // Driver Name
 	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
-	Input_QuickTick,                         // runQuickTick
+	NULL,                                    // done in user main or interrupt
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	Input_frameworkRequest,                  // frameworkRequest
@@ -83,7 +83,7 @@ static driver_t g_drivers[] = {
 	{ "Digital",                             // Driver Name
 	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
-	Digital_quickTick,                       // runQuickTick
+	NULL,                                    // done in user main or interrupt
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	Digital_frameworkRequest,                // frameworkRequest

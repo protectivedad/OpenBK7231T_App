@@ -1,6 +1,8 @@
 // Basic Digital Input Driver
 
 #include "../obk_config.h"
+
+#include "../new_common.h"
 #if ENABLE_DRIVER_DIGITAL
 
 #include "../new_common.h"
@@ -115,7 +117,7 @@ commandResult_t CMD_Digital_setEdge(const void* context, const char* cmd, const 
 #endif
 
 // reads, debounces and set channels for digital input pins
-void Digital_quickTick() {
+void Digital_quickTick(uint32_t timeSinceLast) {
 	if (!g_driverPins)
 		return;
 
@@ -145,7 +147,7 @@ void Digital_quickTick() {
 					}
 				}
 				else {
-					g_times[pinIndex] += QUICK_TMR_DURATION;
+					g_times[pinIndex] += timeSinceLast;
 				}
 				g_times2[pinIndex] = 0;
 			} else {
@@ -156,7 +158,7 @@ void Digital_quickTick() {
 					}
 				}
 				else {
-					g_times2[pinIndex] += QUICK_TMR_DURATION;
+					g_times2[pinIndex] += timeSinceLast;
 				}
 				g_times[pinIndex] = 0;
 			}
@@ -175,7 +177,7 @@ void Digital_quickTick() {
 						}
 					}
 				} else {
-					g_times[pinIndex] += QUICK_TMR_DURATION;
+					g_times[pinIndex] += timeSinceLast;
 				}
 				g_times2[pinIndex] = 0;
 			} else {
@@ -190,7 +192,7 @@ void Digital_quickTick() {
 						}
 					}
 				} else {
-					g_times2[pinIndex] += QUICK_TMR_DURATION;
+					g_times2[pinIndex] += timeSinceLast;
 				}
 				g_times[pinIndex] = 0;
 			}
@@ -353,5 +355,6 @@ bool Digital_isDigital(uint32_t channelIndex) {
 void Digital_setEdges() {
 	// silently ignore the command
 }
-
+void Digital_quickTick(uint32_t timeSinceLast) {
+}
 #endif // ENABLE_DRIVER_DIGITAL

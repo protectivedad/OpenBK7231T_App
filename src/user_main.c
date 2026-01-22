@@ -1112,11 +1112,6 @@ unsigned int g_deltaTimeMS;
 // this is what we do in a qucik tick
 void QuickTick(void* param)
 {
-#if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
-	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick
-#else
-	PIN_ticks(param);
-#endif
 
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
 	g_timeMs = rtos_get_time();
@@ -1131,6 +1126,13 @@ void QuickTick(void* param)
 		g_deltaTimeMS = ((g_timeMs + 0x4000) - (g_last_time + 0x4000));
 	}
 	g_last_time = g_timeMs;
+
+#if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
+	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick
+#else
+	Input_quickTick(g_deltaTimeMS);
+	Digital_quickTick(g_deltaTimeMS);
+#endif
 
 #if ENABLE_OBK_SCRIPTING
 	SVM_RunThreads(g_deltaTimeMS);

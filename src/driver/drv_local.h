@@ -11,16 +11,16 @@ bool Output_isPowerRelay(uint32_t channel);
 bool Output_isRelay(uint32_t channel);
 
 uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-void Input_QuickTick();
+void Input_QuickTick(uint32_t timeSinceLast);
 void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
 bool Input_isButton(uint32_t channelIndex);
 
 #if ENABLE_DRIVER_DIGITAL
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t Digital_digitalCount();
-void Digital_quickTick();
 bool Digital_isDigital(uint32_t channelIndex);
 #endif // ENABLE_DRIVER_DIGITAL
+void Digital_quickTick(uint32_t timeSinceLast);
 void Digital_setEdges();
 
 #if ENABLE_DRIVER_PWM

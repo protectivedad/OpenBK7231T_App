@@ -1114,7 +1114,6 @@ void PIN_ticks(void* param)
 {
 	static uint32_t g_time = 0, g_last_time = 0;
 	uint32_t t_diff = QUICK_TMR_DURATION;
-	int value;
 
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
 	g_time = rtos_get_time();
@@ -1128,6 +1127,8 @@ void PIN_ticks(void* param)
 	}
 	g_last_time = g_time;
 
+	Input_quickTick(t_diff);
+	Digital_quickTick(t_diff);
 }
 
 const char* g_channelTypeNames[] = {
