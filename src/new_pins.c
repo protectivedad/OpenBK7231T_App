@@ -608,14 +608,14 @@ void CHANNEL_DoSpecialToggleAll() {
 	anyEnabled = 0;
 
 	for (i = 0; i < CHANNEL_MAX; i++) {
-		if (CHANNEL_IsPowerRelayChannel(i) == false)
+		if (Output_isPowerRelay(i) == false)
 			continue;
 		if (g_channelValues[i] > 0) {
 			anyEnabled = true;
 		}
 	}
 	for (i = 0; i < CHANNEL_MAX; i++) {
-		if (CHANNEL_IsPowerRelayChannel(i)) {
+		if (Output_isPowerRelay(i)) {
 			CHANNEL_Set(i, !anyEnabled, 0);
 		}
 	}
@@ -746,11 +746,7 @@ static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
 		int pinIndex = registeredPinDetails[usedIndex];
 		if (g_cfg.pins.channels[pinIndex] == ch) {
-			if (g_cfg.pins.roles[pinIndex] == IOR_Relay || g_cfg.pins.roles[pinIndex] == IOR_LED)
-				RAW_SetPinValue(pinIndex, bOn);
-			else if (g_cfg.pins.roles[pinIndex] == IOR_Relay_n || g_cfg.pins.roles[pinIndex] == IOR_LED_n)
-				RAW_SetPinValue(pinIndex, !bOn);
-			else if (g_cfg.pins.roles[pinIndex] == IOR_PWM || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly)
+			if (g_cfg.pins.roles[pinIndex] == IOR_PWM || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly)
 				HAL_PIN_PWM_Update(pinIndex, iVal);
 			else if (g_cfg.pins.roles[pinIndex] == IOR_PWM_n || g_cfg.pins.roles[pinIndex] == IOR_PWM_ScriptOnly_n)
 				HAL_PIN_PWM_Update(pinIndex, 100 - iVal);
@@ -1237,27 +1233,6 @@ bool CHANNEL_IsInUse(int ch) {
 	return false;
 }
 
-// if any pin on the channel is relay say yes
-bool CHANNEL_IsPowerRelayChannel(int ch) {
-	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex];
-		if (g_cfg.pins.channels[pinIndex] == ch) {
-			int role = g_cfg.pins.roles[pinIndex];
-			// NOTE: do not include Battery relay
-			if (role == IOR_Relay || role == IOR_Relay_n) {
-				return true;
-			}
-#if ENABLE_DRIVER_BRIDGE
-			// Also allow toggling Bridge channel
-			// https://www.elektroda.com/rtvforum/viewtopic.php?p=20906463#20906463
-			if (role == IOR_BridgeForward || role == IOR_BridgeReverse) {
-				return true;
-			}
-#endif // ENABLE_DRIVER_BRIDGE
-		}
-	}
-	return false;
-}
 // TODO: Again think about channels
 bool CHANNEL_ShouldBePublished(int ch) {
 	for (int i = 0; i < g_registeredPinCount; i++) {
@@ -1624,28 +1599,6 @@ int h_isChannelPWM(int tg_ch) {
 		//if (role == IOR_PWM_ScriptOnly) {
 		//	return true;
 		//}
-	}
-	return false;
-}
-// if any item on the channel is relay
-int h_isChannelRelay(int tg_ch) {
-	int role;
-
-	for (int usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		int pinIndex = registeredPinDetails[usedIndex];
-		int ch = PIN_GetPinChannelForPinIndex(pinIndex);
-		if (tg_ch != ch)
-			continue;
-		role = PIN_GetPinRoleForPinIndex(pinIndex);
-		if (role == IOR_Relay || role == IOR_Relay_n || role == IOR_LED || role == IOR_LED_n) {
-			return true;
-		}
-#if ENABLE_DRIVER_BRIDGE
-		if ((role == IOR_BridgeForward) || (role == IOR_BridgeReverse))
-		{
-			return true;
-		}
-#endif // ENABLE_DRIVER_BRIDGE
 	}
 	return false;
 }

@@ -4,8 +4,11 @@
 #include "../cmnds/cmd_public.h"
 
 uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-void Output_QuickTick();
+void Output_quickTick();
 uint32_t Output_relayCount();
+void Output_onChanged(uint32_t channel, uint32_t iVal);
+bool Output_isPowerRelay(uint32_t channel);
+bool Output_isRelay(uint32_t channel);
 
 uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Input_QuickTick();

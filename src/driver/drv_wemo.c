@@ -1,3 +1,7 @@
+#include "../obk_config.h"
+
+#if ENABLE_DRIVER_WEMO
+
 #include "../new_common.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
@@ -204,7 +208,7 @@ bool Main_GetFirstPowerState() {
 	int i;
 	// relays driver
 	for (i = 0; i < CHANNEL_MAX; i++) {
-		if (h_isChannelRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
+		if (Output_isRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
 			return CHANNEL_Get(i);
 		}
 	}
@@ -315,9 +319,4 @@ void WEMO_Init() {
 //	}
 }
 
-
-
-
-
-
-
+#endif // ENABLE_DRIVER_WEMO

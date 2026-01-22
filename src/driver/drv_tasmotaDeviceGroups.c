@@ -334,7 +334,7 @@ void DRV_DGR_processPower(int relayStates, byte relaysCount) {
 
 	{
 		// does indexing starts with zero?
-		if(CHANNEL_HasChannelPinWithRoleOrRole(0, IOR_Relay, IOR_Relay_n)) {
+		if(Output_isPowerRelay(0)) {
 			startIndex = 0;
 		} else {
 			startIndex = 1;
@@ -634,8 +634,7 @@ void DRV_DGR_OnChannelChanged(int ch, int value) {
 
 	// we have channel indices starting from 0 but some people start with 1
 	// check if we need to offset
-	if (CHANNEL_HasChannelPinWithRole(0, IOR_Relay) || CHANNEL_HasChannelPinWithRole(0, IOR_Relay_n)
-		|| CHANNEL_HasChannelPinWithRole(0, IOR_LED) || CHANNEL_HasChannelPinWithRole(0, IOR_LED_n)) {
+	if (Output_isRelay(0)) {
 		firstChannelOffset = 0;
 	}
 	else {
@@ -645,8 +644,7 @@ void DRV_DGR_OnChannelChanged(int ch, int value) {
 
 	for(i = 0; i < CHANNEL_MAX-1; i++) {
 		int chIndex = i + firstChannelOffset;
-		if(CHANNEL_HasChannelPinWithRole(chIndex,IOR_Relay) || CHANNEL_HasChannelPinWithRole(chIndex,IOR_Relay_n)
-			|| CHANNEL_HasChannelPinWithRole(chIndex,IOR_LED) || CHANNEL_HasChannelPinWithRole(chIndex,IOR_LED_n)
+		if(Output_isRelay(chIndex)
 			|| CHANNEL_HasChannelPinWithRole(chIndex, IOR_Button) || CHANNEL_HasChannelPinWithRole(chIndex, IOR_Button_n)) {
 			channelsCount = i + 1;
 			if(CHANNEL_Get(chIndex)) {

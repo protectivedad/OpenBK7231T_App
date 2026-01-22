@@ -1564,7 +1564,6 @@ int CHANNEL_Get(int ch);
 float CHANNEL_GetFinalValue(int channel);
 float CHANNEL_GetFloat(int ch);
 bool CHANNEL_ShouldBePublished(int ch);
-bool CHANNEL_IsPowerRelayChannel(int ch);
 // See: enum channelType_t
 void CHANNEL_SetType(int ch, int type);
 int CHANNEL_GetType(int ch);
@@ -1599,7 +1598,6 @@ int PIN_ParsePinRoleName(const char* name);
 
 void PIN_get_Relay_PWM_Count(int* pwmCount);
 int h_isChannelPWM(int tg_ch);
-int h_isChannelRelay(int tg_ch);
 int h_isChannelDigitalInput(int tg_ch);
 
 int CHANNEL_ParseChannelType(const char* s);

@@ -70,7 +70,7 @@ static int http_tasmota_json_power(void* request, jsonCb_t printer) {
 	int relayIndexingOffset;
 	char buff32[32];
 
-	bRelayIndexingStartsWithZero = CHANNEL_HasChannelPinWithRoleOrRole(0, IOR_Relay, IOR_Relay_n);
+	bRelayIndexingStartsWithZero = Output_isPowerRelay(0);
 	if (bRelayIndexingStartsWithZero) {
 		relayIndexingOffset = 0;
 	}
@@ -85,7 +85,7 @@ static int http_tasmota_json_power(void* request, jsonCb_t printer) {
 	{
 		// relays driver
 		for (i = 0; i < CHANNEL_MAX; i++) {
-			if (h_isChannelRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
+			if (Output_isRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
 				numRelays++;
 				lastRelayState = CHANNEL_Get(i);
 			}
@@ -104,7 +104,7 @@ static int http_tasmota_json_power(void* request, jsonCb_t printer) {
 		else {
 			int c_posted = 0;
 			for (i = 0; i < CHANNEL_MAX; i++) {
-				if (h_isChannelRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
+				if (Output_isRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
 					int indexStartingFrom1;
 
 					if (bRelayIndexingStartsWithZero) {
@@ -580,7 +580,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 	//deviceName = "Tasmota";
 	//friendlyName - "Tasmota";
 
-	bRelayIndexingStartsWithZero = CHANNEL_HasChannelPinWithRoleOrRole(0, IOR_Relay, IOR_Relay_n);
+	bRelayIndexingStartsWithZero = Output_isPowerRelay(0);
 
 	PIN_get_Relay_PWM_Count(&pwmCount);
 
@@ -596,7 +596,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 			else {
 				useIdx = i + 1;
 			}
-			bRelay = CHANNEL_HasChannelPinWithRoleOrRole(useIdx, IOR_Relay, IOR_Relay_n);
+			bRelay = Output_isPowerRelay(useIdx);
 			if (bRelay) {
 				iValue = CHANNEL_Get(useIdx);
 				if (iValue)
@@ -619,7 +619,7 @@ static int http_tasmota_json_status_generic(void* request, jsonCb_t printer) {
 		int c_printed = 0;
 		for (i = 0; i < CHANNEL_MAX; i++) {
 			bool bRelay;
-			bRelay = CHANNEL_HasChannelPinWithRoleOrRole(i, IOR_Relay, IOR_Relay_n);
+			bRelay = Output_isPowerRelay(i);
 			if (bRelay) {
 				int useIdx;
 				if (bRelayIndexingStartsWithZero) {

@@ -369,7 +369,7 @@ int http_fn_index(http_request_t* request) {
 			}
 #endif
 			bool bToggleInv = channelType == ChType_Toggle_Inv;
-			if (h_isChannelRelay(i) || channelType == ChType_Toggle) {
+			if (Output_isRelay(i) || channelType == ChType_Toggle) {
 				if (i <= 1) {
 					hprintf255(request, "<tr>");
 				}
@@ -398,7 +398,7 @@ int http_fn_index(http_request_t* request) {
 
 		channelType = CHANNEL_GetType(i);
 		bool bToggleInv = channelType == ChType_Toggle_Inv;
-		if (h_isChannelRelay(i) || channelType == ChType_Toggle || bToggleInv) {
+		if (Output_isRelay(i) || channelType == ChType_Toggle || bToggleInv) {
 			const char* c;
 			const char* prefix;
 			if (i <= 1) {
@@ -628,7 +628,7 @@ int http_fn_index(http_request_t* request) {
 			}
 			poststr(request, "</td></tr>");
 		}
-		else if (h_isChannelRelay(i) || channelType == ChType_Toggle || channelType == ChType_Toggle_Inv) {
+		else if (Output_isRelay(i) || channelType == ChType_Toggle || channelType == ChType_Toggle_Inv) {
 			// HANDLED ABOVE in previous loop
 		}
 		else if ((bRawPWMs && h_isChannelPWM(i)) ||
@@ -2225,7 +2225,7 @@ void doHomeAssistantDiscovery(const char* topic, http_request_t* request) {
 			continue;
 		}
 		bool bToggleInv = g_cfg.pins.channelTypes[i] == ChType_Toggle_Inv;
-		if (h_isChannelRelay(i) || g_cfg.pins.channelTypes[i] == ChType_Toggle || bToggleInv) {
+		if (Output_isRelay(i) || g_cfg.pins.channelTypes[i] == ChType_Toggle || bToggleInv) {
 			// TODO: flags are 32 bit and there are 64 max channels
 			BIT_SET(flagsChannelPublished, i);
 			if (CFG_HasFlag(OBK_FLAG_MQTT_HASS_ADD_RELAYS_AS_LIGHTS)) {
@@ -2387,7 +2387,7 @@ int http_fn_ha_cfg(http_request_t* request) {
 	if (Output_relayCount() > 0) {
 
 		for (i = 0; i < CHANNEL_MAX; i++) {
-			if (h_isChannelRelay(i)) {
+			if (Output_isRelay(i)) {
 				if (mqttAdded == 0) {
 					poststr(request, "mqtt:\n");
 					mqttAdded = 1;

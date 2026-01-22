@@ -21,16 +21,15 @@
 
 uint32_t g_driverIndex;
 
+uint32_t g_relayPins;
 uint32_t g_relayCount;
 uint32_t g_wifiPins;
 
 #define WIFI_LED_FAST_BLINK_DURATION 250
 #define WIFI_LED_SLOW_BLINK_DURATION 500
 
-static void LED_QuickTick() {
-	if (!g_enable_pins)
-		return;
-	if (!g_wifiPins)
+static void LED_quickTick() {
+	if (!g_wifiPins || !g_enable_pins)
 		return;
 
 	uint32_t wifiPins = g_wifiPins;
@@ -73,9 +72,9 @@ static void LED_QuickTick() {
 }
 
 // basic output quick tick timer function
-void Output_QuickTick() {
+void Output_quickTick() {
 	if (g_wifiPins)
-		LED_QuickTick();
+		LED_quickTick();
 }
 
 static bool Output_noOfChannels(int pinIORole) {
@@ -95,8 +94,7 @@ static bool Output_noOfChannels(int pinIORole) {
 	}
 }
 
-// TODO: add arg so pinIORole can be passed with pinIndex
-static bool Output_ActivatePin(int pinIndex) {
+static bool Output_activatePin(int pinIndex) {
 	int channelValue = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
 
 	HAL_PIN_Setup_Output(pinIndex);
@@ -113,6 +111,7 @@ static bool Output_ActivatePin(int pinIndex) {
 	case IOR_LED:
 	case IOR_Relay:
 		HAL_PIN_SetOutputValue(pinIndex, !channelValue);
+		BIT_SET(g_relayPins, pinIndex);
 		g_relayCount++;
 		return true;
 	case IOR_AlwaysHigh:
@@ -140,11 +139,14 @@ static void Output_ReleasePin(int pinIndex) {
 	case IOR_Relay:
 	case IOR_Relay_n:
 		g_relayCount--;
+		BIT_CLEAR(g_relayPins, pinIndex);
+		break;
 	}
 }
 
 static void Output_StopDriver() {
 	g_relayCount = 0;
+	g_relayPins = 0;
 	g_wifiPins = 0;
 }
 
@@ -169,7 +171,7 @@ uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 		break;
 	
 	case OBKF_AcquirePin:
-		return Output_ActivatePin(arg);
+		return Output_activatePin(arg);
 
 	case OBKF_ReleasePin:
 		Output_ReleasePin(arg);
@@ -192,4 +194,65 @@ uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	}
 
 	return true;
+}
+
+void Output_onChanged(uint32_t channel, uint32_t iVal) {
+	if (!g_relayPins || !g_enable_pins)
+		return;
+
+	uint32_t relayPins = g_relayPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(relayPins, pinIndex))
+			continue; // not my pin
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
+			continue; // channel not for pin
+
+		bool channelValue = (iVal > 0);
+		switch (pinIndex) {
+		case IOR_LED_n:
+		case IOR_Relay_n:
+			channelValue = !channelValue;
+		case IOR_LED:
+		case IOR_Relay:
+			HAL_PIN_SetOutputValue(pinIndex, !channelValue);
+		}
+
+		if (!BIT_CLEAR(relayPins, pinIndex))
+			break;
+	}
+}
+
+bool Output_isPowerRelay(uint32_t channel) {
+	uint32_t relayPins = g_relayPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(relayPins, pinIndex))
+			continue; // not my pin
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
+			continue; // channel not for pin
+
+		switch (pinIndex) {
+		case IOR_Relay_n:
+		case IOR_Relay:
+			return true;
+		}
+		if (!BIT_CLEAR(relayPins, pinIndex))
+			break;
+	}
+	return false;
+}
+
+bool Output_isRelay(uint32_t channel) {
+	uint32_t relayPins = g_relayPins;
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(relayPins, pinIndex))
+			continue; // not my pin
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
+			continue; // channel not for pin
+
+		return true;
+	}
+	return false;
 }

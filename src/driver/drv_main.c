@@ -60,8 +60,8 @@ static driver_t g_drivers[] = {
 	{ "Output",                              // Driver Name
 	NULL,                                    // onEverySecond
 	NULL,                                    // appendInformationToHTTPIndexPage
-	Output_QuickTick,                        // runQuickTick
-	NULL,                                    // onChannelChanged
+	Output_quickTick,                        // runQuickTick
+	Output_onChanged,                        // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	Output_frameworkRequest,                 // frameworkRequest
 	false,                                   // loaded

@@ -61,7 +61,7 @@ static commandResult_t power(const void *context, const char *cmd, const char *a
 		int i;
 		bool bRelayIndexingStartsWithZero;
 		
-		bRelayIndexingStartsWithZero  = CHANNEL_HasChannelPinWithRoleOrRole(0, IOR_Relay, IOR_Relay_n);
+		bRelayIndexingStartsWithZero  = Output_isPowerRelay(0);
 
         ADDLOG_INFO(LOG_FEATURE_CMD, "tasCmnd POWER (%s) received with args %s",cmd,args);
 
@@ -75,7 +75,7 @@ static commandResult_t power(const void *context, const char *cmd, const char *a
 		} else {
 			// find first active channel, because some people index with 0 and some with 1
 			for(i = 0; i < CHANNEL_MAX; i++) {
-				if (h_isChannelRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
+				if (Output_isRelay(i) || CHANNEL_GetType(i) == ChType_Toggle) {
 					channel = i;
 					break;
 				}

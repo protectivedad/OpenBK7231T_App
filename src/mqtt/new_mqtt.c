@@ -1498,7 +1498,7 @@ OBK_Publish_Result MQTT_ChannelPublish(int channel, int flags)
 
 	// This will set RETAIN flag for all channels that are used for RELAY
 	if (CFG_HasFlag(OBK_FLAG_MQTT_RETAIN_POWER_CHANNELS)) {
-		if (CHANNEL_IsPowerRelayChannel(channel)) {
+		if (Output_isPowerRelay(channel)) {
 			flags |= OBK_PUBLISH_FLAG_RETAIN;
 		}
 	}
