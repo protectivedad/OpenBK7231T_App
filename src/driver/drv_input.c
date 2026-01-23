@@ -85,7 +85,7 @@ static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton
 		if (button->button_level == button->active_level) {  //start press down
 			button->event = BTN_PRESS_DOWN;
 			EVENT_CB(BTN_PRESS_DOWN);
-			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnInitialPressDown\r\n", pinIndex);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnInitialPressDown", pinIndex);
 
 			if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
 				ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
@@ -125,7 +125,7 @@ static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton
 		}
 		else if (button->ticks > BTN_LONG_MS) {
 			button->event = BTN_LONG_RRESS_START;
-			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHoldStart\r\n", pinIndex);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHoldStart", pinIndex);
 			if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
 				ADDLOG_INFO(LOG_FEATURE_GENERAL, "Child lock!");
 			} else {
@@ -146,7 +146,7 @@ static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton
 			button->ticks = 0;
 			button->state = 3;
 		} else if ((button->ticks > BTN_SHORT_MS) || (button->repeat == 5)) { //released timeout
-			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key press %iX", pinIndex, button->repeat);
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i key press %ix", pinIndex, button->repeat);
 			button->event = BTN_SINGLE_CLICK + button->repeat - 1;
 			if (button->repeat == 1) { // do event_cb before child lock
 				EVENT_CB(BTN_SINGLE_CLICK);
@@ -318,32 +318,32 @@ static uint32_t Input_noOfChannels(uint32_t pinRole) {
 }
 
 static bool Input_activatePin(uint32_t pinIndex) {
-	uint32_t falling = 0;
-
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
-	case IOR_Button:
-	case IOR_Button_ToggleAll:
-	case IOR_Button_ScriptOnly:
-	case IOR_SmartButtonForLEDs:
-		falling = 1;
 	case IOR_Button_n:
 	case IOR_Button_ToggleAll_n:
 	case IOR_Button_ScriptOnly_n:
 	case IOR_SmartButtonForLEDs_n:
-		setGPIActive(pinIndex, 1, falling);
-
-		// digital input
+		setGPIActive(pinIndex, 1, 1);
 		HAL_PIN_Setup_Input_Pullup(pinIndex);
-
-		// init button after initializing pin role
 		g_buttons[pinIndex].event = BTN_NONE_PRESS;
-		g_buttons[pinIndex].button_level = CHANNEL_Get(PIN_GetPinChannelForPinIndex(pinIndex));
+		g_buttons[pinIndex].button_level = false;
+		break;
+
+	case IOR_Button:
+	case IOR_Button_ToggleAll:
+	case IOR_Button_ScriptOnly:
+	case IOR_SmartButtonForLEDs:
+		setGPIActive(pinIndex, 1, 0);
+		HAL_PIN_Setup_Input_Pullup(pinIndex);
+		g_buttons[pinIndex].event = BTN_NONE_PRESS;
+		g_buttons[pinIndex].button_level = true;
 		break;
 
 	case IOR_Counter_f:
 		HAL_PIN_Setup_Input_Pullup(pinIndex);
 		HAL_AttachInterrupt(pinIndex, INTERRUPT_FALLING, PIN_InterruptHandler);
 		break;
+
 	case IOR_Counter_r:
 		HAL_PIN_Setup_Input_Pullup(pinIndex);
 		HAL_AttachInterrupt(pinIndex, INTERRUPT_RISING, PIN_InterruptHandler);
