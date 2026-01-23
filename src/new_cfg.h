@@ -42,6 +42,7 @@ void CFG_SetDefaultLEDRemap(int r, int g, int b, int c, int w);
 int CFG_CountLEDRemapChannels();
 int CFG_SetWebappRoot(const char *s);
 void CFG_InitAndLoad();
+void CFG_SafeToWrite(bool allWriting);
 //void CFG_ApplyStartChannelValues();
 void CFG_Save_IfThereArePendingChanges();
 void CFG_Save_SetupTimer();

@@ -954,7 +954,11 @@ void Main_OnEverySecond()
 		if (g_secondsElapsed > bootCompleteSeconds)
 		{
 			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n", bootCompleteSeconds);
-			HAL_FlashVars_SaveBootComplete();
+			// TODO: for battery devices need to check to make sure writing to flash is safe
+			if (Battery_safeToUpdate()) {
+				HAL_FlashVars_SaveBootComplete();
+				CFG_SafeToWrite(true);
+			}
 			g_bBootMarkedOK = true;
 		}
 	}
@@ -1039,7 +1043,6 @@ void Main_OnEverySecond()
 	if (g_doUnsafeInitIn) {
 		g_doUnsafeInitIn--;
 		if (!g_doUnsafeInitIn) {
-			ADDLOGF_INFO("Going to call Main_ForceUnsafeInit\r\n");
 			Main_ForceUnsafeInit();
 		}
 	}
@@ -1336,12 +1339,16 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 	QuickTick_StartThread();
 }
 void Main_ForceUnsafeInit() {
+	ADDLOGF_INFO("%s", __func__);
+
 	if (g_unsafeInitDone) {
 		ADDLOGF_INFO("It was already done.\r\n");
 		return;
 	}
 	Main_Init_BeforeDelay_Unsafe(false);
 	Main_Init_AfterDelay_Unsafe(false);
+	HAL_FlashVars_SaveBootComplete();
+	CFG_SafeToWrite(true);
 	bSafeMode = false;
 }
 //////////////////////////////////////////////////////

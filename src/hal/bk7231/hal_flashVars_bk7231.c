@@ -37,6 +37,8 @@ static unsigned int flash_vars_start = 0x1e3000; //0x1e1000 + 0x1000 + 0x1000; /
 static unsigned int flash_vars_len = 0x2000; // two blocks in BK7231
 static unsigned int flash_vars_sector_len = 0x1000; // erase size in BK7231
 
+bool g_flashVars_safeToWrite;
+
 FLASH_VARS_STRUCTURE flash_vars;
  // save at least 32 bytes for header
  // this maybe more efficient for flash writes ???
@@ -93,6 +95,13 @@ static bool flash_vars_valid() {
 		return false;
 	}
 	return true;
+}
+
+// read data from the start of the flash area and iterate based on current
+// length to find the last good flash vars
+static uint32_t flash_vars_recover(DD_HANDLE flash_hdl) {
+	// TODO: allow for recovery of vars after boot
+	return 0;
 }
 
 // read data from flash vars area.
@@ -162,12 +171,15 @@ static bool flash_vars_read(FLASH_VARS_STRUCTURE* data) {
 	start_addr -= len;
 
 	if (len != sizeof(*data)) {
+		start_addr = flash_vars_recover(flash_hdl);
+		if (!start_addr) {
 #ifndef TEST_MODE
-		ddev_close(flash_hdl);
-		bk_flash_enable_security(FLASH_PROTECT_ALL);
+			ddev_close(flash_hdl);
+			bk_flash_enable_security(FLASH_PROTECT_ALL);
 #endif
-		ADDLOG_ERROR(LOG_FEATURE_CFG, "%s - len (%d) in flash_varno expected len (%d)", len, sizeof(*data));
-		return false;
+			ADDLOG_ERROR(LOG_FEATURE_CFG, "%s - len (%d) in flash_varno expected len (%d)", len, sizeof(*data));
+			return false;
+		}
 	}
 	// read the DATA portion into the structure
 #ifdef TEST_MODE
@@ -278,7 +290,7 @@ static bool flash_vars_write_magic() {
 // TODO - test we CAN write at a byte boundary?
 // answer - the flash driver in theroy deals with than... writes are always in chunks of 32 bytes
 // on 32 byte boundaries.
-int _flash_vars_write(void* data, unsigned int off_set, unsigned int size) {
+static bool _flash_vars_write(void* data, unsigned int off_set, unsigned int size) {
 	//uint32_t i;
 	//uint32_t param;
 	UINT32 status;
@@ -300,13 +312,13 @@ int _flash_vars_write(void* data, unsigned int off_set, unsigned int size) {
 		ADDLOG_ERROR(LOG_FEATURE_CFG, "_flash vars write invalid addr 0x%X", start_addr);
 		ddev_close(flash_hdl);
 		bk_flash_enable_security(FLASH_PROTECT_ALL);
-		return -1;
+		return false;
 	}
 	if (start_addr + size > flash_vars_start + flash_vars_len) {
 		ADDLOG_ERROR(LOG_FEATURE_CFG, "_flash vars write invalid addr 0x%X len 0x%X", start_addr, size);
 		ddev_close(flash_hdl);
 		bk_flash_enable_security(FLASH_PROTECT_ALL);
-		return -1;
+		return false;
 	}
 
 #ifdef TEST_MODE
@@ -321,12 +333,13 @@ int _flash_vars_write(void* data, unsigned int off_set, unsigned int size) {
 
 	//ADDLOG_DEBUG(LOG_FEATURE_CFG, "_flash vars write wrote offset %d, size %d", off_set, size);
 
-	return 0;
+	return true;
 }
-
 // writes vars memory to flash and increases offset
-int flash_vars_write() {
+static bool __flash_vars_write() {
 	//ADDLOG_DEBUG(LOG_FEATURE_CFG, "%s", __func__);
+	if (!g_flashVars_safeToWrite)
+		return false;
 
 	FLASH_VARS_STRUCTURE* data = &flash_vars;
 	if (flash_vars_offset + data->len > flash_vars_len) {
@@ -336,7 +349,9 @@ int flash_vars_write() {
 	}
 
 	//ADDLOG_DEBUG(LOG_FEATURE_CFG, "flash vars write at offset %d len %d", flash_vars_offset, data->len);
-	_flash_vars_write(data, flash_vars_offset, data->len);
+	if (!_flash_vars_write(data, flash_vars_offset, data->len))
+		return false;
+
 	flash_vars_offset += data->len;
 
 	ADDLOG_DEBUG(LOG_FEATURE_CFG, "new offset %d, boot_count %d, success count %d",
@@ -346,7 +361,12 @@ int flash_vars_write() {
 	);
 	return true;
 }
-
+// only time to force a write is for boot count
+static bool flash_vars_write(bool forcedWrite) {
+	if (g_flashVars_safeToWrite || forcedWrite)
+		return __flash_vars_write();
+	return false;
+}
 // erase one or more of the sectors we are using.
 // off_set is zero based.  size in bytes
 // in theory, can't erase outside of OUR area.
@@ -418,7 +438,7 @@ void HAL_FlashVars_IncreaseBootCount() {
 
 	flash_vars.boot_count++;
 	ADDLOG_INFO(LOG_FEATURE_CFG, "####### Boot Count %d #######", flash_vars.boot_count);
-	if (!flash_vars_write())
+	if (!flash_vars_write(true))
 		return;
 #endif
 }
@@ -432,7 +452,7 @@ void HAL_FlashVars_SaveChannel(int index, int value) {
 
 	flash_vars.savedValues[index] = value;
 	ADDLOG_INFO(LOG_FEATURE_CFG, "####### Flash Save Channel %d as %d #######", index, value);
-	if (!flash_vars_write())
+	if (!flash_vars_write(false))
 		return;
 #endif
 }
@@ -467,7 +487,7 @@ void HAL_FlashVars_SaveLED(byte mode, short brightness, short temperature, byte 
 
 	if (iChangesCount > 0) {
 		ADDLOG_INFO(LOG_FEATURE_CFG, "####### Flash Save LED #######");
-		if (!flash_vars_write())
+		if (!flash_vars_write(false))
 			return;
 	}
 #endif
@@ -482,7 +502,7 @@ void HAL_FlashVars_SaveTotalUsage(short usage) {
 #ifndef DISABLE_FLASH_VARS_VARS
 	flash_vars.savedValues[MAX_RETAIN_CHANNELS - 1] = usage;
 	ADDLOG_INFO(LOG_FEATURE_CFG, "####### Flash Save Usage #######");
-	if (!flash_vars_write())
+	if (!flash_vars_write(false))
 		return;
 #endif
 }
@@ -493,7 +513,8 @@ void HAL_FlashVars_SaveBootComplete() {
 	ADDLOG_INFO(LOG_FEATURE_CFG, "####### Set Boot Complete #######");
 
 	flash_vars.boot_success_count = flash_vars.boot_count;
-	if (!flash_vars_write())
+	g_flashVars_safeToWrite = true;
+	if (!flash_vars_write(false))
 		return;
 #endif
 }
@@ -540,7 +561,7 @@ int HAL_SetEnergyMeterStatus(ENERGY_METERING_DATA* data)
 	if (data != NULL)
 	{
 		memcpy(&flash_vars.emetering, data, sizeof(ENERGY_METERING_DATA));
-		flash_vars_write();
+		flash_vars_write(false);
 		flash_vars_read(&tmp);
 	}
 #endif
@@ -580,7 +601,7 @@ void HAL_FlashVars_SaveEnergy(ENERGY_DATA** data, int channel_count)
 			uintptr_t flash_addr = base + offset ;
 			memcpy((void *)flash_addr, data[i], sizeof(ENERGY_DATA));
 		}
-		flash_vars_write();
+		flash_vars_write(false);
 		flash_vars_read(&tmp);
 	}
 #endif

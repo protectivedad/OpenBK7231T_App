@@ -34,6 +34,8 @@ bool PWM_isPWM(uint32_t channelIndex);
 uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void TuyaMCU_quickTick();
 
+bool Battery_safeToUpdate();
+
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void DoorSensor_OnEverySecond();
 void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);

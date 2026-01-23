@@ -18,6 +18,7 @@
 mainConfig_t g_cfg;
 int g_configInitialized = 0;
 int g_cfg_pendingChanges = 0;
+bool g_cfg_safeToWrite;
 
 #define CFG_IDENT_0 'C'
 #define CFG_IDENT_1 'F'
@@ -551,7 +552,7 @@ void CFG_SetMac(char *mac) {
 	}
 }
 void CFG_Save_IfThereArePendingChanges() {
-	if(g_cfg_pendingChanges > 0) {
+	if ((g_cfg_pendingChanges > 0) && g_cfg_safeToWrite) {
 		g_cfg.version = MAIN_CFG_VERSION;
 		g_cfg.changeCounter++;
 		g_cfg.crc = CFG_CalcChecksum(&g_cfg);
@@ -838,7 +839,11 @@ void CFG_SetDisableWebServer(byte value) {
 	}
 }
 #endif
-
+// allows writing to flash no changes will write until this is set
+void CFG_SafeToWrite(bool allWriting) {
+	if (g_cfg_safeToWrite = allWriting)
+		CFG_Save_IfThereArePendingChanges();
+}
 void CFG_InitAndLoad() {
 	byte chkSum;
 
@@ -849,7 +854,7 @@ void CFG_InitAndLoad() {
 			ADDLOG_WARN(LOG_FEATURE_CFG, "CFG_InitAndLoad: Config crc or ident mismatch. Default config will be loaded.");
 		CFG_SetDefaultConfig();
 		// mark as changed
-		g_cfg_pendingChanges ++;
+		g_cfg_pendingChanges++;
 	} else {
 #if defined(PLATFORM_XRADIO) || defined(PLATFORM_BL602)
 		if (g_cfg.mac[0] == 0 && g_cfg.mac[1] == 0 && g_cfg.mac[2] == 0 && g_cfg.mac[3] == 0 && g_cfg.mac[4] == 0 && g_cfg.mac[5] == 0) {
@@ -891,5 +896,4 @@ void CFG_InitAndLoad() {
 		CFG_SetDefaultLEDCorrectionTable();
 	}
 	g_configInitialized = 1;
-	CFG_Save_IfThereArePendingChanges();
 }

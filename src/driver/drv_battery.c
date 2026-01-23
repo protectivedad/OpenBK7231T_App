@@ -284,5 +284,14 @@ uint32_t Battery_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	}
 	return true;
 }
+bool Battery_safeToUpdate() {
+	if (g_pin_adc == -1)
+		return true;
 
+	return g_lastbattlevel > 5;
+}
+#else
+bool Battery_safeToUpdate() {
+	return true;
+}
 #endif // ENABLE_DRIVER_BATTERY
