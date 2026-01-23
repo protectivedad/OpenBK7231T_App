@@ -646,25 +646,23 @@ static commandResult_t CMD_OpenAP(const void* context, const char* cmd, const ch
 
 	return CMD_RES_OK;
 }
-static commandResult_t CMD_SafeMode(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	int i;
-	int startSaveModeIn;
+// static commandResult_t CMD_SafeMode(const void* context, const char* cmd, const char* args, int cmdFlags) {
+// 	int i;
+// 	int startSaveModeIn;
 
-	Tokenizer_TokenizeString(args, 0);
+// 	Tokenizer_TokenizeString(args, 0);
 
-	startSaveModeIn = Tokenizer_GetArgIntegerDefault(0, 1);
+// 	startSaveModeIn = Tokenizer_GetArgIntegerDefault(0, 1);
 
-	// simulate enough boots so the reboot will go into safe mode
-	for (i = 0; i <= RESTARTS_REQUIRED_FOR_SAFE_MODE; i++) {
-		HAL_FlashVars_IncreaseBootCount();
-	}
-	if (startSaveModeIn <= 0) {
-		startSaveModeIn = 1;
-	}
-	RESET_ScheduleModuleReset(startSaveModeIn);
+// 	// simulate enough boots so the reboot will go into safe mode
+// 	HAL_FlashVars_SetBootCount(HAL_FlashVars_GetBootCount() + RESTARTS_REQUIRED_FOR_SAFE_MODE);
+// 	if (startSaveModeIn <= 0) {
+// 		startSaveModeIn = 1;
+// 	}
+// 	RESET_ScheduleModuleReset(startSaveModeIn);
 
-	return CMD_RES_OK;
-}
+// 	return CMD_RES_OK;
+// }
 
 
 
@@ -1014,11 +1012,12 @@ void CMD_Init_Early() {
 	//cmddetail:"fn":"CMD_OpenAP","file":"cmnds/cmd_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("OpenAP", CMD_OpenAP, NULL);
-	//cmddetail:{"name":"SafeMode","args":"[OptionalDelayBeforeRestart]",
-	//cmddetail:"descr":"Forces device reboot into safe mode (open ap with disabled drivers). Argument is a delay to restart in seconds, optional, minimal delay is 1",
-	//cmddetail:"fn":"CMD_SafeMode","file":"cmnds/cmd_main.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("SafeMode", CMD_SafeMode, NULL);
+// /* Stupid implementation */
+// 	//cmddetail:{"name":"SafeMode","args":"[OptionalDelayBeforeRestart]",
+// 	//cmddetail:"descr":"Forces device reboot into safe mode (open ap with disabled drivers). Argument is a delay to restart in seconds, optional, minimal delay is 1",
+// 	//cmddetail:"fn":"CMD_SafeMode","file":"cmnds/cmd_main.c","requires":"",
+// 	//cmddetail:"examples":""}
+// 	CMD_RegisterCommand("SafeMode", CMD_SafeMode, NULL);
 #if ENABLE_PING_WATCHDOG
 	//cmddetail:{"name":"PingInterval","args":"[IntegerSeconds]",
 	//cmddetail:"descr":"Sets the interval between ping attempts for ping watchdog mechanism",
