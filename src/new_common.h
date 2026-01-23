@@ -1047,6 +1047,7 @@ void usleep(int r);
 #endif
 
 #define RESTARTS_REQUIRED_FOR_SAFE_MODE 4
+#define RESTARTS_REQUIRED_NO_FAST_CONNECT 2
 
 // linear mapping function --> https://www.arduino.cc/reference/en/language/functions/math/map/
 #define MAP(x, in_min, in_max, out_min, out_max) (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -1073,7 +1074,7 @@ typedef enum
 #endif
 WIFI_RSSI_LEVEL wifi_rssi_scale(int8_t rssi_value);
 extern const char *str_rssi[];
-extern int bSafeMode;
+extern bool bSafeMode;
 #if ENABLE_DEEPSLEEP
 extern int g_bWantPinDeepSleep;
 extern int g_pinDeepSleepWakeUp;
@@ -1081,7 +1082,7 @@ extern int g_pinDeepSleepWakeUp;
 extern int g_timeSinceLastPingReply;
 extern int g_startPingWatchDogAfter;
 extern int g_openAP;
-extern int g_bootFailures;
+extern uint32_t g_bootFailures;
 extern int g_secondsElapsed;
 extern int g_rebootReason;
 extern float g_wifi_temperature;

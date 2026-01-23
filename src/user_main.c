@@ -78,7 +78,7 @@ static int g_bHasWiFiConnected = 0;
 static int g_bOpenAccessPointMode = 0;
 // in safe mode, user can press a button to enter the unsafe one
 static int g_doUnsafeInitIn = 0;
-int g_bootFailures = 0;
+uint32_t g_bootFailures = 0;
 static int g_saveCfgAfter = 0;
 #if ENABLE_PING_WATCHDOG
 int g_startPingWatchDogAfter = 60;
@@ -86,8 +86,8 @@ int g_prevTimeSinceLastPingReply = -1;
 #endif
 // used in MQTT and INFO log TODO: pull out
 int g_timeSinceLastPingReply = -1;
-// many boots failed? do not run pins or anything risky
-int bSafeMode = 0;
+// do not run pins or anything risky
+bool bSafeMode;
 // not really <time>, but rather a loop count, but it doesn't really matter much
 // start disabled.
 char g_wifi_bssid[33] = { "30:B5:C2:5D:70:72" };
@@ -532,7 +532,7 @@ void Main_OnWiFiStatusChange(int code)
 		g_SSIDSwitchCnt = 0;
 #endif
 
-		if (bSafeMode == 0) {
+		if (!bSafeMode) {
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(&g_wifi_channel);
 
@@ -592,7 +592,7 @@ void Main_OnPingCheckerReply(int ms)
 #endif
 
 int g_doHomeAssistantDiscoveryIn = 0;
-int g_bBootMarkedOK = 0;
+bool g_bBootMarkedOK = false;
 int g_rebootReason = 0;
 static int bMQTTconnected = 0;
 
@@ -694,15 +694,7 @@ void Main_ConnectToWiFiNow() {
 	// so don't do this here, but e.g. set in Main_OnWiFiStatusChange if connected!!!
 }
 bool Main_HasFastConnect() {
-	if(g_bootFailures > 2)
-	{
-		HAL_DisableEnhancedFastConnect();
-		return false;
-	}
-	if (CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT)) {
-		return true;
-	}
-	return false;
+	return CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT);
 }
 
 #ifndef NO_CHIP_TEMPERATURE
@@ -810,7 +802,7 @@ void Main_OnEverySecond()
 		g_secondsSpentInLowMemoryWarning = 0;
 	}
 #endif
-	if (bSafeMode == 0) {
+	if (!bSafeMode) {
 		const char* ip = HAL_GetMyIPString();
 		// this will return non-zero if there were any changes
 		if (strcpy_safe_checkForChanges(g_currentIPString, ip, sizeof(g_currentIPString))) {
@@ -866,7 +858,7 @@ void Main_OnEverySecond()
 	}
 #endif
 
-	if (bSafeMode == 0)
+	if (!bSafeMode)
 	{
 
 		for (i = 0; i < PLATFORM_GPIO_MAX; i++)
@@ -956,14 +948,13 @@ void Main_OnEverySecond()
 #endif
 
 	// when we hit 30s, mark as boot complete.
-	if (g_bBootMarkedOK == false)
+	if (!g_bBootMarkedOK)
 	{
 		int bootCompleteSeconds = CFG_GetBootOkSeconds();
 		if (g_secondsElapsed > bootCompleteSeconds)
 		{
 			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n", bootCompleteSeconds);
 			HAL_FlashVars_SaveBootComplete();
-			//g_bootFailures = HAL_FlashVars_GetBootFailures();
 			g_bBootMarkedOK = true;
 		}
 	}
@@ -1351,7 +1342,7 @@ void Main_ForceUnsafeInit() {
 	}
 	Main_Init_BeforeDelay_Unsafe(false);
 	Main_Init_AfterDelay_Unsafe(false);
-	bSafeMode = 0;
+	bSafeMode = false;
 }
 //////////////////////////////////////////////////////
 // do things which should happen BEFORE we delay at Startup
@@ -1366,6 +1357,15 @@ void Main_Init_Before_Delay()
 #endif
 	// read or initialise the boot count flash area
 	HAL_FlashVars_IncreaseBootCount();
+	
+	g_bootFailures = HAL_FlashVars_GetBootFailures();
+	if (g_bootFailures > RESTARTS_REQUIRED_FOR_SAFE_MODE)
+		bSafeMode = true;
+	else if (g_bootFailures > RESTARTS_REQUIRED_NO_FAST_CONNECT)
+		HAL_DisableEnhancedFastConnect();
+
+	if (bSafeMode)
+		ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
 
 #ifndef ENABLE_QUIET_MODE
 #if defined(PLATFORM_BEKEN)
@@ -1377,13 +1377,6 @@ void Main_Init_Before_Delay()
 	system_register_idle_callback(isidle);
 #endif
 #endif
-
-	g_bootFailures = HAL_FlashVars_GetBootFailures();
-	if (g_bootFailures > RESTARTS_REQUIRED_FOR_SAFE_MODE)
-	{
-		bSafeMode = 1;
-		ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
-	}
 	CFG_InitAndLoad();
 
 #if ENABLE_LITTLEFS
