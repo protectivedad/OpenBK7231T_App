@@ -648,6 +648,7 @@ int HAL_FlashVars_GetChannelValue(int ch) {
 	return flash_vars.savedValues[ch];
 }
 
+#if ENABLE_BL_SHARED
 int HAL_GetEnergyMeterStatus(ENERGY_METERING_DATA* data)
 {
 #ifndef DISABLE_FLASH_VARS_VARS
@@ -696,6 +697,7 @@ float HAL_FlashVars_GetEnergyExport()
 	memcpy(&f, &flash_vars.savedValues[MAX_RETAIN_CHANNELS - 2], sizeof(float));
 	return f;
 }
+#endif // ENABLE_BL_SHARED
 
 #ifdef ENABLE_DRIVER_HLW8112SPI
 void HAL_FlashVars_SaveEnergy(ENERGY_DATA** data, int channel_count)
