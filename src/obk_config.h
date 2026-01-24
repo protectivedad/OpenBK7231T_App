@@ -1,8 +1,7 @@
 //////////////////////////////////////////////////////
 // specify which parts of the app we wish to be active
 //
-#ifndef OBK_CONFIG_H
-#define OBK_CONFIG_H
+#pragma once
 
 #define OBK_TIMING_LOGGING_ENABLED				1
 #define OBK_INFO_LOGGING_ENABLED				1
@@ -20,6 +19,8 @@
 #define OBK_VARIANT_ESP2M						1
 #define OBK_VARIANT_ESP4M						2
 #define OBK_VARIANT_ESP2M_BERRY					3
+
+#define OBK_MAX_RETAIN_CHANNELS					12
 
 // Starts with all driver flags undefined
 
@@ -726,5 +727,11 @@
 #undef ENABLE_REPEATING_EVENTS
 #undef ENABLE_EVENT_HANDLERS
 
+#undef ENABLE_POWERMETERING
+// channels 0, 1, 2 and 3 are saved
+#undef OBK_MAX_RETAIN_CHANNELS
+#define OBK_MAX_RETAIN_CHANNELS 4
 // closing OBK_CONFIG_H
-#endif
+
+//#define ENABLE_POWERMETERING 1
+//#define ENABLE_DRIVER_LED 1

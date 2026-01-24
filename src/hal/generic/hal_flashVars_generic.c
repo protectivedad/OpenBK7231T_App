@@ -56,6 +56,7 @@ int __attribute__((weak)) HAL_FlashVars_GetChannelValue(int ch)
 	return 0;
 }
 
+#ifdef ENABLE_POWERMETERING
 int __attribute__((weak)) HAL_GetEnergyMeterStatus(ENERGY_METERING_DATA* data)
 {
 	return 0;
@@ -70,3 +71,4 @@ void __attribute__((weak)) HAL_FlashVars_SaveTotalConsumption(float total_consum
 {
 
 }
+#endif // ENABLE_POWERMETERING
