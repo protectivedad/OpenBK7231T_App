@@ -1130,11 +1130,10 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 
 		mapping = TuyaMCU_FindDefForID(dpId);
 		if (!mapping)
-			mapping = TuyaMCU_MapIDToChannel(dpId, dataType, dpId, 0, 1.0f, 0, 0, 0, 0);
+			mapping = TuyaMCU_MapIDToChannel(dpId, DP_TYPE_PUBLISH_TO_MQTT, dpId, 0, 1.0f, 0, 0, 0, 0);
 
-		if (mapping && mapping->dpType == DP_TYPE_PUBLISH_TO_MQTT) {
+		if (mapping && mapping->dpType == DP_TYPE_PUBLISH_TO_MQTT)
 			TuyaMCU_PublishDPToMQTT(data, ofs);
-		}
 
 #if ENABLE_OBK_BERRY
 		TuyaMCU_PublishDPToBerry(data, ofs);
@@ -1832,6 +1831,21 @@ bool TuyaMCU_isTuyaMCU(uint32_t channelIndex) {
 		BIT_CLEAR(driverPins, pinIndex);
 	}
 	return false;
+}
+
+void TuyaMCU_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
+{
+	if (bPreState) {
+		return;
+	}
+	tuyaMCUMapping_t* mapping;
+
+	mapping = g_tuyaMappings;
+	while (mapping) {
+		if (mapping->dpType == DP_TYPE_PUBLISH_TO_MQTT)
+			hprintf255(request, "<h2>dpId=%i, value=%i</h2>", mapping->dpId, mapping->prevValue);
+		mapping = mapping->next;
+	}
 }
 
 #endif // ENABLE_DRIVER_TUYAMCU

@@ -107,7 +107,7 @@ static driver_t g_drivers[] = {
 	//drvdetail:"requires":""}
 	{ "TuyaMCU",                             // Driver Name
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	TuyaMCU_AppendInformationToHTTPIndexPage,// appendInformationToHTTPIndexPage
 	TuyaMCU_quickTick,                       // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
