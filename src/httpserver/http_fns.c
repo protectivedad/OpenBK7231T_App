@@ -2805,8 +2805,6 @@ const char* g_obk_flagNames[] = {
 	"[TuyaMCU] Use queue",
 	"[HTTP] Disable authentication in safe mode (not recommended)",
 	"[MQTT Discovery] Don't merge toggles and dimmers into lights",
-	"[TuyaMCU] Store raw data",
-	"[TuyaMCU] Store ALL data",
 	"[PWR] Invert AC dir",
 	"[HTTP] Hide ON/OFF for relays (only red/green buttons)",
 	"[MQTT] Never add GET suffix",

@@ -101,26 +101,8 @@ typedef struct tuyaMCUMapping_s {
 	byte dpId;
 	// data point type (one of the DP_TYPE_xxx defines)
 	byte dpType;
-	// true if it's supposed to be sent in dp cache
-	byte obkFlags;
-	// could be renamed to flags later?
-	byte inv;
-	// target channel
-	short channel;
 	// store last channel value to avoid sending it again
 	int prevValue;
-	// allow storing raw data for later usage
-	byte *rawData;
-	int rawBufferSize;
-	int rawDataLen;
-	// not really useful as long as we have integer channels
-	float mult;
-	float delta;
-	float delta2;
-	float delta3;
-	// TODO
-	//int mode;
-	// list
 	struct tuyaMCUMapping_s* next;
 } tuyaMCUMapping_t;
 
@@ -252,19 +234,7 @@ tuyaMCUMapping_t* TuyaMCU_FindDefForID(int dpId) {
 	return 0;
 }
 
-tuyaMCUMapping_t* TuyaMCU_FindDefForChannel(int channel) {
-	tuyaMCUMapping_t* cur;
-
-	cur = g_tuyaMappings;
-	while (cur) {
-		if (cur->channel == channel)
-			return cur;
-		cur = cur->next;
-	}
-	return 0;
-}
-
-tuyaMCUMapping_t* TuyaMCU_MapIDToChannel(int dpId, int dpType, int channel, int obkFlags, float mul, int inv, float delta, float delta2, float delta3) {
+tuyaMCUMapping_t* TuyaMCU_MapIDToChannel(int dpId, int dpType) {
 	tuyaMCUMapping_t* cur;
 
 	cur = TuyaMCU_FindDefForID(dpId);
@@ -272,21 +242,11 @@ tuyaMCUMapping_t* TuyaMCU_MapIDToChannel(int dpId, int dpType, int channel, int 
 	if (cur == 0) {
 		cur = (tuyaMCUMapping_t*)malloc(sizeof(tuyaMCUMapping_t));
 		cur->next = g_tuyaMappings;
-		cur->rawData = 0;
-		cur->rawDataLen = 0;
-		cur->rawBufferSize = 0;
 		g_tuyaMappings = cur;
 	}
 	cur->dpId = dpId;
 	cur->dpType = dpType;
-	cur->obkFlags = obkFlags;
-	cur->mult = mul;
-	cur->delta = delta;
-	cur->delta2 = delta2;
-	cur->delta3 = delta3;
-	cur->inv = inv;
 	cur->prevValue = 0;
-	cur->channel = channel;
 	return cur;
 }
 
@@ -720,48 +680,6 @@ int TuyaMCU_ParseDPType(const char *dpTypeString) {
 	return dpType;
 }
 
-commandResult_t TuyaMCU_LinkTuyaMCUOutputToChannel(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	const char* dpTypeString;
-	byte dpId;
-	byte dpType;
-	int channelID;
-	byte argsCount;
-	byte obkFlags;
-	float mult, delta, delta2, delta3;
-	byte inv;
-
-	// linkTuyaMCUOutputToChannel [dpId] [varType] [channelID] [obkFlags] [mult] [inv] [delta]
-	// linkTuyaMCUOutputToChannel 1 val 1
-	Tokenizer_TokenizeString(args, 0);
-
-	argsCount = Tokenizer_GetArgsCount();
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 2)) {
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-	dpId = Tokenizer_GetArgInteger(0);
-	dpTypeString = Tokenizer_GetArg(1);
-	dpType = TuyaMCU_ParseDPType(dpTypeString);
-	if (argsCount < 3) {
-		channelID = -999;
-	}
-	else {
-		channelID = Tokenizer_GetArgInteger(2);
-	}
-	obkFlags = Tokenizer_GetArgInteger(3);
-	mult = Tokenizer_GetArgFloatDefault(4, 1.0f);
-	inv = Tokenizer_GetArgInteger(5);
-	delta = Tokenizer_GetArgFloatDefault(6, 0.0f);
-	delta2 = Tokenizer_GetArgFloatDefault(7, 0.0f);
-	delta3 = Tokenizer_GetArgFloatDefault(8, 0.0f);
-
-	TuyaMCU_MapIDToChannel(dpId, dpType, channelID, obkFlags, mult, inv, delta, delta2, delta3);
-
-	return CMD_RES_OK;
-}
-
 void TuyaMCU_Send(byte* data, int size) {
 	int i;
 	unsigned char check_sum;
@@ -906,62 +824,6 @@ void TuyaMCU_SendNetworkStatus()
 	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "SendNetworkStatus: sending status 0x%X to MCU \n", state);
 	TuyaMCU_SendCommandWithData(0x2B, &state, 1);
 }
-void TuyaMCU_ApplyMapping(tuyaMCUMapping_t* mapping, int dpID, int value) {
-	int mappedValue = value;
-
-	if (mapping == 0) {
-		ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ApplyMapping: id %i (val %i) not mapped\n", dpID, value);
-		return;
-	}
-	if (mapping->channel < 0) {
-		return;
-	}
-	if (mapping->obkFlags & OBKTM_FLAG_NOREAD) {
-		// ignore
-		return;
-	}
-
-	// map value depending on channel type
-	switch (CHANNEL_GetType(mapping->channel))
-	{
-	case ChType_Dimmer:
-		// map TuyaMCU's dimmer range to OpenBK7231T_App's dimmer range 0..100
-		mappedValue = ((value - g_dimmerRangeMin) * 100) / (g_dimmerRangeMax - g_dimmerRangeMin);
-		break;
-	case ChType_Dimmer256:
-		// map TuyaMCU's dimmer range to OpenBK7231T_App's dimmer range 0..256
-		mappedValue = ((value - g_dimmerRangeMin) * 256) / (g_dimmerRangeMax - g_dimmerRangeMin);
-		break;
-	case ChType_Dimmer1000:
-		// map TuyaMCU's dimmer range to OpenBK7231T_App's dimmer range 0..1000
-		mappedValue = ((value - g_dimmerRangeMin) * 1000) / (g_dimmerRangeMax - g_dimmerRangeMin);
-		break;
-	default:
-		break;
-	}
-	if (mapping->inv) {
-		mappedValue = !mappedValue;
-	}
-
-	if (value != mappedValue) {
-		ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ApplyMapping: mapped dp %i value %d to %d\n", dpID, value, mappedValue);
-	}
-
-	mapping->prevValue = mappedValue;
-
-	CHANNEL_Set(mapping->channel, ((mappedValue + mapping->delta) * mapping->mult), 0);
-}
-bool TuyaMCU_IsChannelUsedByTuyaMCU(int channel) {
-	tuyaMCUMapping_t* mapping;
-
-	// find mapping
-	mapping = TuyaMCU_FindDefForChannel(channel);
-
-	if (mapping == 0) {
-		return false;
-	}
-	return true;
-}
 void TuyaMCU_ParseQueryProductInformation(const byte* data, int len) {
 	char name[256];
 	int useLen;
@@ -992,40 +854,7 @@ int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
 			}
 			iCnt++;
 			printer(request, "{\"id\":%i,\"type\":%i,\"data\":", cur->dpId, cur->dpType);
-			if (cur->rawData == 0) {
-				printer(request, "0}", cur->rawData);
-			}
-			else {
-				if (cur->dpType == DP_TYPE_BOOL || cur->dpType == DP_TYPE_ENUM
-					|| cur->dpType == DP_TYPE_VALUE) {
-					if (cur->rawDataLen == 1) {
-						i = cur->rawData[0];
-					}
-					else if (cur->rawDataLen == 4) {
-						i = cur->rawData[0] << 24 | cur->rawData[1] << 16 | cur->rawData[2] << 8 | cur->rawData[3];
-					}
-					else {
-						i = 0;
-					}
-					if (cur->mult != 1.0f) {
-						printer(request, "%f}", (float)(i*cur->mult));
-					}
-					else {
-						printer(request, "%i}", i);
-					}
-				}
-				else if (cur->dpType == DP_TYPE_STRING) {
-					printer(request, "\"%s\"}", cur->rawData);
-				}
-				else {
-					printer(request, "\"");
-					for (i = 0; i < cur->rawDataLen; i++) {
-						sprintf(tmp, "%02X", cur->rawData[i]);
-						printer(request, "%s", tmp);
-					}
-					printer(request, "\"}");
-				}
-			}
+			printer(request, "0}", 0);
 		}
 		cur = cur->next;
 	}
@@ -1035,19 +864,12 @@ int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
 	return 0;
 }
 
-void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
-	int sectorLen;
-	int dpId;
-	int dataType;
+void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const byte *data, int ofs) {
 	char sName[32];
 	int strLen;
 	char *s;
 	const byte *payload;
 	int index;
-
-	sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
-	dpId = data[ofs];
-	dataType = data[ofs + 1];
 
 	// really it's just +1 for NULL character but let's keep more space
 	strLen = sectorLen * 2 + 16;
@@ -1059,7 +881,7 @@ void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 	*s = 0;
 
 	sprintf(sName, "tm/%s/%i", TuyaMCU_GetDataTypeString(dataType), dpId);
-	payload = data + (ofs + 4);
+	payload = data + ofs;
 	switch (dataType) 
 	{
 	case DP_TYPE_BOOL:
@@ -1067,13 +889,11 @@ void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 	case DP_TYPE_ENUM:
 		if (sectorLen == 4){
 			index = payload[0] << 24 | payload[1] << 16 | payload[2] << 8 | payload[3];
+		} else if (sectorLen == 2) {
+			index = payload[1] << 8 | payload[0];
 		} else if (sectorLen == 1) {
 			index = (int)payload[0];
-		}
-		else if (sectorLen == 2) {
-			index =  payload[1] << 8 | payload[0];
-		}
-		else {
+		} else {
 			index = 0;
 		}
 		sprintf(s, "%i", index);
@@ -1111,64 +931,32 @@ void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 }
 void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 	tuyaMCUMapping_t* mapping;
-	int ofs;
-	int sectorLen;
-	int dpId;
-	int dataType;
-	int day, month, year;
-	//int channelType;
+	int ofs = 0;
+	int dpId, dataType, sectorLen;
 	int iVal;
 
-	ofs = 0;
-
 	while (ofs + 4 < len) {
-		sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
 		dpId = data[ofs];
 		dataType = data[ofs + 1];
+		sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
+
 		ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ParseState: id %i type %i-%s len %i\n",
 			dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen);
 
 		mapping = TuyaMCU_FindDefForID(dpId);
 		if (!mapping)
-			mapping = TuyaMCU_MapIDToChannel(dpId, DP_TYPE_PUBLISH_TO_MQTT, dpId, 0, 1.0f, 0, 0, 0, 0);
-
-		if (mapping && mapping->dpType == DP_TYPE_PUBLISH_TO_MQTT)
-			TuyaMCU_PublishDPToMQTT(data, ofs);
-
-#if ENABLE_OBK_BERRY
-		TuyaMCU_PublishDPToBerry(data, ofs);
-#endif
-		if (CFG_HasFlag(OBK_FLAG_TUYAMCU_STORE_RAW_DATA)) {
-			if (CFG_HasFlag(OBK_FLAG_TUYAMCU_STORE_ALL_DATA)) {
-				if (mapping == 0) {
-					mapping = TuyaMCU_MapIDToChannel(dpId, dataType, -1, 0, 1.0f, 0, 0, 0, 0);
-				}
-			}
-			if (mapping) {
-				// add space for NULL terminating character
-				int useLen = sectorLen + 1;
-				if (mapping->rawBufferSize < useLen) {
-					mapping->rawData = realloc(mapping->rawData, useLen);
-					mapping->rawBufferSize = useLen;
-				}
-				mapping->rawDataLen = sectorLen;
-				memcpy(mapping->rawData, data + ofs + 4, sectorLen);
-				// TuyaMCU strings are without NULL terminating character
-				mapping->rawData[sectorLen] = 0;
-			}
-		}
+			mapping = TuyaMCU_MapIDToChannel(dpId, dataType);
 
 		if (sectorLen == 1) {
 			iVal = (int)data[ofs + 4];
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ParseState: byte %i\n", iVal);
-			// apply to channels
-			TuyaMCU_ApplyMapping(mapping, dpId, iVal);
-		}
-		else if (sectorLen == 4) {
+			ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ParseState: byte %i\n", iVal);
+		} else if (sectorLen == 4) {
 			iVal = data[ofs + 4] << 24 | data[ofs + 5] << 16 | data[ofs + 6] << 8 | data[ofs + 7];
-			ADDLOG_INFO(LOG_FEATURE_TUYAMCU, "ParseState: int32 %i\n", iVal);
-			// apply to channels
-			TuyaMCU_ApplyMapping(mapping, dpId, iVal);
+			ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "ParseState: int32 %i\n", iVal);
+		}
+		if (mapping->prevValue != iVal) {
+			TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data, ofs + 4);
+			mapping->prevValue = iVal;
 		}
 
 		// size of header (type, datatype, len 2 bytes) + data sector size
@@ -1589,12 +1377,6 @@ static void TuyaMCU_Shutdown() {
 	while (tmp) {
 		nxt = tmp->next;
 		// free rawData if allocated
-		if (tmp->rawData) {
-			free(tmp->rawData);
-			tmp->rawData = NULL;
-			tmp->rawBufferSize = 0;
-			tmp->rawDataLen = 0;
-		}
 		free(tmp);
 		tmp = nxt;
 	}
@@ -1654,11 +1436,6 @@ static void TuyaMCU_init() {
 
 	UART_InitUART(g_baudRate, 0, false);
 	UART_InitReceiveRingBuffer(1024);
-	//cmddetail:{"name":"linkTuyaMCUOutputToChannel","args":"[dpId][varType][channelID][obkFlags-Optional][mult-optional][bInverse-Optional][delta-Optional][delta2][delta3]",
-	//cmddetail:"descr":"Used to map between TuyaMCU dpIDs and our internal channels. Mult, inverse and delta are for calibration, they are optional. obkFlags is also optional, you can set it to 1 for battery powered devices, so a variable is set with DPCache, for example a sampling interval for humidity/temperature sensor. Mapping works both ways. DpIDs are per-device, you can get them by sniffing UART communication. Vartypes can also be sniffed from Tuya. VarTypes can be following: 0-raw, 1-bool, 2-value, 3-string, 4-enum, 5-bitmap. Please see [Tuya Docs](https://developer.tuya.com/en/docs/iot/tuya-cloud-universal-serial-port-access-protocol?id=K9hhi0xxtn9cb) for info about TuyaMCU. You can also see our [TuyaMCU Analyzer Tool](https://www.elektroda.com/rtvforum/viewtopic.php?p=20528459#20528459)",
-	//cmddetail:"fn":"TuyaMCU_LinkTuyaMCUOutputToChannel","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("linkTuyaMCUOutputToChannel", TuyaMCU_LinkTuyaMCUOutputToChannel, NULL);
 	//cmddetail:{"name":"tuyaMcu_sendHeartbeat","args":"",
 	//cmddetail:"descr":"Send heartbeat to TuyaMCU",
 	//cmddetail:"fn":"TuyaMCU_SendHeartbeat","file":"driver/drv_tuyaMCU.c","requires":"",
@@ -1842,8 +1619,7 @@ void TuyaMCU_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreS
 
 	mapping = g_tuyaMappings;
 	while (mapping) {
-		if (mapping->dpType == DP_TYPE_PUBLISH_TO_MQTT)
-			hprintf255(request, "<h2>dpId=%i, value=%i</h2>", mapping->dpId, mapping->prevValue);
+		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", mapping->dpId, TuyaMCU_GetDataTypeString(mapping->dpType), mapping->prevValue);
 		mapping = mapping->next;
 	}
 }

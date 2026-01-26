@@ -1090,13 +1090,6 @@ bool CHANNEL_ShouldBePublished(int ch) {
 	if (g_cfg.pins.channelTypes[ch] != ChType_Default) {
 		return true;
 	}
-#ifdef ENABLE_DRIVER_TUYAMCU
-	// publish if channel is used by TuyaMCU or Girier (no pin role set), for example door sensor state with power saving V0 protocol
-	// Not enabled by default, you have to set OBK_FLAG_TUYAMCU_ALWAYSPUBLISHCHANNELS flag
-	if (CFG_HasFlag(OBK_FLAG_TUYAMCU_ALWAYSPUBLISHCHANNELS) && TuyaMCU_IsChannelUsedByTuyaMCU(ch)) {
-		return true;
-	}
-#endif
 #ifdef ENABLE_DRIVER_GIRIERMCU
 	if (CFG_HasFlag(OBK_FLAG_TUYAMCU_ALWAYSPUBLISHCHANNELS) && GirierMCU_IsChannelUsedByGirierMCU(ch)) {
 		return true;
