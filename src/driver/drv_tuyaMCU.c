@@ -115,6 +115,7 @@ int g_tuyaMCUBatteryAckDelay;
 
 byte *g_tuyaMCUpayloadBuffer;
 int g_tuyaMCUpayloadBufferSize;
+uint32_t g_waitToSendRespounse;
 
 uint32_t g_driverIndex;
 uint32_t g_driverPins;
@@ -127,9 +128,7 @@ uint32_t g_version;
 char *g_productinfo;
 
 tuyaMCUMapping_t* TuyaMCU_FindDefForID(int dpId) {
-	tuyaMCUMapping_t* cur;
-
-	cur = g_tuyaMappings;
+	tuyaMCUMapping_t* cur = g_tuyaMappings;
 	while (cur) {
 		if (cur->dpId == dpId)
 			return cur;
@@ -138,12 +137,9 @@ tuyaMCUMapping_t* TuyaMCU_FindDefForID(int dpId) {
 	return 0;
 }
 
-tuyaMCUMapping_t* TuyaMCU_MapIDToChannel(int dpId, int dpType) {
-	tuyaMCUMapping_t* cur;
-
-	cur = TuyaMCU_FindDefForID(dpId);
-
-	if (cur == 0) {
+tuyaMCUMapping_t* TuyaMCU_saveDpId(int dpId, int dpType) {
+	tuyaMCUMapping_t* cur = TuyaMCU_FindDefForID(dpId);
+	if (!cur) {
 		cur = (tuyaMCUMapping_t*)malloc(sizeof(tuyaMCUMapping_t));
 		cur->next = g_tuyaMappings;
 		g_tuyaMappings = cur;
@@ -160,11 +156,11 @@ tuyaMCUMapping_t* TuyaMCU_MapIDToChannel(int dpId, int dpType) {
 #define MIN_TUYAMCU_PACKET_SIZE (2+1+1+2+1)
 // talks to TuyaMCU, puts what they said in a buffer and returns
 // how much they said
-int TuyaMCU_talkToThem(byte* theySaid, uint32_t mostWeCanHear) {
-	uint32_t howMuchTheyNeedToSay;
+int TuyaMCU_listenToThem(byte* theySaid, uint32_t mostWeCanHear) {
+	uint32_t howMuchTheyNeedToSay = MIN_TUYAMCU_PACKET_SIZE;
 	uint32_t howMuchTheySaid = UART_GetDataSize();
 	uint32_t whatWeDidnotWantToHear = 0;
-	byte a, b, command, lena, lenb;
+	uint32_t a, b;
 
 	if (howMuchTheySaid < MIN_TUYAMCU_PACKET_SIZE)
 		return 0;
@@ -173,7 +169,7 @@ int TuyaMCU_talkToThem(byte* theySaid, uint32_t mostWeCanHear) {
 	while (howMuchTheySaid >= MIN_TUYAMCU_PACKET_SIZE) {
 		a = UART_GetByte(0);
 		b = UART_GetByte(1);
-		if (a == 0x55 && b == 0xAA)
+		if (a == 0x55 && b == 0xAA) // we have a header
 			break;
 		
 		UART_ConsumeBytes(1);
@@ -182,16 +178,11 @@ int TuyaMCU_talkToThem(byte* theySaid, uint32_t mostWeCanHear) {
 	}
 	if (whatWeDidnotWantToHear > 0) {
 		ADDLOGF_WARN("Consumed %i unwanted non-header byte in Tuya MCU buffer\n", whatWeDidnotWantToHear);
+		if (howMuchTheySaid < MIN_TUYAMCU_PACKET_SIZE)
+			return 0;
 	}
-	if (howMuchTheySaid < MIN_TUYAMCU_PACKET_SIZE)
-		return 0;
 
-	command = UART_GetByte(3);
-	lena = UART_GetByte(4); // hi
-	lenb = UART_GetByte(5); // lo
-	howMuchTheyNeedToSay = lenb | lena >> 8;
-	// now check if we have received whole packet
-	howMuchTheyNeedToSay += MIN_TUYAMCU_PACKET_SIZE; // header 2 bytes, version, command, lenght, chekcusm
+	howMuchTheyNeedToSay += UART_GetByte(5) | UART_GetByte(4) >> 8;
 	if (howMuchTheySaid < howMuchTheyNeedToSay) {
 		ADDLOGF_DEBUG("Still need %i bytes to complete message", howMuchTheyNeedToSay - howMuchTheySaid);
 		return 0;
@@ -230,236 +221,6 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 	}
 	UART_SendByte(check_sum);
 }
-int TuyaMCU_AppendStateInternal(byte *buffer, int bufferMax, int currentLen, uint8_t id, int8_t type, void* value, int dataLen) {
-	if (currentLen + 4 + dataLen >= bufferMax) {
-		ADDLOGF_ERROR("Tuya buff overflow");
-		return 0;
-	}
-	buffer[currentLen + 0] = id;
-	buffer[currentLen + 1] = type;
-	buffer[currentLen + 2] = 0x00;
-	buffer[currentLen + 3] = dataLen;
-	memcpy(buffer + (currentLen + 4), value, dataLen);
-	return currentLen + 4 + dataLen;
-}
-void TuyaMCU_SendStateInternal(uint8_t id, uint8_t type, void* value, int dataLen)
-{
-	uint16_t payload_len = 0;
-	
-	payload_len = TuyaMCU_AppendStateInternal(g_tuyaMCUpayloadBuffer, g_tuyaMCUpayloadBufferSize,
-		payload_len, id, type, value, dataLen);
-
-	TuyaMCU_SendCommandWithData(TUYA_CMD_SET_DP, g_tuyaMCUpayloadBuffer, payload_len);
-}
-void TuyaMCU_SendState(uint8_t id, uint8_t type, uint8_t* value)
-{
-	byte swap[4];
-
-	switch (type) {
-	case DP_TYPE_BOOL:
-	case DP_TYPE_ENUM:
-		TuyaMCU_SendStateInternal(id, type, value, 1);
-		break;
-	case DP_TYPE_VALUE:
-		swap[0] = value[3];
-		swap[1] = value[2];
-		swap[2] = value[1];
-		swap[3] = value[0];
-		TuyaMCU_SendStateInternal(id, type, swap, 4);
-		break;
-	case DP_TYPE_STRING:
-		TuyaMCU_SendStateInternal(id, type, value, strlen((const char*)value));
-		break;
-	case DP_TYPE_RAW:
-		break;
-	}
-}
-
-void TuyaMCU_SendBool(uint8_t id, bool value)
-{
-	TuyaMCU_SendState(id, DP_TYPE_BOOL, (uint8_t*)&value);
-}
-
-void TuyaMCU_SendValue(uint8_t id, uint32_t value)
-{
-	TuyaMCU_SendState(id, DP_TYPE_VALUE, (uint8_t*)(&value));
-}
-
-void TuyaMCU_SendEnum(uint8_t id, uint32_t value)
-{
-	TuyaMCU_SendState(id, DP_TYPE_ENUM, (uint8_t*)(&value));
-}
-
-//battery-powered water sensor with TyuaMCU request to get somo response
-// uartSendHex 55AA0001000000 - this will get reply:
-//Info:TuyaMCU:TuyaMCU_ParseQueryProductInformation: received {"p":"j53rkdu55ydc0fkq","v":"1.0.0"}
-//
-// and this will get states: 0x55 0xAA 0x00 0x02 0x00 0x01 0x04 0x06
-// uartSendHex 55AA000200010406
-/*Info:MAIN:Time 143, free 88864, MQTT 1, bWifi 1, secondsWithNoPing -1, socks 2/38
-
-Info:TuyaMCU:TUYAMCU received: 55 AA 00 08 00 0C 00 02 02 02 02 02 02 01 04 00 01 00 25
-
-Info:TuyaMCU:TuyaMCU_theySaidWhat: processing V0 command 8 with 19 bytes
-
-*/
-
-int TuyaMCU_ParseDPType(const char *dpTypeString) {
-	int dpType;
-	if (!stricmp(dpTypeString, "bool")) {
-		dpType = DP_TYPE_BOOL;
-	}
-	else if (!stricmp(dpTypeString, "val")) {
-		dpType = DP_TYPE_VALUE;
-	}
-	else if (!stricmp(dpTypeString, "str")) {
-		dpType = DP_TYPE_STRING;
-	}
-	else if (!stricmp(dpTypeString, "enum")) {
-		dpType = DP_TYPE_ENUM;
-	}
-	else if (!stricmp(dpTypeString, "raw")) {
-		dpType = DP_TYPE_RAW;
-	}
-	else if (!stricmp(dpTypeString, "RAW_DDS238")) {
-		// linkTuyaMCUOutputToChannel 6 RAW_DDS238
-		dpType = DP_TYPE_RAW_DDS238Packet;
-	}
-	else if (!stricmp(dpTypeString, "RAW_TAC2121C_VCP")) {
-		// linkTuyaMCUOutputToChannel 6 RAW_TAC2121C_VCP
-		dpType = DP_TYPE_RAW_TAC2121C_VCP;
-	}
-	else if (!stricmp(dpTypeString, "RAW_V2C3P3")) {
-		dpType = DP_TYPE_RAW_V2C3P3;
-	}
-	else if (!stricmp(dpTypeString, "RAW_VCPPfF")) {
-		dpType = DP_TYPE_RAW_VCPPfF;
-	}
-	else if (!stricmp(dpTypeString, "RAW_TAC2121C_Yesterday")) {
-		dpType = DP_TYPE_RAW_TAC2121C_YESTERDAY;
-	}
-	else if (!stricmp(dpTypeString, "RAW_TAC2121C_LastMonth")) {
-		dpType = DP_TYPE_RAW_TAC2121C_LASTMONTH;
-	}
-	else if (!stricmp(dpTypeString, "MQTT")) {
-		// linkTuyaMCUOutputToChannel 6 MQTT
-		dpType = DP_TYPE_PUBLISH_TO_MQTT;
-	}
-	else {
-		if (strIsInteger(dpTypeString)) {
-			dpType = atoi(dpTypeString);
-		}
-		else {
-			ADDLOGF_INFO("%s is not a valid var type\n", dpTypeString);
-			return DP_TYPE_VALUE;
-		}
-	}
-	return dpType;
-}
-
-commandResult_t TuyaMCU_SendHeartbeat(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	TuyaMCU_SendCommandWithData(TUYA_CMD_HEARTBEAT, NULL, 0);
-
-	return CMD_RES_OK;
-}
-
-commandResult_t TuyaMCU_SendQueryProductInformation(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-
-	return CMD_RES_OK;
-}
-commandResult_t TuyaMCU_SendQueryState(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_STATE, NULL, 0);
-
-	return CMD_RES_OK;
-}
-
-void TuyaMCU_SendStateRawFromString(int dpId, const char *args) {
-	int cur = 0;
-	byte buffer[64];
-
-	while (*args) {
-		if (cur >= sizeof(buffer)) {
-			ADDLOGF_ERROR("Tuya raw buff overflow");
-			return;
-		}
-		buffer[cur] = CMD_ParseOrExpandHexByte(&args);
-		cur++;
-	}
-	TuyaMCU_SendStateInternal(dpId, DP_TYPE_RAW, buffer, cur);
-}
-const char *STR_FindArg(const char *s, int arg) {
-	while (1) {
-		while (isspace((int)*s)) {
-			if (*s == 0)
-				return "";
-			s++;
-		}
-		arg--;
-		if (arg < 0) {
-			return s;
-		}
-		while (isspace((int)*s) == false) {
-			if (*s == 0)
-				return "";
-			s++;
-		}
-	}
-	return 0;
-}
-// tuyaMcu_sendState id type value
-// send boolean true
-// tuyaMcu_sendState 25 1 1
-// send boolean false
-// tuyaMcu_sendState 25 1 0
-// send value 87
-// tuyaMcu_sendState 25 2 87
-// send string 
-// tuyaMcu_sendState 25 3 ff0000646464ff 
-// send raw 
-// tuyaMcu_sendState 25 0 ff$CH3$00646464ff 
-// tuyaMcu_sendState 2 0 0404010C$CH9$$CH10$$CH11$FF04FEFF0031
-// send enum (type 4)
-// tuyaMcu_sendState 14 4 2
-commandResult_t TuyaMCU_SendStateCmd(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	int dpId;
-	int dpType;
-	int value;
-	const char *valStr;
-
-	Tokenizer_TokenizeString(args, 0);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 3)) {
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-
-	dpId = Tokenizer_GetArgInteger(0);
-	dpType = TuyaMCU_ParseDPType(Tokenizer_GetArg(1)); ;
-	if (dpType == DP_TYPE_STRING) {
-		valStr = Tokenizer_GetArg(2);
-		TuyaMCU_SendState(dpId, DP_TYPE_STRING, (uint8_t*)valStr);
-	}
-	else if (dpType == DP_TYPE_RAW) {
-		//valStr = Tokenizer_GetArg(2);
-		valStr = STR_FindArg(args, 2);
-		TuyaMCU_SendStateRawFromString(dpId, valStr);
-	}
-	else {
-		value = Tokenizer_GetArgInteger(2);
-		TuyaMCU_SendState(dpId, dpType, (uint8_t*)&value);
-	}
-
-	return CMD_RES_OK;
-}
-
-commandResult_t TuyaMCU_SendMCUConf(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	TuyaMCU_SendCommandWithData(TUYA_CMD_MCU_CONF, NULL, 0);
-
-	return CMD_RES_OK;
-}
-
 void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen) {
 	g_productinfo = (char*)malloc(prodInfoLen);
 	if (g_productinfo) {
@@ -579,7 +340,7 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 
 		mapping = TuyaMCU_FindDefForID(dpId);
 		if (!mapping)
-			mapping = TuyaMCU_MapIDToChannel(dpId, dataType);
+			mapping = TuyaMCU_saveDpId(dpId, dataType);
 
 		if (sectorLen == 1) {
 			iVal = (int)data[ofs + 4];
@@ -597,7 +358,13 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 		ofs += (4 + sectorLen);
 	}
 }
-void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
+static void TuyaMCU_recordTypeResponse(byte* data) {
+	for (g_waitToSendRespounse = g_tuyaMCUBatteryAckDelay; !g_waitToSendRespounse; g_waitToSendRespounse--)
+		rtos_delay_milliseconds(1000);
+	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, data, 2);
+}
+static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
+	OSStatus err = kNoErr;
 	int subcommand = value[0];
 	ADDLOGF_DEBUG("command %i, subcommand %i\n", TUYA_CMD_REPORT_STATUS_RECORD_TYPE, subcommand);
 	byte reply[2] = { 0x00, 0x00 };
@@ -614,22 +381,21 @@ void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 		// Unknown subcommand, ignore
 		return;
 	}
-	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
+	err = rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,
+		NULL,
+		(beken_thread_function_t)TuyaMCU_recordTypeResponse,
+		0x800,
+		(byte*)reply);
+	if (err != kNoErr)
+		ADDLOGF_INFO("%s - record type response scheduled");
 }
 void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
-	uint32_t checkCheckSum;
+	uint32_t checkCheckSum = 0;
 	uint32_t cmd;
-	uint32_t checkLen = theySaid[5] | theySaid[4] >> 8;
-	checkLen += MIN_TUYAMCU_PACKET_SIZE;
 
-	if (checkLen != howMuchTheySaid) {
-		ADDLOGF_INFO("ProcessIncoming: discarding packet bad expected len, expected %i and got len %i\n", checkLen, howMuchTheySaid);
-		return;
-	}
-	checkCheckSum = 0;
-	for (uint32_t i = 0; i < howMuchTheySaid - 1; i++) {
+	for (uint32_t i = 0; i < howMuchTheySaid - 1; i++)
 		checkCheckSum += theySaid[i];
-	}
+
 	if (checkCheckSum & 0x000000FF != theySaid[howMuchTheySaid - 1]) {
 		ADDLOGF_INFO("ProcessIncoming: discarding packet bad expected checksum, expected %i and got checksum %i\n", (int)theySaid[howMuchTheySaid - 1], (int)checkCheckSum);
 		return;
@@ -642,32 +408,34 @@ void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
 	case TUYA_CMD_HEARTBEAT:
 		TuyaMCU_SetHeartbeatCounter(0);
 		break;
+	case TUYA_CMD_QUERY_PRODUCT:
+		TuyaMCU_ParseQueryProductInformation(theySaid + 6, howMuchTheySaid - 6);
+		product_information_valid = true;
+		break;
 	case TUYA_CMD_MCU_CONF:
-		if (!checkLen) {
+		if (howMuchTheySaid == MIN_TUYAMCU_PACKET_SIZE) {
 			self_processing_mode = true;
-		} else if (checkLen == 2) {
+		} else if (howMuchTheySaid == MIN_TUYAMCU_PACKET_SIZE + 2) {
 			self_processing_mode = false;
 			ADDLOGF_INFO("IMPORTANT!!! mcu conf pins: %i %i", (int)(theySaid[6]), (int)(theySaid[7]));
 		}
 		ADDLOGF_INFO("ProcessIncoming: TUYA_CMD_MCU_CONF, TODO!");
 		break;
-	case TUYA_CMD_WIFI_SELECT:
-		// TUYA_CMD_WIFI_SELECT
-		// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
-		g_openAP = 1;
-
+	case TUYA_CMD_WIFI_STATE:
+		ADDLOGF_DEBUG("%s - rec'd wifi state response", __func__);
+		break;
 	case TUYA_CMD_WIFI_RESET:
 		ADDLOGF_INFO("ProcessIncoming: 0x04 replying");
 		// added for https://www.elektroda.com/rtvforum/viewtopic.php?p=21095905#21095905
 		TuyaMCU_SendCommandWithData(0x04, 0, 0);
 		break;
+	case TUYA_CMD_WIFI_SELECT:
+		// TUYA_CMD_WIFI_SELECT
+		// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
+		g_openAP = 1;
 	case TUYA_CMD_STATE:
 		TuyaMCU_ParseStateMessage(theySaid + 6, howMuchTheySaid - 6);
 		state_updated = true;
-		break;
-	case TUYA_CMD_QUERY_PRODUCT:
-		TuyaMCU_ParseQueryProductInformation(theySaid + 6, howMuchTheySaid - 6);
-		product_information_valid = true;
 		break;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
 		TuyaMCU_ParseReportStatusType(theySaid + 6, howMuchTheySaid - 6);
@@ -678,35 +446,6 @@ void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
 	}
 	EventHandlers_FireEvent(CMD_EVENT_TUYAMCU_PARSED, cmd);
 }
-// tuyaMcu_sendCmd 0x30 000000
-// This will send 55 AA 00 30 00 03 00 00 00 32
-// 
-commandResult_t TuyaMCU_SendUserCmd(const void* context, const char* cmd, const char* args, int cmdFlags) {
-	byte packet[128];
-	int c = 0;
-
-	Tokenizer_TokenizeString(args, 0);
-
-	int command = Tokenizer_GetArgInteger(0);
-	//XJIKKA 20250327 tuyaMcu_sendCmd without second param bug
-	if (Tokenizer_GetArgsCount() >= 2) {
-		const char* s = Tokenizer_GetArg(1);
-		if (s) {
-			while (*s) {
-				byte b;
-				b = CMD_ParseOrExpandHexByte(&s);
-
-				if (sizeof(packet) > c + 1) {
-					packet[c] = b;
-					c++;
-				}
-			}
-		}
-	}
-	TuyaMCU_SendCommandWithData(command,packet, c);
-	return CMD_RES_OK;
-}
-
 commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int delay;
 
@@ -740,7 +479,7 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // no processing after state is updated
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
-bool TuyaMCU_RunBattery() {
+bool TuyaMCU_runBattery() {
 	/* Don't worry about connection after state is updated device will be turned off */
 	if (!state_updated) {
 		/* Don't send heartbeats just work on product information */
@@ -773,18 +512,22 @@ bool TuyaMCU_RunBattery() {
 
 void TuyaMCU_quickTick() {
 	// process any received information
-	uint32_t weHaveContact;
+	uint32_t howMuchTeySaid;
+
+	if (g_waitToSendRespounse)
+		return;
+
 	do {
 		byte theySaid[192];
-		weHaveContact = TuyaMCU_talkToThem(theySaid, sizeof(theySaid));
-		if (weHaveContact)
-			TuyaMCU_theySaidWhat(theySaid, weHaveContact);
-	} while (weHaveContact);
+		howMuchTeySaid = TuyaMCU_listenToThem(theySaid, sizeof(theySaid));
+		if (howMuchTeySaid)
+			TuyaMCU_theySaidWhat(theySaid, howMuchTeySaid);
+	} while (howMuchTeySaid);
 
 	static int timer_battery = 0;
 	if (timer_battery > 0) {
 		timer_battery -= g_deltaTimeMS;
-	} else if (TuyaMCU_RunBattery()) {
+	} else if (TuyaMCU_runBattery()) {
 		timer_battery = 50;
 	}
 }
@@ -817,36 +560,6 @@ static void TuyaMCU_init() {
 
 	UART_InitUART(g_baudRate, 0, false);
 	UART_InitReceiveRingBuffer(1024);
-	//cmddetail:{"name":"tuyaMcu_sendHeartbeat","args":"",
-	//cmddetail:"descr":"Send heartbeat to TuyaMCU",
-	//cmddetail:"fn":"TuyaMCU_SendHeartbeat","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendHeartbeat", TuyaMCU_SendHeartbeat, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendQueryState","args":"",
-	//cmddetail:"descr":"Send query state command. No arguments needed.",
-	//cmddetail:"fn":"TuyaMCU_SendQueryState","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendQueryState", TuyaMCU_SendQueryState, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendProductInformation","args":"",
-	//cmddetail:"descr":"Send query packet (0x01). No arguments needed.",
-	//cmddetail:"fn":"TuyaMCU_SendQueryProductInformation","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendProductInformation", TuyaMCU_SendQueryProductInformation, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendState","args":"[dpID][dpType][dpValue]",
-	//cmddetail:"descr":"Manually send set state command. Do not use it. Use mapping, so communication is bidirectional and automatic.",
-	//cmddetail:"fn":"TuyaMCU_SendStateCmd","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendState", TuyaMCU_SendStateCmd, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendMCUConf","args":"",
-	//cmddetail:"descr":"Send MCU conf command",
-	//cmddetail:"fn":"TuyaMCU_SendMCUConf","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendMCUConf", TuyaMCU_SendMCUConf, NULL);
-	//cmddetail:{"name":"tuyaMcu_sendCmd","args":"[CommandIndex] [HexPayloadNBytes]",
-	//cmddetail:"descr":"This will automatically calculate TuyaMCU checksum and length for given command ID and payload, then it will send a command. It's better to use it than uartSendHex",
-	//cmddetail:"fn":"TuyaMCU_SendUserCmd","file":"driver/drv_tuyaMCU.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("tuyaMcu_sendCmd", TuyaMCU_SendUserCmd, NULL);
 
 	//cmddetail:{"name":"tuyaMcu_setBatteryAckDelay","args":"[ackDelay]",
 	//cmddetail:"descr":"Defines the delay before the ACK is sent to TuyaMCU sending the device to sleep. Default value is 0 seconds.",
