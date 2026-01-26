@@ -1065,7 +1065,7 @@ void TuyaMCU_quickTick() {
 		if (timer_battery > 0) {
 			timer_battery -= g_deltaTimeMS;
 		} else if (TuyaMCU_RunBattery()) {
-			timer_battery = 0;
+			timer_battery = 50;
 		}
 	}
 
