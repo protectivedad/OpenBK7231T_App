@@ -1058,7 +1058,7 @@ void TuyaMCU_PublishDPToMQTT(const byte *data, int ofs) {
 	s = (char*)g_tuyaMCUpayloadBuffer;
 	*s = 0;
 
-	sprintf(sName, "/%i", dpId);
+	sprintf(sName, "tm/%s/%i", TuyaMCU_GetDataTypeString(dataType), dpId);
 	payload = data + (ofs + 4);
 	switch (dataType) 
 	{
