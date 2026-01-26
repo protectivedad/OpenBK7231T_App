@@ -6,7 +6,6 @@
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
 #include "../cmnds/cmd_enums.h"
-#include "../driver/drv_tuyaMCU.h"
 #include "../driver/drv_girierMCU.h"
 #include "../driver/drv_public.h"
 #include "../driver/drv_bl_shared.h"

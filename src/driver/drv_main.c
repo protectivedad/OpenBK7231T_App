@@ -13,7 +13,6 @@
 #include "drv_public.h"
 #include "drv_ssdp.h"
 #include "drv_test_drivers.h"
-#include "drv_tuyaMCU.h"
 #include "drv_girierMCU.h"
 #include "drv_uart.h"
 #include "drv_ds1820_simple.h"

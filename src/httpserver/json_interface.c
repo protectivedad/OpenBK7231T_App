@@ -9,7 +9,6 @@
 #include "../hal/hal_ota.h"
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
-#include "../driver/drv_tuyaMCU.h"
 #include "../driver/drv_public.h"
 #include "../driver/drv_battery.h"
 #include "../driver/drv_local.h"

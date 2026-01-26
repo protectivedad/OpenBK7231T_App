@@ -9,7 +9,6 @@
 // Commands register, execution API and cmd tokenizer
 #include "cmnds/cmd_public.h"
 #include "i2c/drv_i2c_public.h"
-#include "driver/drv_tuyaMCU.h"
 #include "driver/drv_girierMCU.h"
 #include "driver/drv_public.h"
 #include "driver/drv_local.h"

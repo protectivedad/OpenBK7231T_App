@@ -14,7 +14,6 @@
 #include "../driver/drv_public.h"
 #include "../driver/drv_ntp.h"
 #include "../driver/drv_deviceclock.h"
-#include "../driver/drv_tuyaMCU.h"
 #include "../hal/hal_ota.h"
 #include <math.h>
 #ifndef WINDOWS

@@ -23,8 +23,6 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 #include "../logging/logging.h"
 #include "../hal/hal_wifi.h"
 #include "../mqtt/new_mqtt.h"
-#include "drv_public.h"
-#include "drv_tuyaMCU.h"
 #include "drv_uart.h"
 #include "drv_public.h"
 #include <time.h>
