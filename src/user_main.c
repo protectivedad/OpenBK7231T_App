@@ -10,8 +10,6 @@
 
 //#include "driver/drv_ir.h"
 #include "driver/drv_public.h"
-#include "driver/drv_bl_shared.h"
-#include "driver/drv_hlw8112.h"
 //#include "ir/ir_local.h"
 
 #include "driver/drv_deviceclock.h"

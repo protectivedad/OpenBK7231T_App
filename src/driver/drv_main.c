@@ -20,7 +20,6 @@
 #include "drv_ds1820_full.h"
 #include "drv_ds1820_common.h"
 #include "drv_ds3231.h"
-#include "drv_hlw8112.h"
 #include "drv_battery.h"
 
 typedef struct driver_s {
