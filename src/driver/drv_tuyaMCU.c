@@ -259,12 +259,11 @@ int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
 	return 0;
 }
 
-static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const byte *data, int ofs) {
+static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const byte *data) {
 #if ENABLE_MQTT
 	char sName[32];
 	int strLen;
 	char *s;
-	const byte *payload;
 	int index;
 
 	// really it's just +1 for NULL character but let's keep more space
@@ -277,25 +276,24 @@ static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const
 	*s = 0;
 
 	sprintf(sName, "tm/%s/%i", TuyaMCU_GetDataTypeString(dataType), dpId);
-	payload = data + ofs;
 	switch (dataType) 
 	{
 	case DP_TYPE_BOOL:
 	case DP_TYPE_VALUE:
 	case DP_TYPE_ENUM:
 		if (sectorLen == 4){
-			index = payload[0] << 24 | payload[1] << 16 | payload[2] << 8 | payload[3];
+			index = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
 		} else if (sectorLen == 2) {
-			index = payload[1] << 8 | payload[0];
+			index = data[1] << 8 | data[0];
 		} else if (sectorLen == 1) {
-			index = (int)payload[0];
+			index = (int)data[0];
 		} else {
 			index = 0;
 		}
 		sprintf(s, "%i", index);
 		break;
 	case DP_TYPE_STRING:
-		memcpy(s, payload, sectorLen);
+		memcpy(s, data, sectorLen);
 		s[sectorLen] = 0;
 		break;
 	case DP_TYPE_RAW:
@@ -310,9 +308,9 @@ static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const
 		}
 		for (int i = 0; i < sectorLen; i++) {
 			// convert each byte to two hexadecimal characters
-			s[index++] = "0123456789ABCDEF"[(*payload >> 4) & 0xF];
-			s[index++] = "0123456789ABCDEF"[*payload & 0xF];
-			payload++;
+			s[index++] = "0123456789ABCDEF"[(*data >> 4) & 0xF];
+			s[index++] = "0123456789ABCDEF"[*data & 0xF];
+			data++;
 		}
 		s[index] = 0; // null-terminate the string
 		break;
@@ -326,36 +324,30 @@ static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const
 }
 void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 	tuyaMCUMapping_t* mapping;
-	int ofs = 0;
 	int dpId, dataType, sectorLen;
-	int iVal;
+	int iVal = 0;
 
-	while (ofs + 4 < len) {
-		dpId = data[ofs];
-		dataType = data[ofs + 1];
-		sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
+	dpId = data[0];
+	dataType = data[1];
+	sectorLen = data[2] << 8 | data[3];
 
-		ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i\n",
-			dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen);
+	ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i\n",
+		dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen);
 
-		mapping = TuyaMCU_FindDefForID(dpId);
-		if (!mapping)
-			mapping = TuyaMCU_saveDpId(dpId, dataType);
+	mapping = TuyaMCU_FindDefForID(dpId);
+	if (!mapping)
+		mapping = TuyaMCU_saveDpId(dpId, dataType);
 
-		if (sectorLen == 1) {
-			iVal = (int)data[ofs + 4];
-			ADDLOGF_DEBUG("ParseState: byte %i\n", iVal);
-		} else if (sectorLen == 4) {
-			iVal = data[ofs + 4] << 24 | data[ofs + 5] << 16 | data[ofs + 6] << 8 | data[ofs + 7];
-			ADDLOGF_DEBUG("ParseState: int32 %i\n", iVal);
-		}
-		if (mapping->prevValue != iVal) {
-			TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data, ofs + 4);
-			mapping->prevValue = iVal;
-		}
-
-		// size of header (type, datatype, len 2 bytes) + data sector size
-		ofs += (4 + sectorLen);
+	if (sectorLen == 1) {
+		iVal = (int)data[4];
+		ADDLOGF_DEBUG("ParseState: byte %i\n", iVal);
+	} else if (sectorLen == 4) {
+		iVal = data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7];
+		ADDLOGF_DEBUG("ParseState: int32 %i\n", iVal);
+	}
+	if (mapping->prevValue != iVal) {
+		TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + 4);
+		mapping->prevValue = iVal;
 	}
 }
 static void TuyaMCU_recordTypeResponse(byte* data) {
@@ -406,7 +398,6 @@ void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
 	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i, len %i", xTaskGetTickCount(), __func__, g_version, cmd, howMuchTheySaid);
 	switch (cmd) {
 	case TUYA_CMD_HEARTBEAT:
-		TuyaMCU_SetHeartbeatCounter(0);
 		break;
 	case TUYA_CMD_QUERY_PRODUCT:
 		TuyaMCU_ParseQueryProductInformation(theySaid + 6, howMuchTheySaid - 6);
@@ -494,14 +485,16 @@ bool TuyaMCU_runBattery() {
 		if (Main_HasWiFiConnected()) {
 			if (!wifi_state) {
 				ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to router", xTaskGetTickCount(), __func__);
-				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER, 1);
+				const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER;
+				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
 				wifi_state = true;
 				mqtt_state = false;
 				return true;
 			}
 			if (MQTT_IsReady() && !mqtt_state) { // use MQTT function, main function isn't updated soon enough
 				ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
-				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD, 1);
+				const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
+				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
 				mqtt_state = true;
 				return true;
 			}
