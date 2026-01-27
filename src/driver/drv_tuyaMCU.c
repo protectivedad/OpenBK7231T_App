@@ -31,8 +31,6 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 
 #define LOG_FEATURE LOG_FEATURE_TUYAMCU
 
-#define TUYAMCU_BUFFER_SIZE		256
-
 #define TUYA_CMD_HEARTBEAT     0x00
 #define TUYA_CMD_QUERY_PRODUCT 0x01
 #define TUYA_CMD_MCU_CONF      0x02
@@ -111,10 +109,18 @@ const uint32_t g_baudRate = 9600;
 
 bool self_processing_mode = true;
 bool state_updated;
-int g_tuyaMCUBatteryAckDelay;
+uint32_t g_tuyaMCUBatteryAckDelay = 0;
 
-byte *g_tuyaMCUpayloadBuffer;
-int g_tuyaMCUpayloadBufferSize;
+// dynamic will increase based on need
+// for V3 door sensor the largest packet is 62 bytes
+#define TUYAMCU_BUFFER_SIZE		128
+
+#define MIN_TUYAMCU_PACKET_SIZE (2+1+1+2+1)
+
+byte *g_tuyaMCUTXBuffer;
+uint32_t g_tuyaMCUTXBufferSize = TUYAMCU_BUFFER_SIZE;
+byte *g_tuyaMCURXBuffer;
+uint32_t g_tuyaMCURXBufferSize = TUYAMCU_BUFFER_SIZE;
 uint32_t g_waitToSendRespounse;
 
 uint32_t g_driverIndex;
@@ -126,6 +132,8 @@ bool mqtt_state;
 
 uint32_t g_version;
 char *g_productinfo;
+
+uint32_t g_waitingToHearBack;
 
 tuyaMCUMapping_t* TuyaMCU_FindDefForID(int dpId) {
 	tuyaMCUMapping_t* cur = g_tuyaMappings;
@@ -153,10 +161,9 @@ tuyaMCUMapping_t* TuyaMCU_saveDpId(int dpId, int dpType) {
 // header version command lenght data checksum
 // 55AA     00      00      0000   xx   00
 
-#define MIN_TUYAMCU_PACKET_SIZE (2+1+1+2+1)
 // talks to TuyaMCU, puts what they said in a buffer and returns
 // how much they said
-int TuyaMCU_listenToThem(byte* theySaid, uint32_t mostWeCanHear) {
+int TuyaMCU_listenToThem() {
 	uint32_t howMuchTheyNeedToSay = MIN_TUYAMCU_PACKET_SIZE;
 	uint32_t howMuchTheySaid = UART_GetDataSize();
 	uint32_t whatWeDidnotWantToHear = 0;
@@ -182,23 +189,35 @@ int TuyaMCU_listenToThem(byte* theySaid, uint32_t mostWeCanHear) {
 			return 0;
 	}
 
-	howMuchTheyNeedToSay += UART_GetByte(5) | UART_GetByte(4) >> 8;
+	howMuchTheyNeedToSay += UART_GetByte(4) >> 8 | UART_GetByte(5);
 	if (howMuchTheySaid < howMuchTheyNeedToSay) {
 		ADDLOGF_DEBUG("Still need %i bytes to complete message", howMuchTheyNeedToSay - howMuchTheySaid);
 		return 0;
 	}
-	
 	// can packet fit into the buffer?
-	if (mostWeCanHear < howMuchTheyNeedToSay) {
-		ADDLOGF_ERROR("TuyaMCU packet too large, %i > %i\n", howMuchTheyNeedToSay, mostWeCanHear);
-		UART_ConsumeBytes(howMuchTheyNeedToSay);
-		return 0;
+	if (g_tuyaMCURXBufferSize < howMuchTheyNeedToSay) {
+		g_tuyaMCURXBuffer = realloc(g_tuyaMCURXBuffer, howMuchTheyNeedToSay);
+		g_tuyaMCURXBufferSize = howMuchTheyNeedToSay;
 	}
 
-	for (uint32_t i = 2; i < howMuchTheyNeedToSay; i++)
-		theySaid[i] = UART_GetByte(i);
+	uint32_t checkCheckSum = 0;
+	for (uint32_t i = 0; i < howMuchTheyNeedToSay - 1; i++) {
+		g_tuyaMCURXBuffer[i] = UART_GetByte(i);
+		checkCheckSum += g_tuyaMCURXBuffer[i];
+	}
+	uint32_t sentCheckSum = UART_GetByte(howMuchTheyNeedToSay - 1);
 	// consume whole packet (but don't touch next one, if any)
 	UART_ConsumeBytes(howMuchTheyNeedToSay);
+	checkCheckSum &= 0x000000FF;
+	if (checkCheckSum != sentCheckSum) {
+		ADDLOGF_ERROR("Consumed %i bytes bad checksum, expected %i and got checksum %i",
+			howMuchTheyNeedToSay, sentCheckSum, checkCheckSum);
+		
+		for (uint32_t i = 0; i < howMuchTheyNeedToSay - 4; i += 4)
+			ADDLOGF_ERROR("%x %x %x %x", g_tuyaMCURXBuffer[i], g_tuyaMCURXBuffer[i+1], g_tuyaMCURXBuffer[i+2], g_tuyaMCURXBuffer[i+3]);
+		return g_waitingToHearBack = 0;
+	}
+
 	return howMuchTheyNeedToSay;
 }
 
@@ -220,13 +239,15 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 		UART_SendByte(b);
 	}
 	UART_SendByte(check_sum);
+	g_waitingToHearBack = cmdType;
 }
 void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen) {
 	g_productinfo = (char*)malloc(prodInfoLen);
 	if (g_productinfo) {
 		memcpy(g_productinfo, prodInfo, prodInfoLen - 1);
-		g_productinfo[prodInfoLen] = 0;
-		ADDLOGF_DEBUG("ParseQueryProductInformation: received %s", g_productinfo);
+		g_productinfo[prodInfoLen - 1] = 0;
+		ADDLOGF_DEBUG("ParseQueryProductInformation: %i bytes, received %s",
+			prodInfoLen, g_productinfo);
 	} else {
 		ADDLOGF_ERROR("%s - unable to allocate space for product info %i bytes", prodInfoLen);
 	}
@@ -239,7 +260,6 @@ int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
 	tuyaMCUMapping_t* cur;
 
 	printer(request, "[");
-
 
 	cur = g_tuyaMappings;
 	while (cur) {
@@ -268,11 +288,11 @@ static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const
 
 	// really it's just +1 for NULL character but let's keep more space
 	strLen = sectorLen * 2 + 16;
-	if (g_tuyaMCUpayloadBufferSize < strLen) {
-		g_tuyaMCUpayloadBuffer = realloc(g_tuyaMCUpayloadBuffer, strLen);
-		g_tuyaMCUpayloadBufferSize = strLen;
+	if (g_tuyaMCUTXBufferSize < strLen) {
+		g_tuyaMCUTXBuffer = realloc(g_tuyaMCUTXBuffer, strLen);
+		g_tuyaMCUTXBufferSize = strLen;
 	}
-	s = (char*)g_tuyaMCUpayloadBuffer;
+	s = (char*)g_tuyaMCUTXBuffer;
 	*s = 0;
 
 	sprintf(sName, "tm/%s/%i", TuyaMCU_GetDataTypeString(dataType), dpId);
@@ -350,17 +370,17 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 		mapping->prevValue = iVal;
 	}
 }
-static void TuyaMCU_recordTypeResponse(byte* data) {
-	for (g_waitToSendRespounse = g_tuyaMCUBatteryAckDelay; !g_waitToSendRespounse; g_waitToSendRespounse--)
+static void TuyaMCU_recordTypeResponse(uint32_t subcommand) {
+	byte reply[2] = { 0x00, 0x00 };
+	reply[0] = subcommand;
+	for (g_waitToSendRespounse = g_tuyaMCUBatteryAckDelay; g_waitToSendRespounse; g_waitToSendRespounse--)
 		rtos_delay_milliseconds(1000);
-	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, data, 2);
+	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
 }
 static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 	OSStatus err = kNoErr;
 	int subcommand = value[0];
 	ADDLOGF_DEBUG("command %i, subcommand %i\n", TUYA_CMD_REPORT_STATUS_RECORD_TYPE, subcommand);
-	byte reply[2] = { 0x00, 0x00 };
-	reply[0] = subcommand;
 	switch (subcommand) {
 	case 0x0B:
 		// TuyaMCU version 3 equivalent packet to version 0 0x08 packet
@@ -377,30 +397,23 @@ static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 		NULL,
 		(beken_thread_function_t)TuyaMCU_recordTypeResponse,
 		0x800,
-		(byte*)reply);
+		(uint32_t)subcommand);
 	if (err != kNoErr)
-		ADDLOGF_INFO("%s - record type response scheduled");
+		ADDLOGF_ERROR("%s - record type response failed to scheduled, %i", err);
 }
-void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
-	uint32_t checkCheckSum = 0;
-	uint32_t cmd;
+void TuyaMCU_theySaidWhat(int howMuchTheySaid) {
+	uint32_t whatWeHeard = g_tuyaMCURXBuffer[3];
 
-	for (uint32_t i = 0; i < howMuchTheySaid - 1; i++)
-		checkCheckSum += theySaid[i];
-
-	if (checkCheckSum & 0x000000FF != theySaid[howMuchTheySaid - 1]) {
-		ADDLOGF_INFO("ProcessIncoming: discarding packet bad expected checksum, expected %i and got checksum %i\n", (int)theySaid[howMuchTheySaid - 1], (int)checkCheckSum);
-		return;
-	}
-
-	g_version = theySaid[2];
-	cmd = theySaid[3];
-	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i, len %i", xTaskGetTickCount(), __func__, g_version, cmd, howMuchTheySaid);
-	switch (cmd) {
+	g_version = g_tuyaMCURXBuffer[2];
+	if (g_waitingToHearBack && g_waitingToHearBack != whatWeHeard)
+		ADDLOGF_WARN("%s - Rec'd command response (%i), but sent command %i", __func__, whatWeHeard, g_waitingToHearBack);
+	g_waitingToHearBack = 0;
+	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i, len %i", xTaskGetTickCount(), __func__, g_version, whatWeHeard, howMuchTheySaid);
+	switch (whatWeHeard) {
 	case TUYA_CMD_HEARTBEAT:
 		break;
 	case TUYA_CMD_QUERY_PRODUCT:
-		TuyaMCU_ParseQueryProductInformation(theySaid + 6, howMuchTheySaid - 6);
+		TuyaMCU_ParseQueryProductInformation(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
 		product_information_valid = true;
 		break;
 	case TUYA_CMD_MCU_CONF:
@@ -408,7 +421,7 @@ void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
 			self_processing_mode = true;
 		} else if (howMuchTheySaid == MIN_TUYAMCU_PACKET_SIZE + 2) {
 			self_processing_mode = false;
-			ADDLOGF_INFO("IMPORTANT!!! mcu conf pins: %i %i", (int)(theySaid[6]), (int)(theySaid[7]));
+			ADDLOGF_INFO("IMPORTANT!!! mcu conf pins: %i %i", (int)(g_tuyaMCURXBuffer[6]), (int)(g_tuyaMCURXBuffer[7]));
 		}
 		ADDLOGF_INFO("ProcessIncoming: TUYA_CMD_MCU_CONF, TODO!");
 		break;
@@ -425,17 +438,17 @@ void TuyaMCU_theySaidWhat(const byte* theySaid, int howMuchTheySaid) {
 		// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
 		g_openAP = 1;
 	case TUYA_CMD_STATE:
-		TuyaMCU_ParseStateMessage(theySaid + 6, howMuchTheySaid - 6);
+		TuyaMCU_ParseStateMessage(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
 		state_updated = true;
 		break;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
-		TuyaMCU_ParseReportStatusType(theySaid + 6, howMuchTheySaid - 6);
+		TuyaMCU_ParseReportStatusType(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
 		break;
 	default:
-		ADDLOGF_INFO("ProcessIncoming: unhandled type %i", cmd);
+		ADDLOGF_INFO("ProcessIncoming: unhandled type %i", whatWeHeard);
 		break;
 	}
-	EventHandlers_FireEvent(CMD_EVENT_TUYAMCU_PARSED, cmd);
+	EventHandlers_FireEvent(CMD_EVENT_TUYAMCU_PARSED, whatWeHeard);
 }
 commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int delay;
@@ -472,32 +485,33 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // Use the minimal amount of communications
 bool TuyaMCU_runBattery() {
 	/* Don't worry about connection after state is updated device will be turned off */
-	if (!state_updated) {
-		/* Don't send heartbeats just work on product information */
-		if (!product_information_valid) {
-			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
-			/* Request production information */
-			TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+	if (state_updated || g_waitingToHearBack)
+		return false;
+
+	/* Don't send heartbeats just work on product information */
+	if (!product_information_valid) {
+		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
+		/* Request production information */
+		TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+		return true;
+	}
+	/* No query state. Will be updated when connected to wifi/mqtt */
+	/* One way process device will be turned off after publishing */
+	if (Main_HasWiFiConnected()) {
+		if (!wifi_state) {
+			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to router", xTaskGetTickCount(), __func__);
+			const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER;
+			TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
+			wifi_state = true;
+			mqtt_state = false;
 			return true;
 		}
-		/* No query state. Will be updated when connected to wifi/mqtt */
-		/* One way process device will be turned off after publishing */
-		if (Main_HasWiFiConnected()) {
-			if (!wifi_state) {
-				ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to router", xTaskGetTickCount(), __func__);
-				const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER;
-				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
-				wifi_state = true;
-				mqtt_state = false;
-				return true;
-			}
-			if (MQTT_IsReady() && !mqtt_state) { // use MQTT function, main function isn't updated soon enough
-				ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
-				const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
-				TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
-				mqtt_state = true;
-				return true;
-			}
+		if (MQTT_IsReady() && !mqtt_state) { // use MQTT function, main function isn't updated soon enough
+			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
+			const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
+			TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
+			mqtt_state = true;
+			return true;
 		}
 	}
 	return false;
@@ -505,23 +519,21 @@ bool TuyaMCU_runBattery() {
 
 void TuyaMCU_quickTick() {
 	// process any received information
-	uint32_t howMuchTeySaid;
+	uint32_t howMuchTheySaid;
 
 	if (g_waitToSendRespounse)
 		return;
 
-	do {
-		byte theySaid[192];
-		howMuchTeySaid = TuyaMCU_listenToThem(theySaid, sizeof(theySaid));
-		if (howMuchTeySaid)
-			TuyaMCU_theySaidWhat(theySaid, howMuchTeySaid);
-	} while (howMuchTeySaid);
+	while (howMuchTheySaid = TuyaMCU_listenToThem())
+			TuyaMCU_theySaidWhat(howMuchTheySaid);
 
-	static int timer_battery = 0;
+	// start with a delay because during init we sent a
+	// production request.
+	static int timer_battery = 100;
 	if (timer_battery > 0) {
 		timer_battery -= g_deltaTimeMS;
 	} else if (TuyaMCU_runBattery()) {
-		timer_battery = 50;
+		timer_battery = 100;
 	}
 }
 
@@ -538,18 +550,25 @@ static void TuyaMCU_Shutdown() {
 	}
 	g_tuyaMappings = NULL;
 
-	// free the tuyaMCUpayloadBuffer
-	if (g_tuyaMCUpayloadBuffer) {
-		free(g_tuyaMCUpayloadBuffer);
-		g_tuyaMCUpayloadBuffer = NULL;
-		g_tuyaMCUpayloadBufferSize = 0;
+	// free the g_tuyaMCURXBuffer
+	if (g_tuyaMCURXBuffer) {
+		free(g_tuyaMCURXBuffer);
+		g_tuyaMCURXBuffer = NULL;
+		g_tuyaMCURXBufferSize = 0;
+	}
+
+	// free the g_tuyaMCURXBuffer
+	if (g_tuyaMCUTXBuffer) {
+		free(g_tuyaMCUTXBuffer);
+		g_tuyaMCUTXBuffer = NULL;
+		g_tuyaMCUTXBufferSize = 0;
 	}
 }
 static void TuyaMCU_init() {
-	if (!g_tuyaMCUpayloadBuffer) {
-		g_tuyaMCUpayloadBufferSize = TUYAMCU_BUFFER_SIZE;
-		g_tuyaMCUpayloadBuffer = (byte*)malloc(TUYAMCU_BUFFER_SIZE);
-	}
+	if (!g_tuyaMCURXBuffer)
+		g_tuyaMCURXBuffer = (byte*)malloc(g_tuyaMCURXBufferSize);
+	if (!g_tuyaMCUTXBuffer)
+		g_tuyaMCUTXBuffer = (byte*)malloc(g_tuyaMCUTXBufferSize);
 
 	UART_InitUART(g_baudRate, 0, false);
 	UART_InitReceiveRingBuffer(1024);
