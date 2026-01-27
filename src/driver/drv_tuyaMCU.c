@@ -150,6 +150,7 @@ uint32_t g_version;
 char *g_productinfo;
 
 uint32_t g_waitingToHearBack;
+uint32_t g_queuedMQTT;
 
 static tuyaDP_t* TuyaMCU_findDefForID(int dpId) {
 	tuyaDP_t* curDP = g_tuyaDPs;
@@ -284,7 +285,15 @@ static OBK_Publish_Result TuyaMCU_PublishDPToMQTT(int dpId, tuyaDP_Type_t dataTy
 	case DP_TYPE_BOOL:
 	case DP_TYPE_ENUM:
 		iVal = data[0];
-		return MQTT_PublishMain_StringInt(sName, iVal, 0);
+		if (MQTT_IsReady()) {
+			return MQTT_PublishMain_StringInt(sName, iVal, 0);
+		} else 	{
+			char sValue[4];   // channel value as a string
+			sprintf(sValue, "%i", (int)iVal);
+			MQTT_QueuePublish(CFG_GetMQTTClientId(), sName, sValue, 0); // queue the publishing
+			g_queuedMQTT++;
+			return OBK_PUBLISH_OK;
+		}
 	default:
 		return OBK_PUBLISH_WAS_NOT_REQUIRED;
 	}
@@ -332,14 +341,19 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 		ofs += (4 + sectorLen);
 	}
 
+	if (g_queuedMQTT)
+		return DU_RESP_STRANDED;
+
 	if (g_tuyaMCUBatteryAckDelay) {
 		// we wiil reset the delay no matter what, but we
 		// can only have one stranded at a time
 		if (!g_currentDelay) {
 			g_currentDelay = g_tuyaMCUBatteryAckDelay;
 			return DU_RESP_STRANDED;
-		} else
+		} else {
 			g_currentDelay = g_tuyaMCUBatteryAckDelay;
+			return DU_RESP_SUCCESS;
+		}
 	}
 	
 	return DU_RESP_SUCCESS;
@@ -474,6 +488,18 @@ static bool TuyaMCU_runBattery() {
 }
 void TuyaMCU_onEverySecond() {
 	static bool wasDelaying;
+
+	if (g_queuedMQTT && MQTT_hasQueued())
+		return;
+
+	// process queued item logic
+	while (g_queuedMQTT)
+		if (g_queuedMQTT-- || !g_tuyaMCUBatteryAckDelay) // more queued or no delay
+			TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
+		else // no more on the queue and ack delay
+			g_currentDelay = g_tuyaMCUBatteryAckDelay;
+
+	// process delayed logic
 	if (g_currentDelay) {
 		wasDelaying = true;
 		g_currentDelay--;
@@ -631,7 +657,7 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	tuyaDP_t* mapping;
 
 	if (g_currentDelay)
-		hprintf255(request, "<h2>Time till sleep %i (s)</h2>", g_currentDelay);
+		hprintf255(request, "<h2>Delayed ACK in %i (s)</h2>", g_currentDelay);
 
 	mapping = g_tuyaDPs;
 	while (mapping) {
