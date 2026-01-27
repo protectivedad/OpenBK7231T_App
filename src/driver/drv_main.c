@@ -953,9 +953,9 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"DoorSensor is using deep sleep to preserve battery. This is used for devices without TuyaMCU, where BK deep sleep and wakeup on GPIO is used. This drives requires you to set a DoorSensor pin. Change on door sensor pin wakes up the device. If there are no changes for some time, device goes to sleep. See example [here](https://www.elektroda.com/rtvforum/topic3960149.html). If your door sensor does not wake up in certain pos, please use DSEdge command (try all 3 options, default is 2). ",
 	//drvdetail:"requires":""}
 	{ "DoorSensor",                          // Driver Name
-	DoorSensor_OnEverySecond,                // onEverySecond
-	DoorSensor_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
-	DoorSensor_QuickTick,                    // runQuickTick
+	DoorSensor_onEverySecond,                // onEverySecond
+	DoorSensor_appendHTML,                   // appendHTML
+	DoorSensor_quickTick,                    // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	DoorSensor_frameworkRequest,             // frameworkRequest

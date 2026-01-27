@@ -44,9 +44,9 @@ void Battery_appendHTML(http_request_t *request, int bPreState);
 bool Battery_safeToUpdate();
 
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-void DoorSensor_OnEverySecond();
-void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
-void DoorSensor_QuickTick();
+void DoorSensor_onEverySecond();
+void DoorSensor_appendHTML(http_request_t *request, int bPreState);
+void DoorSensor_quickTick();
 
 void DRV_DGR_Init();
 void DRV_DGR_RunQuickTick();

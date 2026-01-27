@@ -180,7 +180,7 @@ static void DoorSensor_StopDriver() {
 
 // every second timing loop function
 // counts seconds and requests deep sleep when countdown reaches zero
-void DoorSensor_OnEverySecond() {
+void DoorSensor_onEverySecond() {
 	if (OTA_GetProgress() >= 0)
 		return;
 
@@ -205,7 +205,7 @@ void DoorSensor_OnEverySecond() {
 }
 
 // posts html information
-void DoorSensor_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
+void DoorSensor_appendHTML(http_request_t* request, int bPreState)
 {
 	if (bPreState)
 		return;
@@ -257,7 +257,7 @@ uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 
 // quick tick timing loop function
 // reads pin value posts changes to channel
-void DoorSensor_QuickTick() {
+void DoorSensor_quickTick() {
 	if (OTA_GetProgress() >= 0)
 		return;
 
