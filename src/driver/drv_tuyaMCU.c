@@ -242,6 +242,9 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 	g_waitingToHearBack = cmdType;
 	ADDLOGF_DEBUG("%s - Sent command %i, with payload len %i",
 		__func__, cmdType, payload_len);
+	if (payload_len>2)
+		ADDLOGF_DEBUG("%s - Bytes 0x%X 0x%X", __func__, data[0], data[1]);
+
 }
 void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen) {
 	g_productinfo = (char*)malloc(prodInfoLen);
@@ -362,30 +365,18 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 
 	if (sectorLen == 1) {
 		iVal = (int)data[4];
-		ADDLOGF_DEBUG("ParseState: byte %i\n", iVal);
 	} else if (sectorLen == 4) {
 		iVal = data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7];
-		ADDLOGF_DEBUG("ParseState: int32 %i\n", iVal);
 	}
 	if (mapping->prevValue != iVal) {
 		TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + 4);
 		mapping->prevValue = iVal;
 	}
 }
-static void TuyaMCU_recordTypeResponse(uint32_t subcommand) {
-	byte reply[2] = { 0x00, 0x00 };
-	reply[0] = subcommand;
-	ADDLOGF_DEBUG("%s - Thread started for response subcommand: %i, wating %i (s)",
-		__func__, subcommand, g_tuyaMCUBatteryAckDelay);
-	g_waitToSendRespounse = g_tuyaMCUBatteryAckDelay * 10;
-	while (g_waitToSendRespounse--)
-		rtos_delay_milliseconds(100);
-	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
-	g_waitingToHearBack = 0;
-}
 static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
-	OSStatus err = kNoErr;
-	int subcommand = value[0];
+	byte reply[2] = { 0x00, 0x00 };
+	uint32_t subcommand = value[0];
+	reply[0] = subcommand;
 	ADDLOGF_DEBUG("command %i, subcommand %i\n", TUYA_CMD_REPORT_STATUS_RECORD_TYPE, subcommand);
 	switch (subcommand) {
 	case 0x0B:
@@ -399,13 +390,7 @@ static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 		// Unknown subcommand, ignore
 		return;
 	}
-	err = rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,
-		NULL,
-		(beken_thread_function_t)TuyaMCU_recordTypeResponse,
-		0x800,
-		(uint32_t)subcommand);
-	if (err != kNoErr)
-		ADDLOGF_ERROR("%s - record type response failed to scheduled, %i", err);
+	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
 }
 void TuyaMCU_theySaidWhat(int howMuchTheySaid) {
 	uint32_t whatWeHeard = g_tuyaMCURXBuffer[3];
@@ -443,10 +428,6 @@ void TuyaMCU_theySaidWhat(int howMuchTheySaid) {
 		// TUYA_CMD_WIFI_SELECT
 		// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
 		g_openAP = 1;
-	case TUYA_CMD_STATE:
-		TuyaMCU_ParseStateMessage(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
-		state_updated = true;
-		break;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
 		TuyaMCU_ParseReportStatusType(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
 		break;
@@ -454,7 +435,6 @@ void TuyaMCU_theySaidWhat(int howMuchTheySaid) {
 		ADDLOGF_INFO("ProcessIncoming: unhandled type %i", whatWeHeard);
 		break;
 	}
-	EventHandlers_FireEvent(CMD_EVENT_TUYAMCU_PARSED, whatWeHeard);
 }
 commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	int delay;
@@ -699,6 +679,9 @@ void TuyaMCU_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreS
 		return;
 	}
 	tuyaMCUMapping_t* mapping;
+
+	if (product_information_valid)
+		hprintf255(request, "<h3>%s</h3>", g_productinfo);
 
 	mapping = g_tuyaMappings;
 	while (mapping) {
