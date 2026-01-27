@@ -23,7 +23,7 @@
 typedef struct driver_s {
 	const char* name;
 	void(*onEverySecond)();
-	void(*appendInformationToHTTPIndexPage)(http_request_t* request, int bPreState);
+	void(*appendHTML)(http_request_t* request, int bPreState);
 	void(*runQuickTick)();
 	void(*onChannelChanged)(int ch, int val);
 	void(*onHassDiscovery)(const char *topic);
@@ -43,7 +43,7 @@ static driver_t g_drivers[] = {
 	//drvdetail:"requires":""}
 	{ "Null",                                // Driver Name
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
@@ -56,7 +56,7 @@ static driver_t g_drivers[] = {
 	//drvdetail:"requires":""}
 	{ "Output",                              // Driver Name
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	Output_quickTick,                        // runQuickTick
 	Output_onChanged,                        // onChannelChanged
 	NULL,                                    // onHassDiscovery
@@ -69,7 +69,7 @@ static driver_t g_drivers[] = {
 	//drvdetail:"requires":""}
 	{ "Input",                               // Driver Name
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // done in user main or interrupt
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
@@ -79,7 +79,7 @@ static driver_t g_drivers[] = {
 #if ENABLE_DRIVER_DIGITAL
 	{ "Digital",                             // Driver Name
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // done in user main or interrupt
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
@@ -90,7 +90,7 @@ static driver_t g_drivers[] = {
 #if ENABLE_DRIVER_PWM
 	{ "PWM",                                 // Driver Name
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	PWM_onChanged,                           // onChannelChanged
 	NULL,                                    // onHassDiscovery
@@ -121,7 +121,7 @@ static driver_t g_drivers[] = {
 	{ "GirierMCU",                           // Driver Name
 	GirierMCU_Init,                          // Init
 	GirierMCU_RunEverySecond,                // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	GirierMCU_RunFrame,                      // runQuickTick
 	GirierMCU_Shutdown,                      // stopFunction
 	NULL,                                    // onChannelChanged
@@ -137,7 +137,7 @@ static driver_t g_drivers[] = {
 	{ "TCA9554",                             // Driver Name
 	TCA9554_Init,                            // Init
 	TCA9554_OnEverySecond,                   // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	TCA9554_OnChannelChanged,                // onChannelChanged
@@ -153,7 +153,7 @@ static driver_t g_drivers[] = {
 	{ "DMX",                                 // Driver Name
 	DMX_Init,                                // Init
 	DMX_OnEverySecond,                       // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	DMX_Shutdown,                            // stopFunction
 	NULL,                                    // onChannelChanged
@@ -169,7 +169,7 @@ static driver_t g_drivers[] = {
 	{ "Freeze",                              // Driver Name
 	Freeze_Init,                             // Init
 	Freeze_OnEverySecond,                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	Freeze_RunFrame,                         // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -185,7 +185,7 @@ static driver_t g_drivers[] = {
 	{ "TESTSPIFLASH",                        // Driver Name
 	DRV_InitFlashMemoryTestFunctions,        // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -201,7 +201,7 @@ static driver_t g_drivers[] = {
 	{ "PIR",                                 // Driver Name
 	PIR_Init,                                // Init
 	PIR_OnEverySecond,                       // onEverySecond
-	PIR_AppendInformationToHTTPIndexPage,    // appendInformationToHTTPIndexPage
+	PIR_AppendInformationToHTTPIndexPage,    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	PIR_OnChannelChanged,                    // onChannelChanged
@@ -217,7 +217,7 @@ static driver_t g_drivers[] = {
 	{ "PixelAnim",                           // Driver Name
 	PixelAnim_Init,                          // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	PixelAnim_SetAnimQuickTick,              // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -233,7 +233,7 @@ static driver_t g_drivers[] = {
 	{ "Drawers",                             // Driver Name
 	Drawers_Init,                            // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	Drawers_QuickTick,                       // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -249,7 +249,7 @@ static driver_t g_drivers[] = {
 	{ "HGS02",                               // Driver Name
 	HGS02_Init,                              // Init
 	HGS02_RunEverySecond,                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -265,7 +265,7 @@ static driver_t g_drivers[] = {
 	{ "PinMutex",                            // Driver Name
 	DRV_PinMutex_Init,                       // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_PinMutex_RunFrame,                   // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -281,7 +281,7 @@ static driver_t g_drivers[] = {
 	{ "GosundSW2",                           // Driver Name
 	DRV_GosundSW2_Init,                      // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_GosundSW2_RunFrame,                  // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -297,7 +297,7 @@ static driver_t g_drivers[] = {
 	{ "TCL",                                 // Driver Name
 	TCL_Init,                                // Init
 	TCL_UART_RunEverySecond,                 // onEverySecond
-	TCL_AppendInformationToHTTPIndexPage,    // appendInformationToHTTPIndexPage
+	TCL_AppendInformationToHTTPIndexPage,    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -313,7 +313,7 @@ static driver_t g_drivers[] = {
 	{ "OpenWeatherMap",                      // Driver Name
 	DRV_OpenWeatherMap_Init,                 // Init
 	NULL,                                    // onEverySecond
-	OWM_AppendInformationToHTTPIndexPage,    // appendInformationToHTTPIndexPage
+	OWM_AppendInformationToHTTPIndexPage,    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -329,7 +329,7 @@ static driver_t g_drivers[] = {
 	{ "Widget",                              // Driver Name
 	DRV_Widget_Init,                         // Init
 	NULL,                                    // onEverySecond
-	DRV_Widget_AddToHtmlPage,                // appendInformationToHTTPIndexPage
+	DRV_Widget_AddToHtmlPage,                // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -345,7 +345,7 @@ static driver_t g_drivers[] = {
 	{ "TestCharts",                          // Driver Name
 	NULL,                                    // Init
 	NULL,                                    // onEverySecond
-	DRV_Test_Charts_AddToHtmlPage,           // appendInformationToHTTPIndexPage
+	DRV_Test_Charts_AddToHtmlPage,           // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -361,7 +361,7 @@ static driver_t g_drivers[] = {
 	{ "Charts",                              // Driver Name
 	DRV_Charts_Init,                         // Init
 	NULL,                                    // onEverySecond
-	DRV_Charts_AddToHtmlPage,                // appendInformationToHTTPIndexPage
+	DRV_Charts_AddToHtmlPage,                // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -377,7 +377,7 @@ static driver_t g_drivers[] = {
 	{ "NTP",                                 // Driver Name
 	NTP_Init,                                // Init
 	NTP_OnEverySecond,                       // onEverySecond
-	NTP_AppendInformationToHTTPIndexPage,    // appendInformationToHTTPIndexPage
+	NTP_AppendInformationToHTTPIndexPage,    // appendHTML
 	NULL,                                    // runQuickTick
    	NTP_Stop,                                // stopFunction
    	NULL,                                    // onChannelChanged
@@ -393,7 +393,7 @@ static driver_t g_drivers[] = {
 	{ "DS3231",                              // Driver Name
    	DS3231_Init,                             // Init
    	DS3231_OnEverySecond,                    // onEverySecond
-   	DS3231_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+   	DS3231_AppendInformationToHTTPIndexPage, // appendHTML
    	NULL,                                    // runQuickTick
    	DS3231_Stop,                             // stopFunction
    	NULL,                                    // onChannelChanged
@@ -409,7 +409,7 @@ static driver_t g_drivers[] = {
 	{ "HTTPButtons",                         // Driver Name
 	DRV_InitHTTPButtons,                     // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -425,7 +425,7 @@ static driver_t g_drivers[] = {
 	{ "TESTPOWER",                           // Driver Name
 	Test_Power_Init,                         // Init
 	Test_Power_RunEverySecond,               // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -441,7 +441,7 @@ static driver_t g_drivers[] = {
 	{ "TESTLED",                             // Driver Name
 	Test_LED_Driver_Init,                    // Init
 	Test_LED_Driver_RunEverySecond,          // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	Test_LED_Driver_OnChannelChanged,        // onChannelChanged
@@ -457,7 +457,7 @@ static driver_t g_drivers[] = {
 	{ "TESTUART",                            // Driver Name
 	Test_UART_Init,                          // Init
 	Test_UART_RunEverySecond,                // onEverySecond
-	Test_UART_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	Test_UART_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -473,7 +473,7 @@ static driver_t g_drivers[] = {
 	{ "Test",                                // Driver Name
 	Test_Init,                               // Init
 	NULL,                                    // onEverySecond
-	Test_AppendInformationToHTTPIndexPage,   // appendInformationToHTTPIndexPage
+	Test_AppendInformationToHTTPIndexPage,   // appendHTML
 	Test_RunQuickTick,                       // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -489,7 +489,7 @@ static driver_t g_drivers[] = {
 	{ "SimpleEEPROM",                        // Driver Name
 	EEPROM_Init,                             // Init
 	NULL,                                    // onEverySecond
-	EEPROM_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	EEPROM_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -505,7 +505,7 @@ static driver_t g_drivers[] = {
 	{ "MultiPinI2CScanner",                  // Driver Name
 	MultiPinI2CScanner_Init,                 // Init
 	NULL,                                    // onEverySecond
-	MultiPinI2CScanner_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	MultiPinI2CScanner_AppendInformationToHTTPIndexPage, // appendHTML
 	MultiPinI2CScanner_RunFrame,             // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -521,7 +521,7 @@ static driver_t g_drivers[] = {
 	{ "I2C",                                 // Driver Name
 	DRV_I2C_Init,                            // Init
 	DRV_I2C_EverySecond,                     // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	DRV_I2C_Shutdown,                        // stopFunction
 	NULL,                                    // onChannelChanged
@@ -537,7 +537,7 @@ static driver_t g_drivers[] = {
 	{ "RN8209",                              // Driver Name
 	RN8209_Init,                             // Init
 	RN8029_RunEverySecond,                   // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -553,7 +553,7 @@ static driver_t g_drivers[] = {
 	{ "BL0942",                              // Driver Name
 	BL0942_UART_Init,                        // Init
 	BL0942_UART_RunEverySecond,              // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -569,7 +569,7 @@ static driver_t g_drivers[] = {
 	{ "PWMG",                                // Driver Name
 	PWMG_Init,                               // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -585,7 +585,7 @@ static driver_t g_drivers[] = {
 	{ "BL0942SPI",                           // Driver Name
 	BL0942_SPI_Init,                         // Init
 	BL0942_SPI_RunEverySecond,               // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -601,7 +601,7 @@ static driver_t g_drivers[] = {
 	{ "HLW8112SPI",                          // Driver Name
 	HLW8112SPI_Init,                         // Init
 	HLW8112_RunEverySecond,                  // onEverySecond
-	HLW8112_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	HLW8112_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	HLW8112SPI_Stop,                         // stopFunction
 	NULL,                                    // onChannelChanged
@@ -617,7 +617,7 @@ static driver_t g_drivers[] = {
 	{ "ChargingLimit",                       // Driver Name
 	ChargingLimit_Init,                      // Init
 	ChargingLimit_OnEverySecond,             // onEverySecond
-	ChargingLimit_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	ChargingLimit_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -633,7 +633,7 @@ static driver_t g_drivers[] = {
 	{ "BL0937",                              // Driver Name
 	BL0937_Init,                             // Init
 	BL0937_RunEverySecond,                   // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -649,7 +649,7 @@ static driver_t g_drivers[] = {
 	{ "CSE7761",                             // Driver Name
 	CSE7761_Init,                            // Init
 	CSE7761_RunEverySecond,                  // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -665,7 +665,7 @@ static driver_t g_drivers[] = {
 	{ "CSE7766",                             // Driver Name
 	CSE7766_Init,                            // Init
 	CSE7766_RunEverySecond,                  // onEverySecond
-	BL09XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BL09XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -681,7 +681,7 @@ static driver_t g_drivers[] = {
 	{ "MAX6675",                             // Driver Name
 	MAX6675_Init,                            // Init
 	MAX6675_RunEverySecond,                  // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -697,7 +697,7 @@ static driver_t g_drivers[] = {
 	{ "MAX31855",                            // Driver Name
 	MAX31855_Init,                           // Init
 	MAX31855_RunEverySecond,                 // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -713,7 +713,7 @@ static driver_t g_drivers[] = {
 	{ "PT6523",                              // Driver Name
 	PT6523_Init,                             // Init
 	PT6523_RunFrame,                         // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -729,7 +729,7 @@ static driver_t g_drivers[] = {
 	{ "TextScroller",                        // Driver Name
 	TS_Init,                                 // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	TS_RunQuickTick,                         // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -745,7 +745,7 @@ static driver_t g_drivers[] = {
 	{ "SM16703P",                            // Driver Name
 	SM16703P_Init,                           // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	SM16703P_Shutdown,                       // stopFunction
 	NULL,                                    // onChannelChanged
@@ -761,7 +761,7 @@ static driver_t g_drivers[] = {
 	{ "SM15155E",                            // Driver Name
 	SM15155E_Init,                           // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -777,7 +777,7 @@ static driver_t g_drivers[] = {
 	{ "IR",                                  // Driver Name
 	DRV_IR_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_IR_RunFrame,                         // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -793,7 +793,7 @@ static driver_t g_drivers[] = {
 	{ "IR",                                  // Driver Name
 	DRV_IR_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_IR_RunFrame,                         // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -809,7 +809,7 @@ static driver_t g_drivers[] = {
 	{ "RC",                                  // Driver Name
 	DRV_RC_Init,                             // Init
 	NULL,                                    // onEverySecond
-	RC_AppendInformationToHTTPIndexPage,                                    // appendInformationToHTTPIndexPage
+	RC_AppendInformationToHTTPIndexPage,                                    // appendHTML
 	DRV_RC_RunFrame,                         // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -825,7 +825,7 @@ static driver_t g_drivers[] = {
 	{ "IR2",                                 // Driver Name
 	DRV_IR2_Init,                            // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -841,7 +841,7 @@ static driver_t g_drivers[] = {
 	{ "DDPSend",                             // Driver Name
 	DRV_DDPSend_Init,                        // Init
 	NULL,                                    // onEverySecond
-	DRV_DDPSend_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DRV_DDPSend_AppendInformationToHTTPIndexPage, // appendHTML
 	DRV_DDPSend_RunFrame,                    // runQuickTick
 	DRV_DDPSend_Shutdown,                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -857,7 +857,7 @@ static driver_t g_drivers[] = {
 	{ "DDP",                                 // Driver Name
 	DRV_DDP_Init,                            // Init
 	NULL,                                    // onEverySecond
-	DRV_DDP_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DRV_DDP_AppendInformationToHTTPIndexPage, // appendHTML
 	DRV_DDP_RunFrame,                        // runQuickTick
 	DRV_DDP_Shutdown,                        // stopFunction
 	NULL,                                    // onChannelChanged
@@ -873,7 +873,7 @@ static driver_t g_drivers[] = {
 	{ "SSDP",                                // Driver Name
 	DRV_SSDP_Init,                           // Init
 	DRV_SSDP_RunEverySecond,                 // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_SSDP_RunQuickTick,                   // runQuickTick
 	DRV_SSDP_Shutdown,                       // stopFunction
 	NULL,                                    // onChannelChanged
@@ -889,7 +889,7 @@ static driver_t g_drivers[] = {
 	{ "DGR",                                 // Driver Name
 	DRV_DGR_Init,                            // Init
 	DRV_DGR_RunEverySecond,                  // onEverySecond
-	DRV_DGR_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DRV_DGR_AppendInformationToHTTPIndexPage, // appendHTML
 	DRV_DGR_RunQuickTick,                    // runQuickTick
 	DRV_DGR_Shutdown,                        // stopFunction
 	DRV_DGR_OnChannelChanged,                // onChannelChanged
@@ -905,7 +905,7 @@ static driver_t g_drivers[] = {
 	{ "Wemo",                                // Driver Name
 	WEMO_Init,                               // Init
 	NULL,                                    // onEverySecond
-	WEMO_AppendInformationToHTTPIndexPage,   // appendInformationToHTTPIndexPage
+	WEMO_AppendInformationToHTTPIndexPage,   // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -921,7 +921,7 @@ static driver_t g_drivers[] = {
 	{ "Hue",                                 // Driver Name
 	HUE_Init,                                // Init
 	NULL,                                    // onEverySecond
-	HUE_AppendInformationToHTTPIndexPage,    // appendInformationToHTTPIndexPage
+	HUE_AppendInformationToHTTPIndexPage,    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -938,7 +938,7 @@ static driver_t g_drivers[] = {
 	{ "PWMToggler",                          // Driver Name
 	DRV_InitPWMToggler,                      // Init
 	NULL,                                    // onEverySecond
-	DRV_Toggler_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DRV_Toggler_AppendInformationToHTTPIndexPage, // appendHTML
 	DRV_Toggler_QuickTick,                   // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -971,7 +971,7 @@ static driver_t g_drivers[] = {
 	{ "ADCButton",                           // Driver Name
 	DRV_ADCButton_Init,                      // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_ADCButton_RunFrame,                  // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -987,7 +987,7 @@ static driver_t g_drivers[] = {
 	{ "MAX72XX_Clock",                       // Driver Name
 	DRV_MAX72XX_Clock_Init,                  // Init
 	DRV_MAX72XX_Clock_OnEverySecond,         // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_MAX72XX_Clock_RunFrame,              // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1003,7 +1003,7 @@ static driver_t g_drivers[] = {
 	{ "SM2135",                              // Driver Name
 	SM2135_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1017,7 +1017,7 @@ static driver_t g_drivers[] = {
 	{ "BP5758D",                             // Driver Name
 	BP5758D_Init,                            // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1031,7 +1031,7 @@ static driver_t g_drivers[] = {
 	{ "BP1658CJ",                            // Driver Name
 	BP1658CJ_Init,                           // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1045,7 +1045,7 @@ static driver_t g_drivers[] = {
 	{ "SM2235",                              // Driver Name
 	SM2235_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1061,7 +1061,7 @@ static driver_t g_drivers[] = {
 	{ "BMP280",                              // Driver Name
 	BMP280_Init,                             // Init
 	BMP280_OnEverySecond,                    // onEverySecond
-	BMP280_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BMP280_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1077,7 +1077,7 @@ static driver_t g_drivers[] = {
 	{ "MAX72XX",                             // Driver Name
 	DRV_MAX72XX_Init,                        // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	DRV_MAX72XX_Shutdown,                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1093,7 +1093,7 @@ static driver_t g_drivers[] = {
 	{ "BMPI2C",                              // Driver Name
 	BMPI2C_Init,                             // Init
 	BMPI2C_OnEverySecond,                    // onEverySecond
-	BMPI2C_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	BMPI2C_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1109,7 +1109,7 @@ static driver_t g_drivers[] = {
 	{ "CHT83XX",                             // Driver Name
 	CHT83XX_Init,                            // Init
 	CHT83XX_OnEverySecond,                   // onEverySecond
-	CHT83XX_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	CHT83XX_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1125,7 +1125,7 @@ static driver_t g_drivers[] = {
 	{ "MCP9808",                             // Driver Name
 	MCP9808_Init,                            // Init
 	MCP9808_OnEverySecond,                   // onEverySecond
-	MCP9808_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	MCP9808_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1141,7 +1141,7 @@ static driver_t g_drivers[] = {
 	{ "KP18058",                             // Driver Name
 	KP18058_Init,                            // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1157,7 +1157,7 @@ static driver_t g_drivers[] = {
 	{ "ADCSmoother",                         // Driver Name
 	DRV_ADCSmoother_Init,                    // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	DRV_ADCSmoother_RunFrame,                // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1173,7 +1173,7 @@ static driver_t g_drivers[] = {
 	{ "SHT3X",                               // Driver Name
 	SHT3X_Init,                              // Init
 	SHT3X_OnEverySecond,                     // onEverySecond
-	SHT3X_AppendInformationToHTTPIndexPage,  // appendInformationToHTTPIndexPage
+	SHT3X_AppendInformationToHTTPIndexPage,  // appendHTML
 	NULL,                                    // runQuickTick
 	SHT3X_StopDriver,                        // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1189,7 +1189,7 @@ static driver_t g_drivers[] = {
 	{ "SGP",                                 // Driver Name
 	SGP_Init,                                // Init
 	SGP_OnEverySecond,                       // onEverySecond
-	SGP_AppendInformationToHTTPIndexPage,    // appendInformationToHTTPIndexPage
+	SGP_AppendInformationToHTTPIndexPage,    // appendHTML
 	NULL,                                    // runQuickTick
 	SGP_StopDriver,                          // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1205,7 +1205,7 @@ static driver_t g_drivers[] = {
 	{ "ShiftRegister",                       // Driver Name
 	Shift_Init,                              // Init
 	Shift_OnEverySecond,                     // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	Shift_OnChannelChanged,                  // onChannelChanged
@@ -1221,7 +1221,7 @@ static driver_t g_drivers[] = {
 	{ "AHT2X",                               // Driver Name
 	AHT2X_Init,                              // Init
 	AHT2X_OnEverySecond,                     // onEverySecond
-	AHT2X_AppendInformationToHTTPIndexPage,  // appendInformationToHTTPIndexPage
+	AHT2X_AppendInformationToHTTPIndexPage,  // appendHTML
 	NULL,                                    // runQuickTick
 	AHT2X_StopDriver,                        // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1237,7 +1237,7 @@ static driver_t g_drivers[] = {
 	{ "DS1820",                              // Driver Name
 	DS1820_driver_Init,                      // Init
 	DS1820_OnEverySecond,                    // onEverySecond
-	DS1820_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DS1820_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1253,7 +1253,7 @@ static driver_t g_drivers[] = {
 	{ "DS1820_FULL",                         // Driver Name
 	DS1820_full_driver_Init,                 // Init
 	DS1820_full_OnEverySecond,               // onEverySecond
-	DS1820_full_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	DS1820_full_AppendInformationToHTTPIndexPage, // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1269,7 +1269,7 @@ static driver_t g_drivers[] = {
 	{ "HT16K33",                             // Driver Name
 	HT16K33_Init,                            // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1286,7 +1286,7 @@ static driver_t g_drivers[] = {
 	{ "TM1637",                              // Driver Name
 	TM1637_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	TMGN_RunQuickTick,                       // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1300,7 +1300,7 @@ static driver_t g_drivers[] = {
 	{ "GN6932",                              // Driver Name
 	GN6932_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	TMGN_RunQuickTick,                       // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1314,7 +1314,7 @@ static driver_t g_drivers[] = {
 	{ "TM1638",                              // Driver Name
 	TM1638_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	TMGN_RunQuickTick,                       // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1328,7 +1328,7 @@ static driver_t g_drivers[] = {
 	{ "HD2015",                              // Driver Name
 	HD2015_Init,                             // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	TMGN_RunQuickTick,                       // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1359,7 +1359,7 @@ static driver_t g_drivers[] = {
 	{ "BKPartitions",                        // Driver Name
 	BKPartitions_Init,                       // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	BKPartitions_QuickFrame,                 // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1375,7 +1375,7 @@ static driver_t g_drivers[] = {
 	{ "Bridge",                              // Driver Name
 	Bridge_driver_Init,                      // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	Bridge_driver_QuickFrame,                // runQuickTick
 	Bridge_driver_DeInit,                    // stopFunction
 	Bridge_driver_OnChannelChanged,          // onChannelChanged
@@ -1391,7 +1391,7 @@ static driver_t g_drivers[] = {
 	{ "UartTCP",                             // Driver Name
 	UART_TCP_Init,                           // Init
 	NULL,                                    // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	UART_TCP_Deinit,                         // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1407,7 +1407,7 @@ static driver_t g_drivers[] = {
 	{ "TXWCAM",                              // Driver Name
 	TXW_Cam_Init,                            // Init
 	TXW_Cam_RunEverySecond,                  // onEverySecond
-	NULL,                                    // appendInformationToHTTPIndexPage
+	NULL,                                    // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1423,7 +1423,7 @@ static driver_t g_drivers[] = {
 	{ "NEO6M",                               // Driver Name
 	NEO6M_UART_Init,                         // Init
 	NEO6M_UART_RunEverySecond,               // onEverySecond
-	NEO6M_AppendInformationToHTTPIndexPage,  // appendInformationToHTTPIndexPage
+	NEO6M_AppendInformationToHTTPIndexPage,  // appendHTML
 	NULL,                                    // runQuickTick
 	NULL,                                    // stopFunction
 	NULL,                                    // onChannelChanged
@@ -1665,8 +1665,8 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 	for (i = 0; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			c_active++;
-			if (g_drivers[i].appendInformationToHTTPIndexPage) {
-				g_drivers[i].appendInformationToHTTPIndexPage(request, bPreState);
+			if (g_drivers[i].appendHTML) {
+				g_drivers[i].appendHTML(request, bPreState);
 			}
 		}
 	}
