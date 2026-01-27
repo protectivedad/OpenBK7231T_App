@@ -2495,6 +2495,9 @@ void MQTT_QueuePublish(const char* topic, const char* channel, const char* value
 	MQTT_QueuePublishWithCommand(topic, channel, value, flags, None);
 }
 
+bool MQTT_hasQueued() {
+	return g_MqttPublishItemsQueued > 0;
+}
 
 /// @brief Publish MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE queued items.
 /// @return 
@@ -2507,7 +2510,7 @@ OBK_Publish_Result PublishQueuedItems() {
 	//The next actionable item might not be at the front. The queue size is limited to MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE
 	//so this traversal is fast.
 	//ADDLOGF_INFO("PublishQueuedItems g_MqttPublishItemsQueued=%i",g_MqttPublishItemsQueued );
-	while ((head != NULL) && (count < MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE) && (g_MqttPublishItemsQueued > 0)) {
+	while ((head != NULL) && (count < MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE) && (MQTT_hasQueued())) {
 		if (!MQTT_QUEUE_ITEM_IS_REUSABLE(head)) {  //Skip reusable entries
 			count++;
 			result = MQTT_PublishTopicToClient(mqtt_client, head->topic, head->channel, head->value, head->flags, false);
@@ -2537,8 +2540,6 @@ OBK_Publish_Result PublishQueuedItems() {
 
 	return result;
 }
-
-
 /// @brief Is MQTT sub system ready and connected?
 /// @return 
 bool MQTT_IsReady() {
