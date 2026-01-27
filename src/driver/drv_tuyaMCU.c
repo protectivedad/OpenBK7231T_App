@@ -91,17 +91,17 @@ const char* TuyaMCU_GetDataTypeString(int dpId) {
 	return "error";
 }
 
-typedef struct tuyaMCUMapping_s {
+typedef struct tuyaDP_s {
 	// internal Tuya variable index
 	byte dpId;
 	// data point type (one of the DP_TYPE_xxx defines)
 	byte dpType;
 	// store last value to avoid sending it again
 	int prevValue;
-	struct tuyaMCUMapping_s* next;
-} tuyaMCUMapping_t;
+	struct tuyaDP_s* next;
+} tuyaDP_t;
 
-tuyaMCUMapping_t* g_tuyaMappings = 0;
+tuyaDP_t* g_tuyaDPs = 0;
 
 // serial baud rate used to communicate with the TuyaMCU
 // common baud rates are 9600 bit/s and 115200 bit/s
@@ -135,27 +135,27 @@ char *g_productinfo;
 
 uint32_t g_waitingToHearBack;
 
-tuyaMCUMapping_t* TuyaMCU_FindDefForID(int dpId) {
-	tuyaMCUMapping_t* cur = g_tuyaMappings;
-	while (cur) {
-		if (cur->dpId == dpId)
-			return cur;
-		cur = cur->next;
+static tuyaDP_t* TuyaMCU_findDefForID(int dpId) {
+	tuyaDP_t* curDP = g_tuyaDPs;
+	while (curDP) {
+		if (curDP->dpId == dpId)
+			return curDP;
+		curDP = curDP->next;
 	}
 	return 0;
 }
 
-tuyaMCUMapping_t* TuyaMCU_saveDpId(int dpId, int dpType) {
-	tuyaMCUMapping_t* cur = TuyaMCU_FindDefForID(dpId);
-	if (!cur) {
-		cur = (tuyaMCUMapping_t*)malloc(sizeof(tuyaMCUMapping_t));
-		cur->next = g_tuyaMappings;
-		g_tuyaMappings = cur;
+static tuyaDP_t* TuyaMCU_saveDpId(int dpId, int dpType) {
+	tuyaDP_t* curDP = TuyaMCU_findDefForID(dpId);
+	if (!curDP) {
+		curDP = (tuyaDP_t*)malloc(sizeof(tuyaDP_t));
+		curDP->next = g_tuyaDPs;
+		g_tuyaDPs = curDP;
 	}
-	cur->dpId = dpId;
-	cur->dpType = dpType;
-	cur->prevValue = -1;
-	return cur;
+	curDP->dpId = dpId;
+	curDP->dpType = dpType;
+	curDP->prevValue = -1;
+	return curDP;
 }
 
 // header version command lenght data checksum
@@ -163,7 +163,7 @@ tuyaMCUMapping_t* TuyaMCU_saveDpId(int dpId, int dpType) {
 
 // talks to TuyaMCU, puts what they said in a buffer and returns
 // how much they said
-int TuyaMCU_listenToThem() {
+static uint32_t TuyaMCU_listenToTuya() {
 	uint32_t howMuchTheyNeedToSay = MIN_TUYAMCU_PACKET_SIZE;
 	uint32_t howMuchTheySaid = UART_GetDataSize();
 	uint32_t whatWeDidnotWantToHear = 0;
@@ -222,7 +222,7 @@ int TuyaMCU_listenToThem() {
 }
 
 // append header, len, everything, checksum
-void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
+static void TuyaMCU_talkToTuya(byte cmdType, byte* data, int payload_len) {
 	int i;
 	
 	byte check_sum = (0xFF + cmdType + (payload_len >> 8) + (payload_len & 0xFF));
@@ -246,7 +246,7 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 		ADDLOGF_DEBUG("%s - Bytes 0x%X 0x%X", __func__, data[0], data[1]);
 
 }
-void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen) {
+static void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen) {
 	g_productinfo = (char*)malloc(prodInfoLen);
 	if (g_productinfo) {
 		memcpy(g_productinfo, prodInfo, prodInfoLen - 1);
@@ -256,32 +256,6 @@ void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen)
 	} else {
 		ADDLOGF_ERROR("%s - unable to allocate space for product info %i bytes", prodInfoLen);
 	}
-}
-
-int http_obk_json_dps(int id, void* request, jsonCb_t printer) {
-	int i;
-	int iCnt = 0;
-	char tmp[8];
-	tuyaMCUMapping_t* cur;
-
-	printer(request, "[");
-
-	cur = g_tuyaMappings;
-	while (cur) {
-		if (id == -1 || id == cur->dpId) {
-			if (iCnt) {
-				printer(request, ",");
-			}
-			iCnt++;
-			printer(request, "{\"id\":%i,\"type\":%i,\"data\":", cur->dpId, cur->dpType);
-			printer(request, "0}", 0);
-		}
-		cur = cur->next;
-	}
-
-
-	printer(request, "]");
-	return 0;
 }
 
 static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const byte *data) {
@@ -348,7 +322,7 @@ static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const
 #endif
 }
 void TuyaMCU_ParseStateMessage(const byte* data, int len) {
-	tuyaMCUMapping_t* mapping;
+	tuyaDP_t* mapping;
 	int dpId, dataType, sectorLen;
 	int iVal = 0;
 
@@ -364,7 +338,7 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 	ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i value %i\n",
 		dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen, iVal);
 
-	mapping = TuyaMCU_FindDefForID(dpId);
+	mapping = TuyaMCU_findDefForID(dpId);
 	if (!mapping)
 		mapping = TuyaMCU_saveDpId(dpId, dataType);
 
@@ -373,7 +347,7 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 		mapping->prevValue = iVal;
 	}
 }
-static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
+static void TuyaMCU_parseReportStatusType(const byte *value, int len) {
 	byte reply[2] = { 0x00, 0x00 };
 	uint32_t subcommand = value[0];
 	reply[0] = subcommand;
@@ -390,9 +364,9 @@ static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 		// Unknown subcommand, ignore
 		return;
 	}
-	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
+	TuyaMCU_talkToTuya(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
 }
-void TuyaMCU_theySaidWhat(int howMuchTheySaid) {
+static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 	uint32_t whatWeHeard = g_tuyaMCURXBuffer[3];
 
 	g_version = g_tuyaMCURXBuffer[2];
@@ -422,14 +396,14 @@ void TuyaMCU_theySaidWhat(int howMuchTheySaid) {
 	case TUYA_CMD_WIFI_RESET:
 		ADDLOGF_INFO("ProcessIncoming: 0x04 replying");
 		// added for https://www.elektroda.com/rtvforum/viewtopic.php?p=21095905#21095905
-		TuyaMCU_SendCommandWithData(0x04, 0, 0);
+		TuyaMCU_talkToTuya(0x04, 0, 0);
 		break;
 	case TUYA_CMD_WIFI_SELECT:
 		// TUYA_CMD_WIFI_SELECT
 		// it should have 1 payload byte, AP mode or EZ mode, but does it make difference for us?
 		g_openAP = 1;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
-		TuyaMCU_ParseReportStatusType(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
+		TuyaMCU_parseReportStatusType(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
 		break;
 	default:
 		ADDLOGF_INFO("ProcessIncoming: unhandled type %i", whatWeHeard);
@@ -469,7 +443,7 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // no processing after state is updated
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
-bool TuyaMCU_runBattery() {
+static bool TuyaMCU_runBattery() {
 	/* Don't worry about connection after state is updated device will be turned off */
 	if (state_updated || g_waitingToHearBack)
 		return false;
@@ -478,7 +452,7 @@ bool TuyaMCU_runBattery() {
 	if (!product_information_valid) {
 		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
 		/* Request production information */
-		TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+		TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
 		return true;
 	}
 	/* No query state. Will be updated when connected to wifi/mqtt */
@@ -487,7 +461,7 @@ bool TuyaMCU_runBattery() {
 		if (!wifi_state) {
 			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to router", xTaskGetTickCount(), __func__);
 			const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER;
-			TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
+			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
 			wifi_state = true;
 			mqtt_state = false;
 			return true;
@@ -495,7 +469,7 @@ bool TuyaMCU_runBattery() {
 		if (MQTT_IsReady() && !mqtt_state) { // use MQTT function, main function isn't updated soon enough
 			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
 			const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
-			TuyaMCU_SendCommandWithData(TUYA_CMD_WIFI_STATE, &state, 1);
+			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
 			mqtt_state = true;
 			return true;
 		}
@@ -510,8 +484,8 @@ void TuyaMCU_quickTick() {
 	if (g_waitToSendRespounse)
 		return;
 
-	while (howMuchTheySaid = TuyaMCU_listenToThem())
-			TuyaMCU_theySaidWhat(howMuchTheySaid);
+	while (howMuchTheySaid = TuyaMCU_listenToTuya())
+			TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
 	// start with a delay because during init we sent a
 	// production request.
@@ -523,33 +497,6 @@ void TuyaMCU_quickTick() {
 	}
 }
 
-static void TuyaMCU_Shutdown() {
-	tuyaMCUMapping_t *tmp, *nxt;
-
-	// free the tuyaMCUMapping_t linked list
-	tmp = g_tuyaMappings;
-	while (tmp) {
-		nxt = tmp->next;
-		// free rawData if allocated
-		free(tmp);
-		tmp = nxt;
-	}
-	g_tuyaMappings = NULL;
-
-	// free the g_tuyaMCURXBuffer
-	if (g_tuyaMCURXBuffer) {
-		free(g_tuyaMCURXBuffer);
-		g_tuyaMCURXBuffer = NULL;
-		g_tuyaMCURXBufferSize = 0;
-	}
-
-	// free the g_tuyaMCURXBuffer
-	if (g_tuyaMCUTXBuffer) {
-		free(g_tuyaMCUTXBuffer);
-		g_tuyaMCUTXBuffer = NULL;
-		g_tuyaMCUTXBufferSize = 0;
-	}
-}
 static void TuyaMCU_init() {
 	if (!g_tuyaMCURXBuffer)
 		g_tuyaMCURXBuffer = (byte*)malloc(g_tuyaMCURXBufferSize);
@@ -568,7 +515,7 @@ static void TuyaMCU_init() {
 	ADDLOGF_TIMING("%i - %s - Initialization of TuyaMCU", xTaskGetTickCount(), __func__);
 
 	/* Request production information */
-	TuyaMCU_SendCommandWithData(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+	TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
 
 }
 
@@ -590,16 +537,31 @@ static void TuyaMCU_releasePin(uint32_t pinIndex) {
 }
 
 static void TuyaMCU_stopDriver() {
-	TuyaMCU_Shutdown();
+	tuyaDP_t *curDp, *nxtDp;
 	g_driverPins = 0;
-}
 
-static bool TuyaMCU_shouldPublish(uint32_t pinRole) {
-	return false;
-}
+	// free the tuyaDP_t linked list
+	curDp = g_tuyaDPs;
+	while (curDp) {
+		nxtDp = curDp->next;
+		free(curDp);
+		curDp = nxtDp;
+	}
+	g_tuyaDPs = NULL;
 
-static uint32_t TuyaMCU_noOfChannels(uint32_t pinRole) {
-	return 0;
+	// free the g_tuyaMCURXBuffer
+	free(g_tuyaMCURXBuffer);
+	g_tuyaMCURXBuffer = NULL;
+	g_tuyaMCURXBufferSize = TUYAMCU_BUFFER_SIZE;
+
+	// free the g_tuyaMCURXBuffer
+	free(g_tuyaMCUTXBuffer);
+	g_tuyaMCUTXBuffer = NULL;
+	g_tuyaMCUTXBufferSize = TUYAMCU_BUFFER_SIZE;
+
+	// free g_productinfo
+	free(g_productinfo);
+	g_productinfo = NULL;
 }
 
 // framework request function
@@ -624,10 +586,8 @@ uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 		break;
 		
 	case OBKF_ShouldPublish:
-		return TuyaMCU_shouldPublish(arg);
-
 	case OBKF_NoOfChannels:
-		return TuyaMCU_noOfChannels(arg);
+		return false;
 
 	case OBKF_Init:
 		TuyaMCU_init();
@@ -660,20 +620,41 @@ bool TuyaMCU_isTuyaMCU(uint32_t channelIndex) {
 	return false;
 }
 
-void TuyaMCU_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
+void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 {
 	if (bPreState) {
 		return;
 	}
-	tuyaMCUMapping_t* mapping;
+	tuyaDP_t* mapping;
 
-	mapping = g_tuyaMappings;
+	mapping = g_tuyaDPs;
 	while (mapping) {
 		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", mapping->dpId, TuyaMCU_GetDataTypeString(mapping->dpType), mapping->prevValue);
 		mapping = mapping->next;
 	}
 	if (product_information_valid)
 		hprintf255(request, "<h4>TuyaMCU: %s</h4>", g_productinfo);
+}
+
+int TuyaMCU_appendJSON(int id, void* request, jsonCb_t printer) {
+	int iCnt = 0;
+	tuyaDP_t* curDP;
+
+	printer(request, "[");
+
+	curDP = g_tuyaDPs;
+	while (curDP) {
+		if (id == -1 || id == curDP->dpId) {
+			if (iCnt++)
+				printer(request, ",");
+			printer(request, "{\"id\":%i,\"type\":%i,\"data\":%i", curDP->dpId, curDP->dpType, curDP->prevValue);
+		}
+		curDP = curDP->next;
+	}
+
+
+	printer(request, "]");
+	return 0;
 }
 
 #endif // ENABLE_DRIVER_TUYAMCU
