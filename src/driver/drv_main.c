@@ -19,7 +19,6 @@
 #include "drv_ds1820_full.h"
 #include "drv_ds1820_common.h"
 #include "drv_ds3231.h"
-#include "drv_battery.h"
 
 typedef struct driver_s {
 	const char* name;
@@ -1344,7 +1343,7 @@ static driver_t g_drivers[] = {
 	//drvdetail:"requires":""}
 	{ "Battery",                             // Driver Name
 	Battery_onEverySecond,                   // onEverySecond
-	Batt_AppendInformationToHTTPIndexPage,   // appendInformationToHTTPIndexPage
+	Battery_appendHTML,                      // appendHTML
 	Battery_quickTick,                       // runQuickTick
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery

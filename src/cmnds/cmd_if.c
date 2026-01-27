@@ -9,7 +9,6 @@
 #include "../new_pins.h"
 #include "../new_cfg.h"
 #include "../driver/drv_public.h"
-#include "../driver/drv_battery.h"
 #include "../driver/drv_ntp.h"
 #include "../driver/drv_deviceclock.h"
 #include "../hal/hal_flashVars.h"

@@ -35,6 +35,12 @@ uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void TuyaMCU_quickTick();
 void TuyaMCU_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState);
 
+// framework functions
+uint32_t Battery_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void Battery_onEverySecond();
+void Battery_quickTick();
+void Battery_appendHTML(http_request_t *request, int bPreState);
+// special functions
 bool Battery_safeToUpdate();
 
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);

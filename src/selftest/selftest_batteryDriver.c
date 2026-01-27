@@ -1,7 +1,6 @@
 #ifdef WINDOWS
 
 #include "selftest_local.h"
-#include "../driver/drv_battery.h"
 
 // P23 is ADC, it is connected to two resistors, both 1k,
 // one is connected to P26, second to VDD

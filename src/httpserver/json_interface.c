@@ -10,7 +10,6 @@
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
 #include "../driver/drv_public.h"
-#include "../driver/drv_battery.h"
 #include "../driver/drv_local.h"
 #include "../hal/hal_wifi.h"
 #include "../hal/hal_pins.h"

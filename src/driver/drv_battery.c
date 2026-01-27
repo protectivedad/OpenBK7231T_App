@@ -14,7 +14,6 @@
 #include "../httpserver/new_http.h"
 #include "../hal/hal_pins.h"
 #include "../hal/hal_adc.h"
-#include "drv_battery.h"
 
 int32_t g_pin_adc = -1, g_pin_rel = -1, g_val_rel = -1;
 uint32_t g_battcycle = 1, g_battcycleref = 10;
@@ -105,16 +104,7 @@ static void Battery_measure() {
 	g_battcycle--;
 }
 
-uint32_t Battery_lastreading(uint32_t type)
-{
-	if (type == OBK_BATT_VOLTAGE)
-		return g_lastbattvoltage;
-	else if (type == OBK_BATT_LEVEL)
-		return g_lastbattlevel;
-
-	return 0;
-}
-commandResult_t Battery_Setup(const void* context, const char* cmd, const char* args, int cmdFlags) {
+commandResult_t Battery_setup(const void* context, const char* cmd, const char* args, int cmdFlags) {
 
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_DONT_EXPAND);
 	// following check must be done after 'Tokenizer_TokenizeString',
@@ -163,11 +153,11 @@ commandResult_t Battery_cycle(const void* context, const char* cmd, const char* 
 // startDriver Battery
 static void Battery_init() {
 
-	//cmddetail:{"name":"Battery_Setup","args":"[minbatt][maxbatt][V_divider][Vref][AD Bits]",
+	//cmddetail:{"name":"Battery_setup","args":"[minbatt][maxbatt][V_divider][Vref][AD Bits]",
 	//cmddetail:"descr":"measure battery based on ADC. <br />req. args: minbatt in mv, maxbatt in mv. <br />optional: V_divider(2), Vref(default 2400), ADC bits(4096)",
-	//cmddetail:"fn":"Battery_Setup","file":"driver/drv_battery.c","requires":"",
-	//cmddetail:"examples":"Battery_Setup 1500 3000 2 2400 4096"}
-	CMD_RegisterCommand("Battery_Setup", Battery_Setup, NULL);
+	//cmddetail:"fn":"Battery_setup","file":"driver/drv_battery.c","requires":"",
+	//cmddetail:"examples":"Battery_setup 1500 3000 2 2400 4096"}
+	CMD_RegisterCommand("Battery_setup", Battery_setup, NULL);
 
 	//cmddetail:{"name":"Battery_cycle","args":"[int]",
 	//cmddetail:"descr":"change cycle of measurement by default every 10 seconds",
@@ -239,12 +229,10 @@ static void Battery_stopDriver() {
 		Battery_releasePin(g_pin_rel);
 }
 
-void Batt_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
+void Battery_appendHTML(http_request_t* request, int bPreState)
 {
-	if (bPreState) {
-		return;
-	}
-	hprintf255(request, "<h2>Battery level=%.2f%%, voltage=%.2fmV</h2>", g_battlevel, g_battvoltage);
+	if (!bPreState)
+		hprintf255(request, "<h2>Battery level=%.2f%%, voltage=%.2fmV</h2>", g_battlevel, g_battvoltage);
 }
 
 uint32_t Battery_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
