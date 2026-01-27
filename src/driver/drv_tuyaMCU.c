@@ -154,7 +154,7 @@ tuyaMCUMapping_t* TuyaMCU_saveDpId(int dpId, int dpType) {
 	}
 	cur->dpId = dpId;
 	cur->dpType = dpType;
-	cur->prevValue = 0;
+	cur->prevValue = -1;
 	return cur;
 }
 
@@ -355,19 +355,19 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 	dpId = data[0];
 	dataType = data[1];
 	sectorLen = data[2] << 8 | data[3];
-
-	ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i\n",
-		dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen);
-
-	mapping = TuyaMCU_FindDefForID(dpId);
-	if (!mapping)
-		mapping = TuyaMCU_saveDpId(dpId, dataType);
-
 	if (sectorLen == 1) {
 		iVal = (int)data[4];
 	} else if (sectorLen == 4) {
 		iVal = data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7];
 	}
+
+	ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i value %i\n",
+		dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen, iVal);
+
+	mapping = TuyaMCU_FindDefForID(dpId);
+	if (!mapping)
+		mapping = TuyaMCU_saveDpId(dpId, dataType);
+
 	if (mapping->prevValue != iVal) {
 		TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + 4);
 		mapping->prevValue = iVal;
@@ -572,19 +572,6 @@ static void TuyaMCU_init() {
 
 }
 
-// Door sensor with TuyaMCU version 0 (not 3), so all replies have x00 and not 0x03 byte
-// fakeTuyaPacket 55AA0008000C00010101010101030400010223
-// fakeTuyaPacket 55AA0008000C00020202020202010100010123
-// https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccessprotocol?id=K95afs9h4tjjh
-/// 55AA 00 08 000C 00 02 0202 020202010100010123
-/// head vr id size dp dt dtln ????
-// https://github.com/esphome/feature-requests/issues/497
-/// 55AA 00 08 000C 00 02 02 02 02 02 02 01 01 0001 01 23
-/// head vr id size FL YY MM DD HH MM SS ID TP SIZE VL CK
-/// 55AA 00 08 000C 00 01 01 01 01 01 01 03 04 0001 02 23
-// TP = 0x01    bool    1   Value range: 0x00/0x01.
-// TP = 0x04    enum    1   Enumeration type, ranging from 0 to 255.
-
 static bool TuyaMCU_activatePin(uint32_t pinIndex) {
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_TuyaMCU_RX:
@@ -680,14 +667,13 @@ void TuyaMCU_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreS
 	}
 	tuyaMCUMapping_t* mapping;
 
-	if (product_information_valid)
-		hprintf255(request, "<h3>%s</h3>", g_productinfo);
-
 	mapping = g_tuyaMappings;
 	while (mapping) {
 		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", mapping->dpId, TuyaMCU_GetDataTypeString(mapping->dpType), mapping->prevValue);
 		mapping = mapping->next;
 	}
+	if (product_information_valid)
+		hprintf255(request, "<h4>TuyaMCU: %s</h4>", g_productinfo);
 }
 
 #endif // ENABLE_DRIVER_TUYAMCU
