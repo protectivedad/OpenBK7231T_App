@@ -32,7 +32,6 @@ typedef struct driver_s {
 } driver_t;
 
 
-void TuyaMCU_RunEverySecond();
 void GirierMCU_RunEverySecond();
 
 // startDriver BL0937
@@ -104,7 +103,7 @@ static driver_t g_drivers[] = {
 	//drvdetail:"descr":"TuyaMCU is a protocol used for communication between WiFI module and external MCU. This protocol is using usually RX1/TX1 port of BK chips. See [TuyaMCU dimmer example](https://www.elektroda.com/rtvforum/topic3929151.html), see [TH06 LCD humidity/temperature sensor example](https://www.elektroda.com/rtvforum/topic3942730.html), see [fan controller example](https://www.elektroda.com/rtvforum/topic3908093.html), see [simple switch example](https://www.elektroda.com/rtvforum/topic3906443.html)",
 	//drvdetail:"requires":""}
 	{ "TuyaMCU",                             // Driver Name
-	NULL,                                    // onEverySecond
+	TuyaMCU_onEverySecond,                   // onEverySecond
 	TuyaMCU_appendHTML,                      // appendHTML
 	TuyaMCU_quickTick,                       // runQuickTick
 	NULL,                                    // onChannelChanged

@@ -34,6 +34,7 @@ bool PWM_isPWM(uint32_t channelIndex);
 uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void TuyaMCU_quickTick();
 void TuyaMCU_appendHTML(http_request_t* request, int bPreState);
+void TuyaMCU_onEverySecond();
 
 // framework functions
 uint32_t Battery_frameworkRequest(uint32_t obkfRequest, uint32_t arg);

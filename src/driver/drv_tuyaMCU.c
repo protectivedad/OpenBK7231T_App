@@ -59,12 +59,21 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 //=============================================================================
 //dp data point type
 //=============================================================================
-#define         DP_TYPE_RAW                     0x00        //RAW type
-#define         DP_TYPE_BOOL                    0x01        //bool type
-#define         DP_TYPE_VALUE                   0x02        //value type
-#define         DP_TYPE_STRING                  0x03        //string type
-#define         DP_TYPE_ENUM                    0x04        //enum type
-#define         DP_TYPE_BITMAP                  0x05        //fault type
+typedef enum {
+	DP_TYPE_RAW,
+	DP_TYPE_BOOL,
+	DP_TYPE_VALUE,
+	DP_TYPE_STRING,
+	DP_TYPE_ENUM,
+	DP_TYPE_BITMAP
+} tuyaDP_Type_t;
+
+typedef enum {
+	DU_RESP_SUCCESS,
+	DU_RESP_STRANDED,
+	DU_RESP_FAILURE,
+	DU_RESP_INVALID
+} tuyaDU_Resp_t;
 
 // Subtypes of raw - added for OpenBeken - not Tuya standard
 #define         DP_TYPE_RAW_DDS238Packet        200
@@ -75,27 +84,30 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 #define			DP_TYPE_RAW_VCPPfF				205
 #define			DP_TYPE_RAW_V2C3P3				206
 
-const char* TuyaMCU_GetDataTypeString(int dpId) {
-	if (DP_TYPE_RAW == dpId)
+const char* TuyaMCU_getDataTypeString(tuyaDP_Type_t dpType) {
+	switch (dpType) {
+	case DP_TYPE_RAW:
 		return "raw";
-	if (DP_TYPE_BOOL == dpId)
+	case DP_TYPE_BOOL:
 		return "bool";
-	if (DP_TYPE_VALUE == dpId)
+	case DP_TYPE_VALUE:
 		return "val";
-	if (DP_TYPE_STRING == dpId)
+	case DP_TYPE_STRING:
 		return "str";
-	if (DP_TYPE_ENUM == dpId)
+	case DP_TYPE_ENUM:
 		return "enum";
-	if (DP_TYPE_BITMAP == dpId)
+	case DP_TYPE_BITMAP:
 		return "bitmap";
-	return "error";
+	default:
+		return "error";
+	}
 }
 
 typedef struct tuyaDP_s {
 	// internal Tuya variable index
 	byte dpId;
 	// data point type (one of the DP_TYPE_xxx defines)
-	byte dpType;
+	tuyaDP_Type_t dpType;
 	// store last value to avoid sending it again
 	int prevValue;
 	struct tuyaDP_s* next;
@@ -108,8 +120,12 @@ tuyaDP_t* g_tuyaDPs = 0;
 const uint32_t g_baudRate = 9600;
 
 bool self_processing_mode = true;
-bool state_updated;
-uint32_t g_tuyaMCUBatteryAckDelay = 0;
+
+// used to delay a success response to the report status
+// if set a stranded data response is sent and after the
+// delay in seconds a success response is sent
+uint32_t g_tuyaMCUBatteryAckDelay;
+uint32_t g_currentDelay;
 
 // dynamic will increase based on need
 // for V3 door sensor the largest packet is 62 bytes
@@ -145,7 +161,7 @@ static tuyaDP_t* TuyaMCU_findDefForID(int dpId) {
 	return 0;
 }
 
-static tuyaDP_t* TuyaMCU_saveDpId(int dpId, int dpType) {
+static tuyaDP_t* TuyaMCU_saveDpId(int dpId, int dpType, int iVal) {
 	tuyaDP_t* curDP = TuyaMCU_findDefForID(dpId);
 	if (!curDP) {
 		curDP = (tuyaDP_t*)malloc(sizeof(tuyaDP_t));
@@ -154,7 +170,7 @@ static tuyaDP_t* TuyaMCU_saveDpId(int dpId, int dpType) {
 	}
 	curDP->dpId = dpId;
 	curDP->dpType = dpType;
-	curDP->prevValue = -1;
+	curDP->prevValue = iVal;
 	return curDP;
 }
 
@@ -258,113 +274,93 @@ static void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodI
 	}
 }
 
-static void TuyaMCU_PublishDPToMQTT(int dpId, int dataType, int sectorLen, const byte *data) {
+static OBK_Publish_Result TuyaMCU_PublishDPToMQTT(int dpId, tuyaDP_Type_t dataType, int sectorLen, const byte *data) {
 #if ENABLE_MQTT
 	char sName[32];
-	int strLen;
-	char *s;
-	int index;
+	int32_t iVal;
 
-	// really it's just +1 for NULL character but let's keep more space
-	strLen = sectorLen * 2 + 16;
-	if (g_tuyaMCUTXBufferSize < strLen) {
-		g_tuyaMCUTXBuffer = realloc(g_tuyaMCUTXBuffer, strLen);
-		g_tuyaMCUTXBufferSize = strLen;
-	}
-	s = (char*)g_tuyaMCUTXBuffer;
-	*s = 0;
-
-	sprintf(sName, "tm/%s/%i", TuyaMCU_GetDataTypeString(dataType), dpId);
-	switch (dataType) 
-	{
+	sprintf(sName, "tm/%s/%i", TuyaMCU_getDataTypeString(dataType), dpId);
+	switch (dataType) {
 	case DP_TYPE_BOOL:
-	case DP_TYPE_VALUE:
 	case DP_TYPE_ENUM:
-		if (sectorLen == 4){
-			index = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
-		} else if (sectorLen == 2) {
-			index = data[1] << 8 | data[0];
-		} else if (sectorLen == 1) {
-			index = (int)data[0];
-		} else {
-			index = 0;
-		}
-		sprintf(s, "%i", index);
-		break;
-	case DP_TYPE_STRING:
-		memcpy(s, data, sectorLen);
-		s[sectorLen] = 0;
-		break;
-	case DP_TYPE_RAW:
-	case DP_TYPE_BITMAP:
-		// convert payload bytes string like FFAABB in s
-		index = 0;
-		if (0) {
-			*s = '0';
-			s++; index++;
-			*s = 'x';
-			s++; index++;
-		}
-		for (int i = 0; i < sectorLen; i++) {
-			// convert each byte to two hexadecimal characters
-			s[index++] = "0123456789ABCDEF"[(*data >> 4) & 0xF];
-			s[index++] = "0123456789ABCDEF"[*data & 0xF];
-			data++;
-		}
-		s[index] = 0; // null-terminate the string
-		break;
-		
+		iVal = data[0];
+		return MQTT_PublishMain_StringInt(sName, iVal, 0);
+	default:
+		return OBK_PUBLISH_WAS_NOT_REQUIRED;
 	}
-	if (*s == 0)
-		return;
-
-	MQTT_PublishMain_StringString(sName, s, OBK_PUBLISH_FLAG_FORCE_REMOVE_GET);
 #endif
 }
-void TuyaMCU_ParseStateMessage(const byte* data, int len) {
+static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 	tuyaDP_t* mapping;
-	int dpId, dataType, sectorLen;
-	int iVal = 0;
+	uint32_t dpId;
+	tuyaDP_Type_t dataType;
+	uint32_t sectorLen;
+	uint32_t iVal = 0;
 
-	dpId = data[0];
-	dataType = data[1];
-	sectorLen = data[2] << 8 | data[3];
-	if (sectorLen == 1) {
-		iVal = (int)data[4];
-	} else if (sectorLen == 4) {
-		iVal = data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7];
+	uint32_t ofs = 0;
+
+	OBK_Publish_Result ret = OBK_PUBLISH_OK;
+
+	while (ofs + 4 < len) {
+		dpId = data[ofs];
+		dataType = data[ofs + 1];
+		sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
+		ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i value %i\n",
+			dpId, dataType, TuyaMCU_getDataTypeString(dataType), sectorLen, iVal);
+		switch (dataType) {
+		case DP_TYPE_BOOL:
+		case DP_TYPE_ENUM:
+			if (sectorLen == 1)
+				iVal = data[ofs + 4];
+			else
+				return DU_RESP_INVALID;
+			break;
+		default:
+			return DU_RESP_INVALID;
+		}
+
+		mapping = TuyaMCU_findDefForID(dpId);
+		if (!mapping) {
+			mapping = TuyaMCU_saveDpId(dpId, dataType, iVal);
+			ret = TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + ofs + 4);
+		} else if (mapping->prevValue != iVal) {
+			mapping->prevValue = iVal;
+			ret = TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + ofs + 4);
+		}
+		if (OBK_PUBLISH_OK != ret)
+			return DU_RESP_FAILURE;
+		ofs += (4 + sectorLen);
 	}
 
-	ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i value %i\n",
-		dpId, dataType, TuyaMCU_GetDataTypeString(dataType), sectorLen, iVal);
-
-	mapping = TuyaMCU_findDefForID(dpId);
-	if (!mapping)
-		mapping = TuyaMCU_saveDpId(dpId, dataType);
-
-	if (mapping->prevValue != iVal) {
-		TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + 4);
-		mapping->prevValue = iVal;
+	if (g_tuyaMCUBatteryAckDelay) {
+		// we wiil reset the delay no matter what, but we
+		// can only have one stranded at a time
+		if (!g_currentDelay) {
+			g_currentDelay = g_tuyaMCUBatteryAckDelay;
+			return DU_RESP_STRANDED;
+		} else
+			g_currentDelay = g_tuyaMCUBatteryAckDelay;
 	}
+	
+	return DU_RESP_SUCCESS;
+}
+static void TuyaMCU_sendDataUnitResponse(tuyaDU_Resp_t result) {
+	byte reply[2] = { 0x0B, 0x00 };
+	reply[1] = result;
+	TuyaMCU_talkToTuya(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
 }
 static void TuyaMCU_parseReportStatusType(const byte *value, int len) {
-	byte reply[2] = { 0x00, 0x00 };
 	uint32_t subcommand = value[0];
-	reply[0] = subcommand;
 	ADDLOGF_DEBUG("command %i, subcommand %i\n", TUYA_CMD_REPORT_STATUS_RECORD_TYPE, subcommand);
 	switch (subcommand) {
 	case 0x0B:
-		// TuyaMCU version 3 equivalent packet to version 0 0x08 packet
-		// This packet includes first DateTime (skip past), then DataUnits
-		TuyaMCU_ParseStateMessage(value + 9, len - 9);
-		state_updated = true;
-		break;
+		TuyaMCU_sendDataUnitResponse(TuyaMCU_parseStateMessage(value + 9, len - 9));
+		return;
 
 	default:
 		// Unknown subcommand, ignore
 		return;
 	}
-	TuyaMCU_talkToTuya(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
 }
 static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 	uint32_t whatWeHeard = g_tuyaMCURXBuffer[3];
@@ -445,7 +441,7 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // Use the minimal amount of communications
 static bool TuyaMCU_runBattery() {
 	/* Don't worry about connection after state is updated device will be turned off */
-	if (state_updated || g_waitingToHearBack)
+	if (g_currentDelay)
 		return false;
 
 	/* Don't send heartbeats just work on product information */
@@ -476,7 +472,16 @@ static bool TuyaMCU_runBattery() {
 	}
 	return false;
 }
-
+void TuyaMCU_onEverySecond() {
+	static bool wasDelaying;
+	if (g_currentDelay) {
+		wasDelaying = true;
+		g_currentDelay--;
+	} else if (!g_currentDelay && wasDelaying) {
+		wasDelaying = false;
+		TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
+	}
+}
 void TuyaMCU_quickTick() {
 	// process any received information
 	uint32_t howMuchTheySaid;
@@ -484,11 +489,11 @@ void TuyaMCU_quickTick() {
 	if (g_waitToSendRespounse)
 		return;
 
+	// while they are saying something listen to what they said
 	while (howMuchTheySaid = TuyaMCU_listenToTuya())
-			TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
+		TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
-	// start with a delay because during init we sent a
-	// production request.
+	// start with a delay because during init we sent a production request.
 	static int timer_battery = 100;
 	if (timer_battery > 0) {
 		timer_battery -= g_deltaTimeMS;
@@ -496,7 +501,6 @@ void TuyaMCU_quickTick() {
 		timer_battery = 100;
 	}
 }
-
 static void TuyaMCU_init() {
 	if (!g_tuyaMCURXBuffer)
 		g_tuyaMCURXBuffer = (byte*)malloc(g_tuyaMCURXBufferSize);
@@ -516,7 +520,6 @@ static void TuyaMCU_init() {
 
 	/* Request production information */
 	TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-
 }
 
 static bool TuyaMCU_activatePin(uint32_t pinIndex) {
@@ -627,9 +630,12 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	}
 	tuyaDP_t* mapping;
 
+	if (g_currentDelay)
+		hprintf255(request, "<h2>Time till sleep %i (s)</h2>", g_currentDelay);
+
 	mapping = g_tuyaDPs;
 	while (mapping) {
-		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", mapping->dpId, TuyaMCU_GetDataTypeString(mapping->dpType), mapping->prevValue);
+		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", mapping->dpId, TuyaMCU_getDataTypeString(mapping->dpType), mapping->prevValue);
 		mapping = mapping->next;
 	}
 	if (product_information_valid)
