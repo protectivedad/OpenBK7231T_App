@@ -240,6 +240,8 @@ void TuyaMCU_SendCommandWithData(byte cmdType, byte* data, int payload_len) {
 	}
 	UART_SendByte(check_sum);
 	g_waitingToHearBack = cmdType;
+	ADDLOGF_DEBUG("%s - Sent command %i, with payload len %i",
+		__func__, cmdType, payload_len);
 }
 void TuyaMCU_ParseQueryProductInformation(const byte* prodInfo, int prodInfoLen) {
 	g_productinfo = (char*)malloc(prodInfoLen);
@@ -373,9 +375,13 @@ void TuyaMCU_ParseStateMessage(const byte* data, int len) {
 static void TuyaMCU_recordTypeResponse(uint32_t subcommand) {
 	byte reply[2] = { 0x00, 0x00 };
 	reply[0] = subcommand;
-	for (g_waitToSendRespounse = g_tuyaMCUBatteryAckDelay; g_waitToSendRespounse; g_waitToSendRespounse--)
-		rtos_delay_milliseconds(1000);
+	ADDLOGF_DEBUG("%s - Thread started for response subcommand: %i, wating %i (s)",
+		__func__, subcommand, g_tuyaMCUBatteryAckDelay);
+	g_waitToSendRespounse = g_tuyaMCUBatteryAckDelay * 10;
+	while (g_waitToSendRespounse--)
+		rtos_delay_milliseconds(100);
 	TuyaMCU_SendCommandWithData(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
+	g_waitingToHearBack = 0;
 }
 static void TuyaMCU_ParseReportStatusType(const byte *value, int len) {
 	OSStatus err = kNoErr;
