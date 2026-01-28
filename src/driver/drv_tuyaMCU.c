@@ -683,19 +683,18 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	if (bPreState) {
 		return;
 	}
-	tuyaDP_t* mapping;
 
-	// wait an extra second before saying we have a response
-	static bool waitingToHearBack;
+	static uint32_t waitingToHearBack;
+	// wait at least one full second before saying we have no response
+	if (TuyaMCU_waitingToHearBack && waitingToHearBack)
+		hprintf255(request, "<h2>TuyaMCU not responding to commands</h2>");
 	if (TuyaMCU_waitingToHearBack) {
 		if (waitingToHearBack)
-			hprintf255(request, "<h2>TuyaMCU not responding to commands</h2>");
-		waitingToHearBack = true;
-	} else {
-		if (waitingToHearBack)
-			hprintf255(request, "<h2>TuyaMCU not responding to commands</h2>");
-		waitingToHearBack = false;
-	}
+			waitingToHearBack--;
+		else
+			waitingToHearBack = 2;
+	} else
+		waitingToHearBack = 0;
 
 	if (TuyaMCU_queuedMQTT)
 		hprintf255(request, "<h2>MQTT timeout in %is</h2>", TuyaMCU_queuedMQTTTimeout);
@@ -703,10 +702,10 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	if (TuyaMCU_ackDelayLeft)
 		hprintf255(request, "<h2>Delayed ACK in %is</h2>", TuyaMCU_ackDelayLeft);
 
-	mapping = g_tuyaDPs;
-	while (mapping) {
-		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", mapping->dpId, TuyaMCU_getDataTypeString(mapping->dpType), mapping->prevValue);
-		mapping = mapping->next;
+	tuyaDP_t* tuyaDP = g_tuyaDPs;
+	while (tuyaDP) {
+		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", tuyaDP->dpId, TuyaMCU_getDataTypeString(tuyaDP->dpType), tuyaDP->prevValue);
+		tuyaDP = tuyaDP->next;
 	}
 	if (product_information_valid)
 		hprintf255(request, "<h4>TuyaMCU: %s</h4>", g_productinfo);
