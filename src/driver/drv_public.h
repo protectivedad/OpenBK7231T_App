@@ -84,13 +84,16 @@ energySensorNames_t* DRV_GetEnergySensorNamesEx(int asensdatasetix, energySensor
 
 void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
 bool Input_isButton(uint32_t channelIndex);
+void Input_quickTick();
 
 uint32_t Output_relayCount();
 bool Output_isPowerRelay(uint32_t channel);
 bool Output_isRelay(uint32_t channel);
 
-void Digital_quickTick(uint32_t timeSinceLast);
+uint32_t Digital_digitalCount();
+bool Digital_isDigital(uint32_t channelIndex);
 void Digital_setEdges();
+void Digital_quickTick();
 
 uint32_t PWM_maxPWM(uint32_t channelIndex);
 bool PWM_isPWM(uint32_t channelIndex);

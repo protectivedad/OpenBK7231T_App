@@ -1122,8 +1122,8 @@ void QuickTick(void* param)
 #if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
 	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick
 #else
-	Input_quickTick(g_deltaTimeMS);
-	Digital_quickTick(g_deltaTimeMS);
+	Input_quickTick();
+	Digital_quickTick();
 #endif
 
 #if ENABLE_OBK_SCRIPTING

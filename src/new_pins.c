@@ -1104,22 +1104,21 @@ bool CHANNEL_ShouldBePublished(int ch) {
 void PIN_ticks(void* param)
 {
 	static uint32_t g_time = 0, g_last_time = 0;
-	uint32_t t_diff = QUICK_TMR_DURATION;
 
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS)
 	g_time = rtos_get_time();
-	t_diff = g_time - g_last_time;
+	g_deltaTimeMS = g_time - g_last_time;
 #else
 	g_time += QUICK_TMR_DURATION;
 #endif
 	// cope with wrap
-	if (t_diff > 0x4000) {
-		t_diff = ((g_time + 0x4000) - (g_last_time + 0x4000));
+	if (g_deltaTimeMS > 0x4000) {
+		g_deltaTimeMS = ((g_time + 0x4000) - (g_last_time + 0x4000));
 	}
 	g_last_time = g_time;
 
-	Input_quickTick(t_diff);
-	Digital_quickTick(t_diff);
+	Input_quickTick();
+	Digital_quickTick();
 }
 
 const char* g_channelTypeNames[] = {

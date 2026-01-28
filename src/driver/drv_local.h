@@ -8,12 +8,9 @@ void Output_quickTick();
 void Output_onChanged(uint32_t channel, uint32_t iVal);
 
 uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-void Input_QuickTick(uint32_t timeSinceLast);
 
 #if ENABLE_DRIVER_DIGITAL
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-uint32_t Digital_digitalCount();
-bool Digital_isDigital(uint32_t channelIndex);
 #endif // ENABLE_DRIVER_DIGITAL
 
 #if ENABLE_DRIVER_PWM

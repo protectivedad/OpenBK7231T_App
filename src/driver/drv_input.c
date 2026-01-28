@@ -78,7 +78,7 @@ void Button_OnPressRelease(uint32_t pinIndex) {
 // function. So this is what we will do.
 
 // called from quick tick only
-static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton_s* button, uint32_t timeSinceLast) {
+static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton_s* button) {
 	/*-----------------State machine-------------------*/
 	switch (button->state) {
 	case 0:
@@ -214,7 +214,7 @@ static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton
 		if (button->button_level == button->active_level) {
 			//continue hold trigger
 			button->event = BTN_LONG_PRESS_HOLD;
-			button->holdRepeatTicks += timeSinceLast;
+			button->holdRepeatTicks += g_deltaTimeMS;
 			if (button->holdRepeatTicks > BTN_HOLD_REPEAT_MS) {
 				ADDLOG_INFO(LOG_FEATURE_GENERAL, "%i Button_OnLongPressHold\r\n", pinIndex);
 				if (CFG_HasFlag(OBK_FLAG_BUTTON_DISABLE_ALL)) {
@@ -243,7 +243,7 @@ void PIN_InterruptHandler(int gpio) {
 }
 
 // basic input quick tick timer function
-void Input_quickTick(uint32_t timeSinceLast) {
+void Input_quickTick() {
 	if (!g_driverPins || !g_enable_pins)
 		return;
 
@@ -280,7 +280,7 @@ void Input_quickTick(uint32_t timeSinceLast) {
 		case IOR_SmartButtonForLEDs:
 			//ticks counter working..
 			if (g_buttons[pinIndex].state)
-				g_buttons[pinIndex].ticks += timeSinceLast;
+				g_buttons[pinIndex].ticks += g_deltaTimeMS;
 
 			/*------------button debounce handle---------------*/
 			if (pinValue != g_buttons[pinIndex].button_level) {
@@ -288,13 +288,13 @@ void Input_quickTick(uint32_t timeSinceLast) {
 					g_buttons[pinIndex].button_level = pinValue;
 					g_buttons[pinIndex].debounce_cnt = 0;
 				} else {
-					g_buttons[pinIndex].debounce_cnt += timeSinceLast;
+					g_buttons[pinIndex].debounce_cnt += g_deltaTimeMS;
 				}
 			} else {
 				g_buttons[pinIndex].debounce_cnt = 0;
 			}
 
-			PIN_Input_Handler(pinIndex, pinRole, &g_buttons[pinIndex], timeSinceLast);
+			PIN_Input_Handler(pinIndex, pinRole, &g_buttons[pinIndex]);
 			break;
 		}
 		// clear processed pin and exit if no more left to process

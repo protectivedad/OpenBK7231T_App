@@ -14,6 +14,7 @@
 #include "../httpserver/new_http.h"
 #include "../hal/hal_pins.h"
 #include "../hal/hal_adc.h"
+#include "../hal/hal_ota.h"
 
 int32_t g_pin_adc = -1, g_pin_rel = -1, g_val_rel = -1;
 uint32_t g_battcycle = 1, g_battcycleref = 10;

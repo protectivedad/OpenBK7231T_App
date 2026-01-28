@@ -117,7 +117,7 @@ commandResult_t CMD_Digital_setEdge(const void* context, const char* cmd, const 
 #endif
 
 // reads, debounces and set channels for digital input pins
-void Digital_quickTick(uint32_t timeSinceLast) {
+void Digital_quickTick() {
 	if (!g_driverPins)
 		return;
 
@@ -147,7 +147,7 @@ void Digital_quickTick(uint32_t timeSinceLast) {
 					}
 				}
 				else {
-					g_times[pinIndex] += timeSinceLast;
+					g_times[pinIndex] += g_deltaTimeMS;
 				}
 				g_times2[pinIndex] = 0;
 			} else {
@@ -158,7 +158,7 @@ void Digital_quickTick(uint32_t timeSinceLast) {
 					}
 				}
 				else {
-					g_times2[pinIndex] += timeSinceLast;
+					g_times2[pinIndex] += g_deltaTimeMS;
 				}
 				g_times[pinIndex] = 0;
 			}
@@ -177,7 +177,7 @@ void Digital_quickTick(uint32_t timeSinceLast) {
 						}
 					}
 				} else {
-					g_times[pinIndex] += timeSinceLast;
+					g_times[pinIndex] += g_deltaTimeMS;
 				}
 				g_times2[pinIndex] = 0;
 			} else {
@@ -192,7 +192,7 @@ void Digital_quickTick(uint32_t timeSinceLast) {
 						}
 					}
 				} else {
-					g_times2[pinIndex] += timeSinceLast;
+					g_times2[pinIndex] += g_deltaTimeMS;
 				}
 				g_times[pinIndex] = 0;
 			}
