@@ -82,5 +82,20 @@ float DRV_GetReading(energySensor_t type);
 energySensorNames_t* DRV_GetEnergySensorNames(energySensor_t type);
 energySensorNames_t* DRV_GetEnergySensorNamesEx(int asensdatasetix, energySensor_t type);
 
+void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
+bool Input_isButton(uint32_t channelIndex);
+
+uint32_t Output_relayCount();
+bool Output_isPowerRelay(uint32_t channel);
+bool Output_isRelay(uint32_t channel);
+
+void Digital_quickTick(uint32_t timeSinceLast);
+void Digital_setEdges();
+
+uint32_t PWM_maxPWM(uint32_t channelIndex);
+bool PWM_isPWM(uint32_t channelIndex);
+
+bool Battery_safeToUpdate();
+
 #endif /* __DRV_PUBLIC_H__ */
 

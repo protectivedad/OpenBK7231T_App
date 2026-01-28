@@ -4,32 +4,23 @@
 #include "../cmnds/cmd_public.h"
 
 uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
-uint32_t Output_relayCount();
 void Output_quickTick();
 void Output_onChanged(uint32_t channel, uint32_t iVal);
-bool Output_isPowerRelay(uint32_t channel);
-bool Output_isRelay(uint32_t channel);
 
 uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Input_QuickTick(uint32_t timeSinceLast);
-void Input_SetGenericDoubleClickCallback(void (*cb)(uint32_t pinIndex));
-bool Input_isButton(uint32_t channelIndex);
 
 #if ENABLE_DRIVER_DIGITAL
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t Digital_digitalCount();
 bool Digital_isDigital(uint32_t channelIndex);
 #endif // ENABLE_DRIVER_DIGITAL
-void Digital_quickTick(uint32_t timeSinceLast);
-void Digital_setEdges();
 
 #if ENABLE_DRIVER_PWM
 uint32_t PWM_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t PWM_countChannels();
 uint32_t PWM_countPins();
 #endif // ENABLE_DRIVER_PWM
-uint32_t PWM_maxPWM(uint32_t channelIndex);
-bool PWM_isPWM(uint32_t channelIndex);
 
 uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void TuyaMCU_quickTick();
@@ -41,8 +32,6 @@ uint32_t Battery_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Battery_onEverySecond();
 void Battery_quickTick();
 void Battery_appendHTML(http_request_t *request, int bPreState);
-// special functions
-bool Battery_safeToUpdate();
 
 uint32_t DoorSensor_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void DoorSensor_onEverySecond();
