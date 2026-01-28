@@ -121,35 +121,51 @@ const uint32_t g_baudRate = 9600;
 
 bool self_processing_mode = true;
 
-// used to delay a success response to the report status
-// if set a stranded data response is sent and after the
-// delay in seconds a success response is sent
-uint32_t g_tuyaMCUBatteryAckDelay;
-uint32_t g_currentDelay;
-
 // dynamic will increase based on need
 // for V3 door sensor the largest packet is 62 bytes
 #define TUYAMCU_BUFFER_SIZE		128
 
 #define MIN_TUYAMCU_PACKET_SIZE (2+1+1+2+1)
 
+uint32_t g_driverIndex;
+uint32_t g_driverPins;
+
+
 byte *g_tuyaMCUTXBuffer;
 uint32_t g_tuyaMCUTXBufferSize = TUYAMCU_BUFFER_SIZE;
 byte *g_tuyaMCURXBuffer;
 uint32_t g_tuyaMCURXBufferSize = TUYAMCU_BUFFER_SIZE;
-
-uint32_t g_driverIndex;
-uint32_t g_driverPins;
+char *g_productinfo;
 
 bool product_information_valid;
 bool wifi_state;
-bool mqtt_state;
 
 uint32_t g_version;
-char *g_productinfo;
 
-uint32_t g_waitingToHearBack;
-uint32_t g_queuedMQTT;
+/* Tuya command wait logic details */
+// Last command sent to TuyaMCU
+uint32_t TuyaMCU_waitingToHearBack;
+// Default value to wait to hear back
+#define TUYAMCU_HEARBACK_TIMEOUT 2
+// Number of seconds we wait till giving up
+uint32_t TuyaMCU_waitingToHearBackTimeout = TUYAMCU_HEARBACK_TIMEOUT;
+// Reset command wait logic
+static void TuyaMCU_waitingToHearBackReset() {
+	TuyaMCU_waitingToHearBack = 0;
+	TuyaMCU_waitingToHearBackTimeout = TUYAMCU_HEARBACK_TIMEOUT;
+}
+
+/* MQTT queued logic counters */
+// Number of MQTT items queued
+uint32_t TuyaMCU_queuedMQTT;
+// Timeout in seconds before failing MQTT queued
+uint32_t TuyaMCU_queuedMQTTTimeout = 300;
+
+/* Tuya ACK delay logic counters */
+// Delay before sending the last data unit acknowledgement
+uint32_t TuyaMCU_ackDelay;
+// Acknowledgement delay left
+uint32_t TuyaMCU_ackDelayLeft;
 
 static tuyaDP_t* TuyaMCU_findDefForID(int dpId) {
 	tuyaDP_t* curDP = g_tuyaDPs;
@@ -231,7 +247,7 @@ static uint32_t TuyaMCU_listenToTuya() {
 		
 		for (uint32_t i = 0; i < howMuchTheyNeedToSay - 4; i += 4)
 			ADDLOGF_ERROR("%x %x %x %x", g_tuyaMCURXBuffer[i], g_tuyaMCURXBuffer[i+1], g_tuyaMCURXBuffer[i+2], g_tuyaMCURXBuffer[i+3]);
-		g_waitingToHearBack = 0;
+		TuyaMCU_waitingToHearBackReset();
 		return 0;
 	}
 
@@ -256,7 +272,7 @@ static void TuyaMCU_talkToTuya(byte cmdType, byte* data, int payload_len) {
 		UART_SendByte(b);
 	}
 	UART_SendByte(check_sum);
-	g_waitingToHearBack = cmdType;
+	TuyaMCU_waitingToHearBack = cmdType;
 	ADDLOGF_DEBUG("%s - Sent command %i, with payload len %i",
 		__func__, cmdType, payload_len);
 	if (payload_len>2)
@@ -291,7 +307,7 @@ static OBK_Publish_Result TuyaMCU_PublishDPToMQTT(int dpId, tuyaDP_Type_t dataTy
 			char sValue[4];   // channel value as a string
 			sprintf(sValue, "%i", (int)iVal);
 			MQTT_QueuePublish(CFG_GetMQTTClientId(), sName, sValue, 0); // queue the publishing
-			g_queuedMQTT++;
+			TuyaMCU_queuedMQTT++;
 			return OBK_PUBLISH_OK;
 		}
 	default:
@@ -341,17 +357,14 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 		ofs += (4 + sectorLen);
 	}
 
-	if (g_queuedMQTT)
-		return DU_RESP_STRANDED;
-
-	if (g_tuyaMCUBatteryAckDelay) {
+	if (TuyaMCU_ackDelay) {
 		// we wiil reset the delay no matter what, but we
 		// can only have one stranded at a time
-		if (!g_currentDelay) {
-			g_currentDelay = g_tuyaMCUBatteryAckDelay;
+		if (!TuyaMCU_ackDelayLeft) {
+			TuyaMCU_ackDelayLeft = TuyaMCU_ackDelay;
 			return DU_RESP_STRANDED;
 		} else {
-			g_currentDelay = g_tuyaMCUBatteryAckDelay;
+			TuyaMCU_ackDelayLeft = TuyaMCU_ackDelay;
 			return DU_RESP_SUCCESS;
 		}
 	}
@@ -370,7 +383,7 @@ static void TuyaMCU_parseReportStatusType(const byte *value, int len) {
 	switch (subcommand) {
 	case 0x0B:
 		ret = TuyaMCU_parseStateMessage(value + 9, len - 9);
-		if (g_queuedMQTT)
+		if (TuyaMCU_queuedMQTT)
 			return;
 		TuyaMCU_sendDataUnitResponse(ret);
 		return;
@@ -384,9 +397,9 @@ static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 	uint32_t whatWeHeard = g_tuyaMCURXBuffer[3];
 
 	g_version = g_tuyaMCURXBuffer[2];
-	if (g_waitingToHearBack && g_waitingToHearBack != whatWeHeard)
-		ADDLOGF_WARN("%s - Rec'd command response (%i), but sent command %i", __func__, whatWeHeard, g_waitingToHearBack);
-	g_waitingToHearBack = 0;
+	if (TuyaMCU_waitingToHearBack && TuyaMCU_waitingToHearBack != whatWeHeard)
+		ADDLOGF_WARN("%s - Rec'd command response (%i), but sent command %i", __func__, whatWeHeard, TuyaMCU_waitingToHearBack);
+	TuyaMCU_waitingToHearBackReset();
 	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i, len %i", xTaskGetTickCount(), __func__, g_version, whatWeHeard, howMuchTheySaid);
 	switch (whatWeHeard) {
 	case TUYA_CMD_HEARTBEAT:
@@ -448,7 +461,7 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 		return CMD_RES_BAD_ARGUMENT;
 	}
 
-	g_tuyaMCUBatteryAckDelay = delay;
+	TuyaMCU_ackDelay = delay;
 
 	return CMD_RES_OK;
 }
@@ -459,35 +472,65 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
 static void TuyaMCU_runBattery() {
-	/* Don't worry about connection after state is updated device will be turned off */
-	if (g_currentDelay)
+	/* Don't worry about connection after wifi has been succesfully updated */
+	if (wifi_state)
 		return;
 
-	/* Don't send heartbeats just work on product information */
-	/* If we are waiting to hear back don't send a new one */
-	if (!product_information_valid && g_waitingToHearBack != TUYA_CMD_QUERY_PRODUCT) {
-		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
-		/* Request production information */
-		TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+	/*
+		Don't send heartbeats just work on product information but
+		if we are waiting to hear back don't send a new one
+	*/
+	if (!product_information_valid) {
+		if (TuyaMCU_waitingToHearBack != TUYA_CMD_QUERY_PRODUCT) {
+			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
+			/* Request production information */
+			TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+		}
 		return;
-	} else if (!product_information_valid)
-		return;
-
-	/* As soon as we have product information tell Tuya we are connected */
-	if (!wifi_state && g_waitingToHearBack != TUYA_CMD_WIFI_STATE) {
-		ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
-		uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
-		TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
 	}
-	return;
+
+	/*
+		As soon as we have product information tell Tuya we are connected
+		so we get the sensor details as soon as possible
+	*/
+	if (!wifi_state) {
+		if (TuyaMCU_waitingToHearBack != TUYA_CMD_WIFI_STATE) {
+			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
+			uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
+			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
+		}
+		return;
+	}
 }
+/*
+	Called every second, used by the driver to process timeout counters
+	- Waiting to hear back from a command sent to Tuya
+	- Items sent to the MQTT queue
+	- Delaying of data unit acknowledgements
+*/
 void TuyaMCU_onEverySecond() {
-	static bool wasDelaying;
+	/*
+		If we haven't heard back reduce the counter and fail the next time if 
+		it turns 0
+	*/
+	if (TuyaMCU_waitingToHearBack && !TuyaMCU_waitingToHearBackTimeout--)
+		TuyaMCU_waitingToHearBackReset();
+
+	// if I queued something and it it still there do nothing
+	// continue and fail items if timeout reaches zero
+	if (TuyaMCU_queuedMQTT && MQTT_hasQueued() && TuyaMCU_queuedMQTTTimeout--)
+		return;
+
+	if (TuyaMCU_queuedMQTT && !TuyaMCU_queuedMQTTTimeout)
+		while (TuyaMCU_queuedMQTT)
+			if (TuyaMCU_queuedMQTT-- || !TuyaMCU_ackDelayLeft) // more queued or no delay
+				TuyaMCU_sendDataUnitResponse(DU_RESP_FAILURE);
 
 	// process delayed logic
-	if (g_currentDelay) {
+	static bool wasDelaying;
+	if (TuyaMCU_ackDelayLeft) {
 		wasDelaying = true;
-		g_currentDelay--;
+		TuyaMCU_ackDelayLeft--;
 	} else if (wasDelaying) {
 		wasDelaying = false;
 		TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
@@ -501,15 +544,14 @@ void TuyaMCU_quickTick() {
 	while (howMuchTheySaid = TuyaMCU_listenToTuya())
 		TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
-	if (g_queuedMQTT && MQTT_hasQueued())
+	// if I queued something and it it still there do nothing
+	if (TuyaMCU_queuedMQTT && MQTT_hasQueued())
 		return;
 
 	// process queued item logic
-	while (g_queuedMQTT)
-		if (g_queuedMQTT-- || !g_tuyaMCUBatteryAckDelay) // more queued or no delay
+	while (TuyaMCU_queuedMQTT)
+		if (TuyaMCU_queuedMQTT-- || !TuyaMCU_ackDelayLeft) // more queued or no delay
 			TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
-		else // no more on the queue and ack delay
-			g_currentDelay = g_tuyaMCUBatteryAckDelay;
 
 	// it is safe to run because it checks for waiting before sending again
 	TuyaMCU_runBattery();
@@ -643,8 +685,23 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	}
 	tuyaDP_t* mapping;
 
-	if (g_currentDelay)
-		hprintf255(request, "<h2>Delayed ACK in %i (s)</h2>", g_currentDelay);
+	// wait an extra second before saying we have a response
+	static bool waitingToHearBack;
+	if (TuyaMCU_waitingToHearBack) {
+		if (waitingToHearBack)
+			hprintf255(request, "<h2>TuyaMCU not responding to commands</h2>");
+		waitingToHearBack = true;
+	} else {
+		if (waitingToHearBack)
+			hprintf255(request, "<h2>TuyaMCU not responding to commands</h2>");
+		waitingToHearBack = false;
+	}
+
+	if (TuyaMCU_queuedMQTT)
+		hprintf255(request, "<h2>MQTT timeout in %is</h2>", TuyaMCU_queuedMQTTTimeout);
+
+	if (TuyaMCU_ackDelayLeft)
+		hprintf255(request, "<h2>Delayed ACK in %is</h2>", TuyaMCU_ackDelayLeft);
 
 	mapping = g_tuyaDPs;
 	while (mapping) {
