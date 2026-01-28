@@ -89,7 +89,7 @@ void Digital_setEdges() {
 // #endif
 // 			SetWUPIO(i, pull, falling);
 // #else
-		setGPIActive(pinIndex, 1, falling);
+		PIN_setGPIActive(pinIndex, 1, falling);
 // #endif
 		if (!BIT_CLEAR(driverPins, pinIndex))
 			break;
@@ -248,7 +248,7 @@ static bool Digital_activatePin(uint32_t pinIndex) {
 	else
 		HAL_PIN_Setup_Input(pinIndex);
 
-	setGPIActive(pinIndex, 1, falling);
+	PIN_setGPIActive(pinIndex, 1, falling);
 	BIT_SET_TO(g_lastValidState, pinIndex, channelValue);
 	BIT_SET(g_driverPins, pinIndex);
 	return true;
@@ -256,7 +256,7 @@ static bool Digital_activatePin(uint32_t pinIndex) {
 
 static void Digital_releasePin(uint32_t pinIndex) {
 	BIT_CLEAR(g_driverPins, pinIndex);
-	setGPIActive(pinIndex, 0, 0);
+	PIN_setGPIActive(pinIndex, 0, 0);
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_DigitalInput_n:
 	case IOR_DigitalInput:
@@ -275,7 +275,7 @@ static void Digital_stopDriver() {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
 		if (!BIT_CHECK(g_driverPins, pinIndex))
 			continue;
-		setGPIActive(pinIndex, 0, 0);
+		PIN_setGPIActive(pinIndex, 0, 0);
 		BIT_CLEAR(g_driverPins, pinIndex);
 	}
 }

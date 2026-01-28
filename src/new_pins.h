@@ -1632,4 +1632,6 @@ float XJ_MovingAverage_float(float aprevvalue, float aactvalue);
 int XJ_MovingAverage_int(int aprevvalue, int aactvalue);
 #endif
 
+void PIN_setGPIActive(uint32_t pinIndex, int active, int falling);
+
 #endif

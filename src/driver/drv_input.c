@@ -323,7 +323,7 @@ static bool Input_activatePin(uint32_t pinIndex) {
 	case IOR_Button_ToggleAll_n:
 	case IOR_Button_ScriptOnly_n:
 	case IOR_SmartButtonForLEDs_n:
-		setGPIActive(pinIndex, 1, 1);
+		PIN_setGPIActive(pinIndex, 1, 1);
 		HAL_PIN_Setup_Input_Pullup(pinIndex);
 		g_buttons[pinIndex].event = BTN_NONE_PRESS;
 		g_buttons[pinIndex].button_level = false;
@@ -333,7 +333,7 @@ static bool Input_activatePin(uint32_t pinIndex) {
 	case IOR_Button_ToggleAll:
 	case IOR_Button_ScriptOnly:
 	case IOR_SmartButtonForLEDs:
-		setGPIActive(pinIndex, 1, 0);
+		PIN_setGPIActive(pinIndex, 1, 0);
 		HAL_PIN_Setup_Input_Pullup(pinIndex);
 		g_buttons[pinIndex].event = BTN_NONE_PRESS;
 		g_buttons[pinIndex].button_level = true;
@@ -370,7 +370,7 @@ static void Input_ReleasePin(uint32_t pinIndex) {
 	case IOR_Button_ToggleAll_n:
 	case IOR_Button_ScriptOnly_n:
 	case IOR_SmartButtonForLEDs_n:
-		setGPIActive(pinIndex, 0, 0);
+		PIN_setGPIActive(pinIndex, 0, 0);
 		memset(&g_buttons[pinIndex], 0, sizeof(pinButton_s));
 		break;
 	}

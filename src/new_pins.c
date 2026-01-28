@@ -114,7 +114,7 @@ void SetWUPIO(int index, int pull, int edge)
 }
 #endif
 
-void setGPIActive(uint32_t pinIndex, int active, int falling) {
+void PIN_setGPIActive(uint32_t pinIndex, int active, int falling) {
 	BIT_SET_TO(g_gpio_index_map, pinIndex, active);
 	BIT_SET_TO(g_gpio_edge_map, pinIndex, falling);
 }
@@ -255,7 +255,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		case IOR_IRRecv:
 			falling = 1;
 			// add to active inputs
-			setGPIActive(index, 1, falling);
+			PIN_setGPIActive(index, 1, falling);
 			break;
 #endif
 #if ENABLE_DRIVER_BRIDGE
@@ -500,7 +500,7 @@ static void PIN_ProcessOldPinRole(int index) {
 			return;
 		}
 		// remove from active inputs
-		setGPIActive(index, 0, 0);
+		PIN_setGPIActive(index, 0, 0);
 		switch (role)
 		{
 		case IOR_ADC_Button:
