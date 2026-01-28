@@ -97,6 +97,7 @@ void Digital_quickTick();
 
 uint32_t PWM_maxPWM(uint32_t channelIndex);
 bool PWM_isPWM(uint32_t channelIndex);
+void PWM_onChanged(uint32_t channelIndex, float iVal);
 
 bool Battery_safeToUpdate();
 
