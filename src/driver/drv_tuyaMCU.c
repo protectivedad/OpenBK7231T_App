@@ -364,11 +364,15 @@ static void TuyaMCU_sendDataUnitResponse(tuyaDU_Resp_t result) {
 	TuyaMCU_talkToTuya(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
 }
 static void TuyaMCU_parseReportStatusType(const byte *value, int len) {
+	tuyaDU_Resp_t ret;
 	uint32_t subcommand = value[0];
 	ADDLOGF_DEBUG("command %i, subcommand %i\n", TUYA_CMD_REPORT_STATUS_RECORD_TYPE, subcommand);
 	switch (subcommand) {
 	case 0x0B:
-		TuyaMCU_sendDataUnitResponse(TuyaMCU_parseStateMessage(value + 9, len - 9));
+		ret = TuyaMCU_parseStateMessage(value + 9, len - 9);
+		if (g_queuedMQTT)
+			return;
+		TuyaMCU_sendDataUnitResponse(ret);
 		return;
 
 	default:
@@ -401,6 +405,7 @@ static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 		ADDLOGF_INFO("ProcessIncoming: TUYA_CMD_MCU_CONF, TODO!");
 		break;
 	case TUYA_CMD_WIFI_STATE:
+		wifi_state = true;
 		ADDLOGF_DEBUG("%s - rec'd wifi state response", __func__);
 		break;
 	case TUYA_CMD_WIFI_RESET:
@@ -453,10 +458,10 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // no processing after state is updated
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
-static bool TuyaMCU_runBattery() {
+static void TuyaMCU_runBattery() {
 	/* Don't worry about connection after state is updated device will be turned off */
 	if (g_currentDelay)
-		return false;
+		return;
 
 	/* Don't send heartbeats just work on product information */
 	/* If we are waiting to hear back don't send a new one */
@@ -464,41 +469,20 @@ static bool TuyaMCU_runBattery() {
 		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
 		/* Request production information */
 		TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-		return true;
+		return;
+	} else if (!product_information_valid)
+		return;
+
+	/* As soon as we have product information tell Tuya we are connected */
+	if (!wifi_state && g_waitingToHearBack != TUYA_CMD_WIFI_STATE) {
+		ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
+		uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
+		TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
 	}
-	/* No query state. Will be updated when connected to wifi/mqtt */
-	/* One way process device will be turned off after publishing */
-	if (Main_HasWiFiConnected()) {
-		if (!wifi_state) {
-			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to router", xTaskGetTickCount(), __func__);
-			const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_ROUTER;
-			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
-			wifi_state = true;
-			mqtt_state = false;
-			return true;
-		}
-		if (MQTT_IsReady() && !mqtt_state) { // use MQTT function, main function isn't updated soon enough
-			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
-			const uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
-			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
-			mqtt_state = true;
-			return true;
-		}
-	}
-	return false;
+	return;
 }
 void TuyaMCU_onEverySecond() {
 	static bool wasDelaying;
-
-	if (g_queuedMQTT && MQTT_hasQueued())
-		return;
-
-	// process queued item logic
-	while (g_queuedMQTT)
-		if (g_queuedMQTT-- || !g_tuyaMCUBatteryAckDelay) // more queued or no delay
-			TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
-		else // no more on the queue and ack delay
-			g_currentDelay = g_tuyaMCUBatteryAckDelay;
 
 	// process delayed logic
 	if (g_currentDelay) {
@@ -517,13 +501,18 @@ void TuyaMCU_quickTick() {
 	while (howMuchTheySaid = TuyaMCU_listenToTuya())
 		TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
-	// start with a delay because during init we sent a production request.
-	static int timer_battery = 250;
-	if (timer_battery > 0) {
-		timer_battery -= g_deltaTimeMS;
-	} else if (TuyaMCU_runBattery()) {
-		timer_battery = 100;
-	}
+	if (g_queuedMQTT && MQTT_hasQueued())
+		return;
+
+	// process queued item logic
+	while (g_queuedMQTT)
+		if (g_queuedMQTT-- || !g_tuyaMCUBatteryAckDelay) // more queued or no delay
+			TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
+		else // no more on the queue and ack delay
+			g_currentDelay = g_tuyaMCUBatteryAckDelay;
+
+	// it is safe to run because it checks for waiting before sending again
+	TuyaMCU_runBattery();
 }
 static void TuyaMCU_init() {
 	if (!g_tuyaMCURXBuffer)
