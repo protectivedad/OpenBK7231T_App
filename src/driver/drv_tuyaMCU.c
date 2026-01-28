@@ -137,7 +137,6 @@ byte *g_tuyaMCUTXBuffer;
 uint32_t g_tuyaMCUTXBufferSize = TUYAMCU_BUFFER_SIZE;
 byte *g_tuyaMCURXBuffer;
 uint32_t g_tuyaMCURXBufferSize = TUYAMCU_BUFFER_SIZE;
-uint32_t g_waitToSendRespounse;
 
 uint32_t g_driverIndex;
 uint32_t g_driverPins;
@@ -232,7 +231,8 @@ static uint32_t TuyaMCU_listenToTuya() {
 		
 		for (uint32_t i = 0; i < howMuchTheyNeedToSay - 4; i += 4)
 			ADDLOGF_ERROR("%x %x %x %x", g_tuyaMCURXBuffer[i], g_tuyaMCURXBuffer[i+1], g_tuyaMCURXBuffer[i+2], g_tuyaMCURXBuffer[i+3]);
-		return g_waitingToHearBack = 0;
+		g_waitingToHearBack = 0;
+		return 0;
 	}
 
 	return howMuchTheyNeedToSay;
@@ -459,7 +459,8 @@ static bool TuyaMCU_runBattery() {
 		return false;
 
 	/* Don't send heartbeats just work on product information */
-	if (!product_information_valid) {
+	/* If we are waiting to hear back don't send a new one */
+	if (!product_information_valid && g_waitingToHearBack != TUYA_CMD_QUERY_PRODUCT) {
 		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
 		/* Request production information */
 		TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
@@ -503,7 +504,7 @@ void TuyaMCU_onEverySecond() {
 	if (g_currentDelay) {
 		wasDelaying = true;
 		g_currentDelay--;
-	} else if (!g_currentDelay && wasDelaying) {
+	} else if (wasDelaying) {
 		wasDelaying = false;
 		TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
 	}
@@ -512,15 +513,12 @@ void TuyaMCU_quickTick() {
 	// process any received information
 	uint32_t howMuchTheySaid;
 
-	if (g_waitToSendRespounse)
-		return;
-
 	// while they are saying something listen to what they said
 	while (howMuchTheySaid = TuyaMCU_listenToTuya())
 		TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
 	// start with a delay because during init we sent a production request.
-	static int timer_battery = 100;
+	static int timer_battery = 250;
 	if (timer_battery > 0) {
 		timer_battery -= g_deltaTimeMS;
 	} else if (TuyaMCU_runBattery()) {
