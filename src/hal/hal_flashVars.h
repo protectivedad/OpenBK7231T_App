@@ -59,7 +59,7 @@ typedef enum {
 
 // save at least 32 bytes for header
 // this maybe more efficient for flash writes ???
-#define FLASH_VARS_MAGIC 'VKBO'
+#define FLASH_VARS_MAGIC 0x564B424F
 #define FLASH_VARS_VERS 1
 typedef struct flash_vars_header {
 	uint32_t magic;

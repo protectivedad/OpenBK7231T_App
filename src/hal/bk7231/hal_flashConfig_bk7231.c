@@ -9,6 +9,9 @@
 
 #include "../../logging/logging.h"
 
+extern int hal_flash_lock(void);
+extern int hal_flash_unlock(void);
+
 static SemaphoreHandle_t config_mutex = 0;
 
 int config_get_tableOffsets(int tableID, int *outStart, int *outLen) {
