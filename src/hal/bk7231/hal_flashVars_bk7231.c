@@ -121,13 +121,18 @@ bool flash_vars_read_v0() {
 	
 	flash_vars.boot_count = data.boot_count;
 	flash_vars.boot_success_count = data.boot_success_count;
-	memcpy(&flash_vars.savedValues, data.savedValues, sizeof(data.savedValues));
+	// truncate if smaller
+	memcpy(&flash_vars.savedValues, data.savedValues, sizeof(flash_vars.savedValues));
 #ifdef ENABLE_POWERMETERING
-	memcpy(&flash_vars.emetering, data.emetering, sizeof(data.emetering));
-	memcpy(&flash_vars.emetering, data.emetering, sizeof(data.emetering));
+	memcpy(&flash_vars.emetering, data.emetering, sizeof(flash_vars.emetering));
+	memcpy(&flash_vars.emetering, data.emetering, sizeof(flash_vars.emetering));
 #endif // ENABLE_POWERMETERING
 #ifdef ENABLE_DRIVER_LED
-	memcpy(&flash_vars.led.rgb, data.rgb, sizeof(data.rgb));
+	flash_vars.led.bEnableAll = data.savedValues[MAX_RETAIN_CHANNELS_V0 - 4];
+	flash_vars.led.mode = data.savedValues[MAX_RETAIN_CHANNELS_V0 - 3];
+	flash_vars.led.temperature = data.savedValues[MAX_RETAIN_CHANNELS_V0 - 2];
+	flash_vars.led.brightness = data.savedValues[MAX_RETAIN_CHANNELS_V0 - 1];
+	memcpy(&flash_vars.led.rgb, data.rgb, sizeof(flash_vars.led.rgb));
 #endif // ENABLE_DRIVER_LED
 
 	return true;
