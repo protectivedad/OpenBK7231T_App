@@ -511,8 +511,8 @@ static void TuyaMCU_runBattery() {
 */
 void TuyaMCU_onEverySecond() {
 	// Send a heartbeak if the quick tick thread has not sent a command
-	if (!TuyaMCU_waitingToHearBack && TuyaMCU_queuedMQTT)
-		TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
+	// if (!TuyaMCU_waitingToHearBack && TuyaMCU_queuedMQTT)
+	// 	TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
 
 	// If we haven't heard back reduce the counter and fail the next time if 
 	// it turns 0
