@@ -485,7 +485,9 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
 static void TuyaMCU_runBattery() {
-	// Send a heartbeak if the quick tick thread has not sent a command
+	/* 
+		Full protocol requires starting with a heartbeat
+	*/
 	if (!g_heartbeat_valid) {
 		if (TuyaMCU_waitingToHearBack != TUYA_CMD_HEARTBEAT + 1) {
 			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_HEARTBEAT.\n");
@@ -495,8 +497,7 @@ static void TuyaMCU_runBattery() {
 	}
 
 	/*
-		Don't send heartbeats just work on product information but
-		if we are waiting to hear back don't send a new one
+		Follow up with getting product information
 	*/
 	if (!g_product_information_valid) {
 		if (TuyaMCU_waitingToHearBack != TUYA_CMD_QUERY_PRODUCT + 1) {
@@ -507,6 +508,9 @@ static void TuyaMCU_runBattery() {
 		return;
 	}
 
+	/*
+		Retrieve the MCU configuration details
+	*/
 	if (!g_mcuconfig_valid) {
 		if (TuyaMCU_waitingToHearBack != TUYA_CMD_MCU_CONF + 1) {
 			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_MCU_CONF.\n");
@@ -516,11 +520,10 @@ static void TuyaMCU_runBattery() {
 	}
 
 	/*
-		As soon as we have product information tell Tuya we are connected
-		so we get the sensor details as soon as possible
+		Connect to MQTT will signal that we are connected to cloud
 	*/
 	if (!g_wifi_state) {
-		if (TuyaMCU_waitingToHearBack != TUYA_CMD_WIFI_STATE + 1) {
+		if (MQTT_IsReady() && TuyaMCU_waitingToHearBack != TUYA_CMD_WIFI_STATE + 1) {
 			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
 			uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
 			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
