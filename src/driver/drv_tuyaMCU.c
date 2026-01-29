@@ -300,16 +300,17 @@ static OBK_Publish_Result TuyaMCU_PublishDPToMQTT(int dpId, tuyaDP_Type_t dataTy
 	char sName[32];
 	int32_t iVal;
 
-	sprintf(sName, "tm/%s/%i", TuyaMCU_getDataTypeString(dataType), dpId);
 	switch (dataType) {
 	case DP_TYPE_BOOL:
 	case DP_TYPE_ENUM:
 		iVal = data[0];
 		if (MQTT_IsReady()) {
+			sprintf(sName, "tm/%s/%i", TuyaMCU_getDataTypeString(dataType), dpId);
 			return MQTT_PublishMain_StringInt(sName, iVal, 0);
 		} else 	{
 			char sValue[4];   // channel value as a string
 			sprintf(sValue, "%i", (int)iVal);
+			sprintf(sName, "tm/%s/%i/get", TuyaMCU_getDataTypeString(dataType), dpId);
 			MQTT_QueuePublish(CFG_GetMQTTClientId(), sName, sValue, 0); // queue the publishing
 			TuyaMCU_queuedMQTT++;
 			return OBK_PUBLISH_OK;
