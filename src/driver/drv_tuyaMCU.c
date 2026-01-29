@@ -161,8 +161,9 @@ static void TuyaMCU_waitingToHearBackReset() {
 /* MQTT queued logic counters */
 // Number of MQTT items queued
 uint32_t TuyaMCU_queuedMQTT;
-// Timeout in seconds before failing MQTT queued
-uint32_t TuyaMCU_queuedMQTTTimeout = 300;
+// Timeout in seconds from start before failing MQTT queued
+// Tuya will turn off module in about this time
+uint32_t TuyaMCU_MQTTConnectTimeout = 90;
 
 /* Tuya ACK delay logic counters */
 // Delay before sending the last data unit acknowledgement
@@ -517,13 +518,16 @@ void TuyaMCU_onEverySecond() {
 	if (TuyaMCU_waitingToHearBack && !TuyaMCU_stillWaitingToHearBack--)
 		TuyaMCU_waitingToHearBackReset();
 
+	// MQTT Timeout to fail dpIds before Tuya turns module off
+	if (!MQTT_IsReady())
+		TuyaMCU_MQTTConnectTimeout--;
 	// if I queued something and it it still there do nothing
 	// continue and fail items if timeout reaches zero
-	if (TuyaMCU_queuedMQTT && MQTT_hasQueued() && TuyaMCU_queuedMQTTTimeout--)
+	if (TuyaMCU_queuedMQTT && MQTT_hasQueued() && TuyaMCU_MQTTConnectTimeout)
 		return;
 
 	// I timed out so send a failure message to Tuya
-	if (TuyaMCU_queuedMQTT && !TuyaMCU_queuedMQTTTimeout)
+	if (TuyaMCU_queuedMQTT && !TuyaMCU_MQTTConnectTimeout)
 		while (TuyaMCU_queuedMQTT)
 			if (TuyaMCU_queuedMQTT-- || !TuyaMCU_ackDelayLeft) // more queued or no delay
 				TuyaMCU_sendDataUnitResponse(DU_RESP_FAILURE);
@@ -703,8 +707,8 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	else if (waitingToHearBack)
 		waitingToHearBack--;
 
-	if (TuyaMCU_queuedMQTT)
-		hprintf255(request, "<h2>MQTT timeout in %is</h2>", TuyaMCU_queuedMQTTTimeout);
+	if (!MQTT_IsReady())
+		hprintf255(request, "<h2>MQTT timeout in %is</h2>", TuyaMCU_MQTTConnectTimeout);
 
 	if (TuyaMCU_ackDelayLeft)
 		hprintf255(request, "<h2>Delayed ACK in %is</h2>", TuyaMCU_ackDelayLeft);
