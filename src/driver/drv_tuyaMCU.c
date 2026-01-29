@@ -162,8 +162,8 @@ static void TuyaMCU_waitingToHearBackReset() {
 // Number of MQTT items queued
 uint32_t TuyaMCU_queuedMQTT;
 // Timeout in seconds from start before failing MQTT queued
-// Tuya will turn off module in about this time
-uint32_t TuyaMCU_MQTTConnectTimeout = 90;
+// Make sure Tuya will not turn off module before this time
+uint32_t TuyaMCU_MQTTConnectTimeout = 60;
 
 /* Tuya ACK delay logic counters */
 // Delay before sending the last data unit acknowledgement
@@ -334,8 +334,8 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 		dpId = data[ofs];
 		dataType = data[ofs + 1];
 		sectorLen = data[ofs + 2] << 8 | data[ofs + 3];
-		ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i value %i\n",
-			dpId, dataType, TuyaMCU_getDataTypeString(dataType), sectorLen, iVal);
+		ADDLOGF_DEBUG("ParseState: id %i type %i-%s len %i, first byte %i",
+			dpId, dataType, TuyaMCU_getDataTypeString(dataType), sectorLen, data[ofs + 3 + sectorLen]);
 		switch (dataType) {
 		case DP_TYPE_BOOL:
 		case DP_TYPE_ENUM:
@@ -519,7 +519,7 @@ void TuyaMCU_onEverySecond() {
 		TuyaMCU_waitingToHearBackReset();
 
 	// MQTT Timeout to fail dpIds before Tuya turns module off
-	if (!MQTT_IsReady())
+	if (!MQTT_IsReady() && TuyaMCU_MQTTConnectTimeout)
 		TuyaMCU_MQTTConnectTimeout--;
 	// if I queued something and it it still there do nothing
 	// continue and fail items if timeout reaches zero
@@ -707,17 +707,20 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 	else if (waitingToHearBack)
 		waitingToHearBack--;
 
-	if (!MQTT_IsReady())
-		hprintf255(request, "<h2>MQTT timeout in %is</h2>", TuyaMCU_MQTTConnectTimeout);
-
-	if (TuyaMCU_ackDelayLeft)
-		hprintf255(request, "<h2>Delayed ACK in %is</h2>", TuyaMCU_ackDelayLeft);
-
 	tuyaDP_t* tuyaDP = g_tuyaDPs;
 	while (tuyaDP) {
 		hprintf255(request, "<h2>dpId=%i, type=%s, value=%i</h2>", tuyaDP->dpId, TuyaMCU_getDataTypeString(tuyaDP->dpType), tuyaDP->prevValue);
 		tuyaDP = tuyaDP->next;
 	}
+
+	if (!MQTT_IsReady() && TuyaMCU_MQTTConnectTimeout)
+		hprintf255(request, "<h4>MQTT: Timeout in %is</h4>", TuyaMCU_MQTTConnectTimeout);
+	else if (!TuyaMCU_MQTTConnectTimeout)
+		hprintf255(request, "<h4>MQTT: Timed out</h4>");
+
+	if (TuyaMCU_ackDelayLeft)
+		hprintf255(request, "<h4>Delayed ACK in %is</h4>", TuyaMCU_ackDelayLeft);
+
 	if (g_product_information_valid)
 		hprintf255(request, "<h4>TuyaMCU: %s</h4>", g_productinfo);
 }
