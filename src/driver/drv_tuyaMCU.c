@@ -279,7 +279,7 @@ static void TuyaMCU_talkToTuya(byte cmdType, byte* data, int payload_len) {
 	TuyaMCU_waitingToHearBack = cmdType + 1;
 	ADDLOGF_DEBUG("%s - Sent command %i, with payload len %i",
 		__func__, cmdType, payload_len);
-	if (payload_len>2)
+	if (payload_len>=2)
 		ADDLOGF_DEBUG("%s - Bytes 0x%X 0x%X", __func__, data[0], data[1]);
 
 }
@@ -503,14 +503,14 @@ static void TuyaMCU_runBattery() {
 	}
 }
 /*
-	Send heartbeats if nothing else is going on
+	Send heartbeats if queued and nothing else is going on
 	Waiting to hear timeout
 	MQTT queued timeout
 	Delayed data unit acknowledgement
 */
 void TuyaMCU_onEverySecond() {
 	// Send a heartbeak if the quick tick thread has not sent a command
-	if (!TuyaMCU_waitingToHearBack)
+	if (!TuyaMCU_waitingToHearBack && TuyaMCU_queuedMQTT)
 		TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
 
 	// If we haven't heard back reduce the counter and fail the next time if 
@@ -713,6 +713,9 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 		tuyaDP = tuyaDP->next;
 	}
 
+	if (g_product_information_valid)
+		hprintf255(request, "<h4>TuyaMCU: %s</h4>", g_productinfo);
+
 	if (!MQTT_IsReady() && TuyaMCU_MQTTConnectTimeout)
 		hprintf255(request, "<h4>MQTT: Timeout in %is</h4>", TuyaMCU_MQTTConnectTimeout);
 	else if (!TuyaMCU_MQTTConnectTimeout)
@@ -720,9 +723,6 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 
 	if (TuyaMCU_ackDelayLeft)
 		hprintf255(request, "<h4>Delayed ACK in %is</h4>", TuyaMCU_ackDelayLeft);
-
-	if (g_product_information_valid)
-		hprintf255(request, "<h4>TuyaMCU: %s</h4>", g_productinfo);
 }
 
 int TuyaMCU_appendJSON(int id, void* request, jsonCb_t printer) {
