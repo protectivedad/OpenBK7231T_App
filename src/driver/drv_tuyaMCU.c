@@ -164,7 +164,7 @@ static void TuyaMCU_waitingToHearBackReset() {
 
 /* MQTT queued logic counters */
 // Number of MQTT items queued
-uint32_t TuyaMCU_queuedMQTT;
+bool TuyaMCU_queuedMQTT;
 // Timeout in seconds from start before failing MQTT queued
 // Make sure Tuya will not turn off module before this time
 uint32_t TuyaMCU_MQTTConnectTimeout = 60;
@@ -316,7 +316,7 @@ static OBK_Publish_Result TuyaMCU_PublishDPToMQTT(int dpId, tuyaDP_Type_t dataTy
 			sprintf(sValue, "%i", (int)iVal);
 			sprintf(sName, "tm/%s/%i/get", TuyaMCU_getDataTypeString(dataType), dpId);
 			MQTT_QueuePublish(CFG_GetMQTTClientId(), sName, sValue, 0); // queue the publishing
-			TuyaMCU_queuedMQTT++;
+			TuyaMCU_queuedMQTT = true;
 			return OBK_PUBLISH_OK;
 		}
 	default:
@@ -335,6 +335,7 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 
 	OBK_Publish_Result ret = OBK_PUBLISH_OK;
 
+	bool queuedMQTT = TuyaMCU_queuedMQTT;
 	while (ofs + 4 < len) {
 		dpId = data[ofs];
 		dataType = data[ofs + 1];
@@ -353,7 +354,6 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 			return DU_RESP_INVALID;
 		}
 
-		uint32_t queuedMQTT = TuyaMCU_queuedMQTT;
 		mapping = TuyaMCU_findDefForID(dpId);
 		if (!mapping) {
 			mapping = TuyaMCU_saveDpId(dpId, dataType, iVal);
@@ -362,15 +362,15 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 			mapping->prevValue = iVal;
 			ret = TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + ofs + 4);
 		}
-		if (queuedMQTT != TuyaMCU_queuedMQTT)
-			return DU_RESP_STRANDED;
 			
 		if (OBK_PUBLISH_OK != ret)
 			return DU_RESP_FAILURE;
 		ofs += (4 + sectorLen);
 	}
 
-	if (TuyaMCU_ackDelay) {
+	if (TuyaMCU_queuedMQTT && queuedMQTT != TuyaMCU_queuedMQTT)
+		return DU_RESP_STRANDED;
+	else if (TuyaMCU_ackDelay) {
 		// we wiil reset the delay no matter what, but we
 		// can only have one stranded at a time
 		if (!TuyaMCU_ackDelayLeft) {
@@ -484,7 +484,7 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // no processing after state is updated
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
-static void TuyaMCU_runBattery() {
+static void TuyaMCU_runInitializationProtocol() {
 	/* 
 		Full protocol requires starting with a heartbeat
 	*/
@@ -552,10 +552,11 @@ void TuyaMCU_onEverySecond() {
 		return;
 
 	// I timed out so send a failure message to Tuya
-	if (TuyaMCU_queuedMQTT && !TuyaMCU_MQTTConnectTimeout)
-		while (TuyaMCU_queuedMQTT)
-			if (TuyaMCU_queuedMQTT-- || !TuyaMCU_ackDelayLeft) // more queued or no delay
-				TuyaMCU_sendDataUnitResponse(DU_RESP_FAILURE);
+	if (TuyaMCU_queuedMQTT && !TuyaMCU_MQTTConnectTimeout) {
+		TuyaMCU_queuedMQTT = false;
+		if (!TuyaMCU_ackDelayLeft)
+			TuyaMCU_sendDataUnitResponse(DU_RESP_FAILURE);
+	}
 
 	// process delayed logic
 	static bool wasDelaying;
@@ -580,16 +581,19 @@ void TuyaMCU_quickTick() {
 	while (howMuchTheySaid = TuyaMCU_listenToTuya())
 		TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
-	TuyaMCU_runBattery();
+	if (!g_wifi_state)
+		TuyaMCU_runInitializationProtocol();
 
 	// if I queued something and it it still there do nothing
 	if (TuyaMCU_queuedMQTT && MQTT_hasQueued())
 		return;
 
 	// process queued item logic
-	while (TuyaMCU_queuedMQTT)
-		if (TuyaMCU_queuedMQTT-- || !TuyaMCU_ackDelayLeft) // more queued or no delay
-			TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
+	if (TuyaMCU_queuedMQTT) {
+		TuyaMCU_queuedMQTT = false;
+ 		if (!TuyaMCU_ackDelayLeft)
+ 			TuyaMCU_sendDataUnitResponse(DU_RESP_SUCCESS);
+	}
 
 }
 static void TuyaMCU_init() {
