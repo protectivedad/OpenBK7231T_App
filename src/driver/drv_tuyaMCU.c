@@ -693,14 +693,15 @@ void TuyaMCU_appendHTML(http_request_t* request, int bPreState)
 
 	static uint32_t waitingToHearBack;
 	// wait at least one full second before saying we have no response
-	if (TuyaMCU_waitingToHearBack && waitingToHearBack)
-		hprintf255(request, "<h2>TuyaMCU not responding to commands</h2>");
-	if (TuyaMCU_waitingToHearBack) {
-		if (waitingToHearBack)
-			waitingToHearBack--;
-		else
-			waitingToHearBack = 1;
-	}
+	if (TuyaMCU_waitingToHearBack || waitingToHearBack)
+		hprintf255(request, "<h2>TuyaMCU: Offline</h2>");
+	else
+		hprintf255(request, "<h2>TuyaMCU: Online</h2>");
+
+	if (TuyaMCU_waitingToHearBack)
+		waitingToHearBack = 1;
+	else if (waitingToHearBack)
+		waitingToHearBack--;
 
 	if (TuyaMCU_queuedMQTT)
 		hprintf255(request, "<h2>MQTT timeout in %is</h2>", TuyaMCU_queuedMQTTTimeout);
