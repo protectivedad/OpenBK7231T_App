@@ -485,14 +485,14 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
 static void TuyaMCU_runInitializationProtocol() {
+	if (TuyaMCU_waitingToHearBack)
+		return;
 	/* 
 		Full protocol requires starting with a heartbeat
 	*/
 	if (!g_heartbeat_valid) {
-		if (TuyaMCU_waitingToHearBack != TUYA_CMD_HEARTBEAT + 1) {
-			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_HEARTBEAT.\n");
-			TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
-		}
+		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_HEARTBEAT.");
+		TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
 		return;
 	}
 
@@ -500,11 +500,9 @@ static void TuyaMCU_runInitializationProtocol() {
 		Follow up with getting product information
 	*/
 	if (!g_product_information_valid) {
-		if (TuyaMCU_waitingToHearBack != TUYA_CMD_QUERY_PRODUCT + 1) {
-			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
-			/* Request production information */
-			TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
-		}
+		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.");
+		/* Request production information */
+		TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
 		return;
 	}
 
@@ -512,10 +510,8 @@ static void TuyaMCU_runInitializationProtocol() {
 		Retrieve the MCU configuration details
 	*/
 	if (!g_mcuconfig_valid) {
-		if (TuyaMCU_waitingToHearBack != TUYA_CMD_MCU_CONF + 1) {
-			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_MCU_CONF.\n");
-			TuyaMCU_talkToTuya(TUYA_CMD_MCU_CONF, NULL, 0);
-		}
+		ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_MCU_CONF.");
+		TuyaMCU_talkToTuya(TUYA_CMD_MCU_CONF, NULL, 0);
 		return;
 	}
 
@@ -523,7 +519,7 @@ static void TuyaMCU_runInitializationProtocol() {
 		Connect to MQTT will signal that we are connected to cloud
 	*/
 	if (!g_wifi_state) {
-		if (MQTT_IsReady() && TuyaMCU_waitingToHearBack != TUYA_CMD_WIFI_STATE + 1) {
+		if (MQTT_IsReady()) {
 			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
 			uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
 			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
