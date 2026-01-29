@@ -349,6 +349,7 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 			return DU_RESP_INVALID;
 		}
 
+		uint32_t queuedMQTT = TuyaMCU_queuedMQTT;
 		mapping = TuyaMCU_findDefForID(dpId);
 		if (!mapping) {
 			mapping = TuyaMCU_saveDpId(dpId, dataType, iVal);
@@ -357,6 +358,9 @@ static tuyaDU_Resp_t TuyaMCU_parseStateMessage(const byte* data, int len) {
 			mapping->prevValue = iVal;
 			ret = TuyaMCU_PublishDPToMQTT(dpId, dataType, sectorLen, data + ofs + 4);
 		}
+		if (queuedMQTT != TuyaMCU_queuedMQTT)
+			return DU_RESP_STRANDED;
+			
 		if (OBK_PUBLISH_OK != ret)
 			return DU_RESP_FAILURE;
 		ofs += (4 + sectorLen);
@@ -388,8 +392,6 @@ static void TuyaMCU_parseReportStatusType(const byte *value, int len) {
 	switch (subcommand) {
 	case 0x0B:
 		ret = TuyaMCU_parseStateMessage(value + 9, len - 9);
-		if (TuyaMCU_queuedMQTT)
-			return;
 		TuyaMCU_sendDataUnitResponse(ret);
 		return;
 
