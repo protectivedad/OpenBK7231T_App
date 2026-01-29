@@ -138,8 +138,12 @@ uint32_t g_tuyaMCURXBufferSize = TUYAMCU_BUFFER_SIZE;
 char *g_productinfo;
 
 /* Tuya communication status logic details */
+// Heartbeat status
+bool g_heartbeat_valid;
 // Query production information
 bool g_product_information_valid;
+// MCU configuration status
+bool g_mcuconfig_valid;
 // Inform on wifi status
 bool g_wifi_state;
 
@@ -149,7 +153,7 @@ uint32_t g_version;
 // Last command sent to TuyaMCU incremented by one
 uint32_t TuyaMCU_waitingToHearBack;
 // Default value to wait to hear back
-#define TUYAMCU_HEARBACK_TIMEOUT 2
+#define TUYAMCU_HEARBACK_TIMEOUT 3
 // Number of seconds we wait till giving up
 uint32_t TuyaMCU_stillWaitingToHearBack = TUYAMCU_HEARBACK_TIMEOUT;
 // Reset command wait logic
@@ -410,12 +414,14 @@ static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 	ADDLOGF_TIMING("%i - %s - ProcessIncoming[v=%i]: cmd %i, len %i", xTaskGetTickCount(), __func__, g_version, whatWeHeard, howMuchTheySaid);
 	switch (whatWeHeard) {
 	case TUYA_CMD_HEARTBEAT:
+		g_heartbeat_valid = true;
 		break;
 	case TUYA_CMD_QUERY_PRODUCT:
 		TuyaMCU_ParseQueryProductInformation(g_tuyaMCURXBuffer + 6, howMuchTheySaid - 6);
 		g_product_information_valid = true;
 		break;
 	case TUYA_CMD_MCU_CONF:
+		g_mcuconfig_valid = true;
 		if (howMuchTheySaid == MIN_TUYAMCU_PACKET_SIZE) {
 			self_processing_mode = true;
 		} else if (howMuchTheySaid == MIN_TUYAMCU_PACKET_SIZE + 2) {
@@ -479,6 +485,15 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 // Devices are powered by the TuyaMCU, transmit information and get turned off
 // Use the minimal amount of communications
 static void TuyaMCU_runBattery() {
+	// Send a heartbeak if the quick tick thread has not sent a command
+	if (!g_heartbeat_valid) {
+		if (TuyaMCU_waitingToHearBack != TUYA_CMD_HEARTBEAT + 1) {
+			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_HEARTBEAT.\n");
+			TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
+		}
+		return;
+	}
+
 	/*
 		Don't send heartbeats just work on product information but
 		if we are waiting to hear back don't send a new one
@@ -488,6 +503,14 @@ static void TuyaMCU_runBattery() {
 			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_QUERY_PRODUCT.\n");
 			/* Request production information */
 			TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+		}
+		return;
+	}
+
+	if (!g_mcuconfig_valid) {
+		if (TuyaMCU_waitingToHearBack != TUYA_CMD_MCU_CONF + 1) {
+			ADDLOGF_EXTRADEBUG("Will send TUYA_CMD_MCU_CONF.\n");
+			TuyaMCU_talkToTuya(TUYA_CMD_MCU_CONF, NULL, 0);
 		}
 		return;
 	}
@@ -512,10 +535,6 @@ static void TuyaMCU_runBattery() {
 	Delayed data unit acknowledgement
 */
 void TuyaMCU_onEverySecond() {
-	// Send a heartbeak if the quick tick thread has not sent a command
-	// if (!TuyaMCU_waitingToHearBack && TuyaMCU_queuedMQTT)
-	// 	TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
-
 	// If we haven't heard back reduce the counter and fail the next time if 
 	// it turns 0
 	if (TuyaMCU_waitingToHearBack && !TuyaMCU_stillWaitingToHearBack--)
@@ -588,7 +607,7 @@ static void TuyaMCU_init() {
 	ADDLOGF_TIMING("%i - %s - Initialization of TuyaMCU", xTaskGetTickCount(), __func__);
 
 	/* Request production information */
-	TuyaMCU_talkToTuya(TUYA_CMD_QUERY_PRODUCT, NULL, 0);
+	TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
 }
 
 static bool TuyaMCU_activatePin(uint32_t pinIndex) {
