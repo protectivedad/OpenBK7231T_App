@@ -71,7 +71,7 @@ static int g_connectToWiFi = 0;
 // reset after this number of seconds
 static int g_reset = 0;
 // is connected to WiFi?
-static int g_bHasWiFiConnected = 0;
+bool Main_bHasWiFiConnected;
 // is Open Access point or a client?
 static int g_bOpenAccessPointMode = 0;
 // in safe mode, user can press a button to enter the unsafe one
@@ -478,7 +478,7 @@ void Main_OnWiFiStatusChange(int code)
 	switch (code)
 	{
 	case WIFI_STA_CONNECTING:
-		g_bHasWiFiConnected = 0;
+		Main_bHasWiFiConnected = false;
 		g_connectToWiFi = 120;
 		ADDLOGF_INFO("%s - WIFI_STA_CONNECTING - %i\r\n", __func__, code);
 		break;
@@ -486,20 +486,22 @@ void Main_OnWiFiStatusChange(int code)
 		// try to connect again in few seconds
 		// if we are already disconnected, why must we call disconnect again?
 #if PLATFORM_BEKEN
-		if (g_bHasWiFiConnected != 0)
-		{
+		if (Main_bHasWiFiConnected)
 			HAL_DisconnectFromWifi();
-		}
 #endif
-		if(g_secondsElapsed < 30)
-		{
+		// if we have fast connect then do three quick retries
+		static uint32_t fastConnectCounter = 3;
+		if (Main_HasFastConnect() && fastConnectCounter--) {
+			if (!fastConnectCounter)
+				HAL_DisableEnhancedFastConnect();
+			else
+				g_connectToWiFi = 1;
+		} else if(g_secondsElapsed < 30)
 			g_connectToWiFi = 5;
-		}
 		else
-		{
 			g_connectToWiFi = 15;
-		}
-		g_bHasWiFiConnected = 0;
+
+		Main_bHasWiFiConnected = false;
 #if ENABLE_PING_WATCHDOG
 		g_timeSinceLastPingReply = -1;
 #endif
@@ -515,15 +517,15 @@ void Main_OnWiFiStatusChange(int code)
 		else {
 			g_connectToWiFi = 60;
 		}
-		g_bHasWiFiConnected = 0;
+		Main_bHasWiFiConnected = false;
 		ADDLOGF_INFO("%s - WIFI_STA_AUTH_FAILED - %i\r\n", __func__, code);
 		break;
 	case WIFI_STA_CONNECTED:
 #if ALLOW_SSID2
-		if (!g_bHasWiFiConnected) FV_UpdateStartupSSIDIfChanged_StoredValue(g_SSIDactual);	//update ony on first connect
+		if (!Main_bHasWiFiConnected) FV_UpdateStartupSSIDIfChanged_StoredValue(g_SSIDactual);	//update ony on first connect
 #endif		
 
-		g_bHasWiFiConnected = 1;
+		Main_bHasWiFiConnected = true;
 		ADDLOGF_INFO("%s - WIFI_STA_CONNECTED - %i\r\n", __func__, code);
 
 #if ALLOW_SSID2
@@ -563,11 +565,11 @@ void Main_OnWiFiStatusChange(int code)
 		break;
 		/* for softap mode */
 	case WIFI_AP_CONNECTED:
-		g_bHasWiFiConnected = 1;
+		Main_bHasWiFiConnected = true;
 		ADDLOGF_INFO("%s - WIFI_AP_CONNECTED - %i\r\n", __func__, code);
 		break;
 	case WIFI_AP_FAILED:
-		g_bHasWiFiConnected = 0;
+		Main_bHasWiFiConnected = false;
 		ADDLOGF_INFO("%s - WIFI_AP_FAILED - %i\r\n", __func__, code);
 		break;
 	default:
@@ -605,7 +607,7 @@ int Main_HasMQTTConnected()
 
 int Main_HasWiFiConnected()
 {
-	return g_bHasWiFiConnected;
+	return Main_bHasWiFiConnected;
 }
 
 #ifdef OBK_MCU_SLEEP_METRICS_ENABLE
@@ -718,7 +720,7 @@ void Main_OnEverySecond()
 	int i;
 
 #ifdef WINDOWS
-	g_bHasWiFiConnected = 1;
+	Main_bHasWiFiConnected = 1;
 #endif
 
 #ifndef NO_CHIP_TEMPERATURE
@@ -821,7 +823,7 @@ void Main_OnEverySecond()
 	// Otherwise only start HTTP service if we have a connection to the
 	// outside world or AP mode, unless it has been disabled.
 	if (!HTTPService_Started() && 
-		(g_bHasWiFiConnected || g_bOpenAccessPointMode || bSafeMode)
+		(Main_bHasWiFiConnected || g_bOpenAccessPointMode || bSafeMode)
 #if MQTT_USE_TLS
 		&& !(CFG_GetDisableWebServer() && !bSafeMode)
 #endif
@@ -844,11 +846,11 @@ void Main_OnEverySecond()
 		// this is an old mechanism that just tries to reconnect (but without reboot)
 		if (CFG_GetPingDisconnectedSecondsToRestart() > 0 && g_timeSinceLastPingReply >= CFG_GetPingDisconnectedSecondsToRestart())
 		{
-			if (g_bHasWiFiConnected != 0)
+			if (Main_bHasWiFiConnected != 0)
 			{
 				ADDLOGF_INFO("[Ping watchdog] No ping replies within %i seconds. Will try to reconnect.\n", g_timeSinceLastPingReply);
 				HAL_DisconnectFromWifi();
-				g_bHasWiFiConnected = 0;
+				Main_bHasWiFiConnected = 0;
 				g_connectToWiFi = 10;
 				g_timeSinceLastPingReply = -1;
 			}
@@ -911,11 +913,11 @@ void Main_OnEverySecond()
 #if ENABLE_MQTT
 		ADDLOGF_INFO("%sTime %i, idle %i/s, free %d, MQTT %i(%i), bWifi %i, secondsWithNoPing %i, socks %i/%i %s\n",
 			safe, g_secondsElapsed, idleCount, xPortGetFreeHeapSize(), bMQTTconnected,
-			MQTT_GetConnectEvents(),g_bHasWiFiConnected, g_timeSinceLastPingReply, LWIP_GetActiveSockets(), LWIP_GetMaxSockets(),
+			MQTT_GetConnectEvents(),Main_bHasWiFiConnected, g_timeSinceLastPingReply, LWIP_GetActiveSockets(), LWIP_GetMaxSockets(),
 			g_powersave ? "POWERSAVE" : "");
 #else
 		ADDLOGF_INFO("%sTime %i, idle %i/s, free %d,  bWifi %i, secondsWithNoPing %i, socks %i/%i %s\n",
-			safe, g_secondsElapsed, idleCount, xPortGetFreeHeapSize(),g_bHasWiFiConnected, g_timeSinceLastPingReply, LWIP_GetActiveSockets(), LWIP_GetMaxSockets(),
+			safe, g_secondsElapsed, idleCount, xPortGetFreeHeapSize(),Main_bHasWiFiConnected, g_timeSinceLastPingReply, LWIP_GetActiveSockets(), LWIP_GetMaxSockets(),
 			g_powersave ? "POWERSAVE" : "");
 #endif
 		// reset so it's a per-second counter.
@@ -981,10 +983,10 @@ void Main_OnEverySecond()
 #endif
 	if (g_openAP)
 	{
-		if (g_bHasWiFiConnected)
+		if (Main_bHasWiFiConnected)
 		{
 			HAL_DisconnectFromWifi();
-			g_bHasWiFiConnected = 0;
+			Main_bHasWiFiConnected = false;
 		}
 		g_openAP--;
 		if (0 == g_openAP)
@@ -996,7 +998,7 @@ void Main_OnEverySecond()
 
 #if ENABLE_PING_WATCHDOG
 	//ADDLOGF_INFO("g_startPingWatchDogAfter %i, g_bPingWatchDogStarted %i ", g_startPingWatchDogAfter, g_bPingWatchDogStarted);
-	if (g_bHasWiFiConnected) {
+	if (Main_bHasWiFiConnected) {
 		if (g_startPingWatchDogAfter) {
 			//ADDLOGF_INFO("g_startPingWatchDogAfter %i", g_startPingWatchDogAfter);
 			g_startPingWatchDogAfter--;
@@ -1022,13 +1024,10 @@ void Main_OnEverySecond()
 		}
 	}
 #endif
-	if (g_connectToWiFi)
-	{
+	if (g_connectToWiFi) {
 		g_connectToWiFi--;
-		if (0 == g_connectToWiFi && g_bHasWiFiConnected == 0)
-		{
+		if (!g_connectToWiFi && !Main_bHasWiFiConnected)
 			Main_ConnectToWiFiNow();
-		}
 	}
 
 	// config save moved here because of stack size problems
