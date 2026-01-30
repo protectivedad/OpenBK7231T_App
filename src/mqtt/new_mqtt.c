@@ -810,13 +810,12 @@ int tasCmnd(obk_mqtt_request_t* request) {
 //}
 
 // copied here because for some reason renames in sdk?
-static void MQTT_disconnect(mqtt_client_t* client)
-{
-	if (!client)
+void MQTT_disconnectClient() {
+	if (!mqtt_client)
 		return;
 	// this is what it was renamed to.  why?
 	LOCK_TCPIP_CORE();
-	mqtt_disconnect(client);
+	mqtt_disconnect(mqtt_client);
 	UNLOCK_TCPIP_CORE();
 
 }

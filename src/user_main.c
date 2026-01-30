@@ -1076,6 +1076,7 @@ void Main_OnEverySecond()
 #if ENABLE_DEEPSLEEP
 	if (g_bWantPinDeepSleep) {
 		g_bWantPinDeepSleep = 0;
+		MQTT_disconnectClient();
 // may be necessary to enusre led is off when asleep not sure yet
 //		PIN_set_wifi_led(0);
 		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
