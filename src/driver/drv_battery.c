@@ -7,7 +7,6 @@
 #include "../new_cfg.h"
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
-#include "../mqtt/new_mqtt.h"
 #include "../logging/logging.h"
 #include "drv_local.h"
 #include "drv_uart.h"
@@ -88,7 +87,7 @@ static void Battery_measure() {
 		g_battlevel = 100;
 
 #if ENABLE_MQTT
-	if (MQTT_IsReady()) {
+	if (Main_HasMQTTConnected()) {
 		MQTT_PublishMain_StringInt("voltage", (int)g_battvoltage, 0);
 		MQTT_PublishMain_StringInt("battery", (int)g_battlevel, 0);
 	} else 	{
