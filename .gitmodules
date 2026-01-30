@@ -8,7 +8,7 @@
 	branch = master
 [submodule "sdk/OpenBK7231N"]
 	path = sdk/OpenBK7231N
-	url = https://github.com/openshwprojects/OpenBK7231N.git
+	url = https://github.com/protectivedad/OpenBK7231N
 	branch = master
 [submodule "sdk/OpenBL602"]
 	path = sdk/OpenBL602
@@ -43,7 +43,7 @@
 	branch = master
 [submodule "sdk/beken_freertos_sdk"]
 	path = sdk/beken_freertos_sdk
-	url = https://github.com/NonPIayerCharacter/beken_freertos_sdk.git
+	url = https://github.com/protectivedad/beken_freertos_sdk.git
 	branch = master
 [submodule "sdk/OpenRTL8720D"]
 	path = sdk/OpenRTL8720D
