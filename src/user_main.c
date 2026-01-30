@@ -1026,7 +1026,7 @@ void Main_OnEverySecond()
 #endif
 	if (g_connectToWiFi) {
 		g_connectToWiFi--;
-		if (!g_connectToWiFi && !Main_bHasWiFiConnected)
+		if (!g_connectToWiFi && !Main_bHasWiFiConnected && !g_bOpenAccessPointMode)
 			Main_ConnectToWiFiNow();
 	}
 
