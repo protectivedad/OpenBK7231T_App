@@ -607,6 +607,8 @@ static void TuyaMCU_init() {
 
 	/* Request production information */
 	TuyaMCU_talkToTuya(TUYA_CMD_HEARTBEAT, NULL, 0);
+	// default is 5, works well for devices that power on, publish and power off
+	MQTT_setKeepAlive(MQTT_CYCLIC_TIMER_INTERVAL + 1);
 }
 
 static bool TuyaMCU_activatePin(uint32_t pinIndex) {

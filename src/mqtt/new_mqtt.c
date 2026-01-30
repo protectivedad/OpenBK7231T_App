@@ -3,6 +3,9 @@
 
 #if ENABLE_MQTT 
 
+#include <rtos_pub.h>
+#include <rtos_error.h>
+
 #include "new_mqtt.h"
 #include "../new_common.h"
 #include "../new_pins.h"
@@ -1204,6 +1207,12 @@ void dnsFound(const char *name, ip_addr_t *ipaddr, void *arg)
 }
 
 #define MQTT_ROUTE_DELAYS 5		// upto 40,20,20,... ms
+
+// sets the connection keep alive time in seconds
+// must be done before connection
+void MQTT_setKeepAlive(uint32_t keep_alive) {
+	mqtt_client_info.keep_alive = keep_alive;
+}
 
 static int MQTT_do_connect(mqtt_client_t* client)
 {

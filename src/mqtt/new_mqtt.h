@@ -166,6 +166,7 @@ OBK_Publish_Result MQTT_PublishTele(const char* teleName, const char* teleValue)
 void MQTT_InvokeCommandAtEnd(PostPublishCommands command);
 bool MQTT_IsReady();
 bool MQTT_hasQueued();
+void MQTT_setKeepAlive(uint32_t keep_alive);
 extern int g_mqtt_bBaseTopicDirty;
 extern int mqtt_reconnect;
 extern int mqtt_loopsWithDisconnected;
