@@ -388,6 +388,7 @@ static void TuyaMCU_sendDataUnitResponse(tuyaDU_Resp_t result) {
 	byte reply[2] = { 0x0B, 0x00 };
 	reply[1] = result;
 	TuyaMCU_talkToTuya(TUYA_CMD_REPORT_STATUS_RECORD_TYPE, reply, 2);
+	TuyaMCU_waitingToHearBackReset();
 }
 static void TuyaMCU_parseReportStatusType(const byte *value, int len) {
 	tuyaDU_Resp_t ret;
@@ -438,7 +439,7 @@ static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 		ADDLOGF_INFO("ProcessIncoming: 0x04 replying");
 		// added for https://www.elektroda.com/rtvforum/viewtopic.php?p=21095905#21095905
 		TuyaMCU_talkToTuya(0x04, 0, 0);
-
+		TuyaMCU_waitingToHearBackReset();
 		// start AP mode in 1 second
 		g_openAP = 1;
 		uint8_t state = TUYA_NETWORK_STATUS_AP_MODE;
