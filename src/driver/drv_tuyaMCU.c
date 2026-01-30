@@ -308,7 +308,7 @@ static OBK_Publish_Result TuyaMCU_PublishDPToMQTT(int dpId, tuyaDP_Type_t dataTy
 	case DP_TYPE_BOOL:
 	case DP_TYPE_ENUM:
 		iVal = data[0];
-		if (MQTT_IsReady()) {
+		if (Main_HasMQTTConnected()) {
 			sprintf(sName, "tm/%s/%i", TuyaMCU_getDataTypeString(dataType), dpId);
 			return MQTT_PublishMain_StringInt(sName, iVal, 0);
 		} else 	{
@@ -440,10 +440,11 @@ static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 		// added for https://www.elektroda.com/rtvforum/viewtopic.php?p=21095905#21095905
 		TuyaMCU_talkToTuya(0x04, 0, 0);
 		TuyaMCU_waitingToHearBackReset();
-		// start AP mode in 1 second
+		
+		// switch to AP mode in 1 second
 		g_openAP = 1;
-		uint8_t state = TUYA_NETWORK_STATUS_AP_MODE;
-		TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
+		MQTT_disconnectClient();
+		TuyaMCU_wifi_state = false;
 		break;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
 		TuyaMCU_parseReportStatusType(TuyaMCU_RXBuffer + 6, howMuchTheySaid - 6);
@@ -476,7 +477,13 @@ commandResult_t Cmd_TuyaMCU_SetBatteryAckDelay(const void* context, const char* 
 		return CMD_RES_BAD_ARGUMENT;
 	}
 
-	TuyaMCU_ackDelay = delay;
+	if (TuyaMCU_ackDelay != delay) {
+		TuyaMCU_ackDelay = delay;
+		if (TuyaMCU_ackDelay <= MQTT_CYCLIC_TIMER_INTERVAL + 1)
+			MQTT_setKeepAlive(MQTT_CYCLIC_TIMER_INTERVAL + 1);
+		else
+			MQTT_setKeepAlive(TuyaMCU_ackDelay + 1);
+	}
 
 	return CMD_RES_OK;
 }
@@ -524,6 +531,11 @@ static void TuyaMCU_runInitializationProtocol() {
 		if (MQTT_IsReady()) {
 			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are connected to cloud", xTaskGetTickCount(), __func__);
 			uint8_t state = TUYA_NETWORK_STATUS_CONNECTED_TO_CLOUD;
+			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
+		}
+		if (Main_IsOpenAccessPointMode()) {
+			ADDLOGF_TIMING("%i - %s - Sending TuyaMCU we are in AP mode", xTaskGetTickCount(), __func__);
+			uint8_t state = TUYA_NETWORK_STATUS_AP_MODE;
 			TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
 		}
 		return;
