@@ -438,6 +438,11 @@ static void TuyaMCU_tuyaSaidWhat(int howMuchTheySaid) {
 		ADDLOGF_INFO("ProcessIncoming: 0x04 replying");
 		// added for https://www.elektroda.com/rtvforum/viewtopic.php?p=21095905#21095905
 		TuyaMCU_talkToTuya(0x04, 0, 0);
+
+		// start AP mode in 1 second
+		g_openAP = 1;
+		uint8_t state = TUYA_NETWORK_STATUS_AP_MODE;
+		TuyaMCU_talkToTuya(TUYA_CMD_WIFI_STATE, &state, 1);
 		break;
 	case TUYA_CMD_REPORT_STATUS_RECORD_TYPE:
 		TuyaMCU_parseReportStatusType(TuyaMCU_RXBuffer + 6, howMuchTheySaid - 6);

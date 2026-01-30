@@ -2228,7 +2228,7 @@ int MQTT_RunQuickTick(){
 // return true/false on connected/disconnected
 bool MQTT_RunEverySecondUpdate()
 {
-	if (!mqtt_initialised)
+	if (!mqtt_initialised || Main_IsOpenAccessPointMode())
 		return false;
 
 	// check OTA right away and stop processing
