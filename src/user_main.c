@@ -73,7 +73,7 @@ static int g_reset = 0;
 // is connected to WiFi?
 bool Main_bHasWiFiConnected;
 // is Open Access point or a client?
-static int g_bOpenAccessPointMode = 0;
+bool Main_bOpenAccessPointMode;
 // in safe mode, user can press a button to enter the unsafe one
 static int g_doUnsafeInitIn = 0;
 uint32_t g_bootFailures = 0;
@@ -95,8 +95,6 @@ static int g_bPingWatchDogStarted = 0;
 // current IP string, this is compared with IP returned from HAL
 // and if it changes, the MQTT publish is done
 static char g_currentIPString[32] = { 0 };
-static HALWifiStatus_t g_newWiFiStatus = WIFI_UNDEFINED;
-static HALWifiStatus_t g_prevWiFiStatus = WIFI_UNDEFINED;
 static int g_noMQTTTime = 0;
 
 uint8_t g_StartupDelayOver = 0;
@@ -413,6 +411,13 @@ extern int g_ln882h_pendingPowerSaveCommand;
 void LN882H_ApplyPowerSave(int bOn);
 #endif
 
+bool Main_HasFastConnect() {
+	return CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT);
+}
+bool Main_hasSavedConnect() {
+	return CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT);
+}
+
 // SSID switcher by xjikka 20240525
 #if ALLOW_SSID2
 #define SSID_USE_SSID1  0
@@ -433,7 +438,8 @@ void CheckForSSID12_Switch() {
 	g_SSIDSwitchCnt = 0;
 	g_SSIDactual ^= 1;	// toggle SSID 
 	ADDLOGF_INFO("WiFi SSID: switching to SSID%i\r\n", g_SSIDactual + 1);
-	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT)) HAL_DisableEnhancedFastConnect();
+	if(Main_hasSavedConnect())
+		HAL_DisableEnhancedFastConnect();
 #endif
 }
 
@@ -489,14 +495,16 @@ void Main_OnWiFiStatusChange(int code)
 		if (Main_bHasWiFiConnected)
 			HAL_DisconnectFromWifi();
 #endif
-		// if we have fast connect then do three quick retries
-		static uint32_t fastConnectCounter = 3;
-		if (Main_HasFastConnect() && fastConnectCounter--) {
+		// if we have failed three times erase BSSID
+		// three more and we disable it all together
+		static uint32_t fastConnectCounter = 6;
+		if (Main_hasSavedConnect() && fastConnectCounter--) {
 			if (!fastConnectCounter)
 				HAL_DisableEnhancedFastConnect();
-			else
-				g_connectToWiFi = 1;
-		} else if(g_secondsElapsed < 30)
+			else if (fastConnectCounter == 3)
+				HAL_eraseFastConnectBSSID();
+		}
+		if(g_secondsElapsed < 30)
 			g_connectToWiFi = 5;
 		else
 			g_connectToWiFi = 15;
@@ -575,7 +583,7 @@ void Main_OnWiFiStatusChange(int code)
 	default:
 		break;
 	}
-	g_newWiFiStatus = code;
+	EventHandlers_FireEvent(CMD_EVENT_WIFI_STATE, code);
 }
 
 
@@ -600,13 +608,11 @@ static int bMQTTconnected = 0;
 // returns bMQTTconnected updated every second
 // if fast connect
 // returns MQTT_IsReady() for sub second processing of messages
-int Main_HasMQTTConnected()
-{
+int Main_HasMQTTConnected() {
 	return Main_HasFastConnect() ? MQTT_IsReady() : bMQTTconnected;
 }
 
-int Main_HasWiFiConnected()
-{
+int Main_HasWiFiConnected() {
 	return Main_bHasWiFiConnected;
 }
 
@@ -667,11 +673,10 @@ void Main_ScheduleHomeAssistantDiscovery(int seconds) {
 }
 #endif
 
-
 void Main_ConnectToWiFiNow() {
 	const char* wifi_ssid, * wifi_pass;
 
-	g_bOpenAccessPointMode = 0;
+	Main_bOpenAccessPointMode = false;
 	CheckForSSID12_Switch();
 	wifi_ssid = CFG_GetWiFiSSIDX();
 	wifi_pass = CFG_GetWiFiPassX();
@@ -681,22 +686,11 @@ void Main_ConnectToWiFiNow() {
 	HAL_WiFi_SetupStatusCallback(Main_OnWiFiStatusChange);
 	ADDLOGF_INFO("Registered for wifi changes\r\n");
 	ADDLOGF_INFO("Connecting to SSID [%s]\r\n", wifi_ssid);
-	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT))
-	{
-		HAL_FastConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
-	}
-	else
-	{
-		HAL_ConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
-	}
+	HAL_ConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
 	// don't set g_connectToWiFi = 0; here!
 	// this would overwrite any changes, e.g. from Main_OnWiFiStatusChange !
 	// so don't do this here, but e.g. set in Main_OnWiFiStatusChange if connected!!!
 }
-bool Main_HasFastConnect() {
-	return CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT);
-}
-
 #ifndef NO_CHIP_TEMPERATURE
 #if PLATFORM_LN882H || PLATFORM_ESPIDF || PLATFORM_ESP8266
 // Quick hack to display LN-only temperature,
@@ -751,12 +745,12 @@ void Main_OnEverySecond()
 	}
 #endif
 
-	if (g_newWiFiStatus != g_prevWiFiStatus) {
-		g_prevWiFiStatus = g_newWiFiStatus;
-		// Argument type here is HALWifiStatus_t enumeration
-		EventHandlers_FireEvent(CMD_EVENT_WIFI_STATE, g_newWiFiStatus);
+	// no STA or AP and no trying for STA or AP
+	if (!Main_bHasWiFiConnected && !Main_bOpenAccessPointMode
+		&& !g_openAP && !g_connectToWiFi
+	) {
+		g_openAP = 5;
 	}
-
 #if ENABLE_MQTT
 	// run_adc_test();
 	if (MQTT_RunEverySecondUpdate() != bMQTTconnected) {
@@ -823,7 +817,7 @@ void Main_OnEverySecond()
 	// Otherwise only start HTTP service if we have a connection to the
 	// outside world or AP mode, unless it has been disabled.
 	if (!HTTPService_Started() && 
-		(Main_bHasWiFiConnected || g_bOpenAccessPointMode || bSafeMode)
+		(Main_bHasWiFiConnected || Main_bOpenAccessPointMode || bSafeMode)
 #if MQTT_USE_TLS
 		&& !(CFG_GetDisableWebServer() && !bSafeMode)
 #endif
@@ -983,16 +977,14 @@ void Main_OnEverySecond()
 #endif
 	if (g_openAP)
 	{
-		if (Main_bHasWiFiConnected)
-		{
+		if (Main_bHasWiFiConnected) {
 			HAL_DisconnectFromWifi();
 			Main_bHasWiFiConnected = false;
 		}
 		g_openAP--;
-		if (0 == g_openAP)
-		{
+		if (!g_openAP) {
 			HAL_SetupWiFiOpenAccessPoint(CFG_GetDeviceName());
-			g_bOpenAccessPointMode = 1;
+			Main_bOpenAccessPointMode = true;
 		}
 	}
 
@@ -1026,7 +1018,7 @@ void Main_OnEverySecond()
 #endif
 	if (g_connectToWiFi) {
 		g_connectToWiFi--;
-		if (!g_connectToWiFi && !Main_bHasWiFiConnected && !g_bOpenAccessPointMode)
+		if (!g_connectToWiFi && !Main_bHasWiFiConnected && !Main_bOpenAccessPointMode)
 			Main_ConnectToWiFiNow();
 	}
 
@@ -1205,9 +1197,8 @@ void app_on_generic_dbl_click(uint32_t btnIndex)
 }
 
 
-int Main_IsOpenAccessPointMode()
-{
-	return g_bOpenAccessPointMode;
+int Main_IsOpenAccessPointMode() {
+	return Main_bOpenAccessPointMode;
 }
 
 #ifndef ENABLE_QUIET_MODE
@@ -1434,10 +1425,6 @@ void Main_Init_After_Delay()
 #else
 	ADDLOGF_INFO("%s", __func__);
 #endif
-	// we can log this after delay.
-	if (bSafeMode) {
-		ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
-	}
 #if ALLOW_SSID2
 	Init_WiFiSSIDactual_FromChannelIfSet();//Channel must be set in early.bat using CMD_setStartupSSIDChannel
 #endif
@@ -1456,48 +1443,28 @@ void Main_Init_After_Delay()
 
 	HAL_Configure_WDT();
 
-	if ((*wifi_ssid == 0))
-	{
-		// start AP mode in 5 seconds
+	if (bSafeMode) {
 		g_openAP = 5;
-		//HAL_SetupWiFiOpenAccessPoint();
-	}
-	else {
-		if (bSafeMode)
-		{
-			g_openAP = 5;
-		}
-		else {
-			if (Main_HasFastConnect()) {
-#if ENABLE_MQTT
-				mqtt_loopsWithDisconnected = 9999;
-#endif
-				Main_ConnectToWiFiNow();
-			}
-			else {
-				g_connectToWiFi = 5;
-			}
-		}
+		ADDLOGF_INFO("%s done - safe mode", __func__);
+		return;
 	}
 
-	ADDLOGF_INFO("Using SSID [%s]\r\n", wifi_ssid);
-	ADDLOGF_INFO("Using Pass [%s]\r\n", wifi_pass);
+	if ((*wifi_ssid == 0)) // start AP mode in 5 seconds
+		g_openAP = 5;
+	else 
+		g_connectToWiFi = 5;
 
-	// NOT WORKING, I done it other way, see ethernetif.c
-	//net_dhcp_hostname_set(g_shortDeviceName);
+	// try a fast connect
+	if (Main_HasFastConnect())
+		Main_ConnectToWiFiNow();
 
 	// only initialise certain things if we are not in AP mode
-	if (!bSafeMode)
-	{
 #if ENABLE_HA_DISCOVERY
-		//Always invoke discovery on startup. This accounts for change in ipaddr before startup and firmware update.
-		if (CFG_HasFlag(OBK_FLAG_AUTOMAIC_HASS_DISCOVERY)) {
-			Main_ScheduleHomeAssistantDiscovery(1);
-		}
+	//Always invoke discovery on startup. This accounts for change in ipaddr before startup and firmware update.
+	if (CFG_HasFlag(OBK_FLAG_AUTOMAIC_HASS_DISCOVERY))
+		Main_ScheduleHomeAssistantDiscovery(1);
 #endif
-		Main_Init_AfterDelay_Unsafe(true);
-	}
-
+	Main_Init_AfterDelay_Unsafe(true);
 	ADDLOGF_INFO("%s done", __func__);
 }
 
