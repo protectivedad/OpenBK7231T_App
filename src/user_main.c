@@ -956,6 +956,7 @@ void Main_OnEverySecond()
 			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n", bootCompleteSeconds);
 			// TODO: for battery devices need to check to make sure writing to flash is safe
 			if (Battery_safeToUpdate()) {
+				HAL_PrintNetworkInfo();
 				HAL_FlashVars_SaveBootComplete();
 				CFG_SafeToWrite(true);
 			}
