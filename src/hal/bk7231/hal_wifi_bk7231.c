@@ -442,7 +442,7 @@ void HAL_FastConnectToWiFi(const char* oob_ssid, const char* connect_key, obkSta
 	}
 	network_cfg.ap_info.channel = g_cfg.fcdata.channel;
 	network_cfg.ap_info.security = g_cfg.fcdata.security_type;
-	network_cfg.wifi_retry_interval = 100;
+	network_cfg.wifi_retry_interval = 50;
 
 	bk_wlan_start_sta_adv(&network_cfg);
 }
