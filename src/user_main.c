@@ -681,14 +681,7 @@ void Main_ConnectToWiFiNow() {
 	HAL_WiFi_SetupStatusCallback(Main_OnWiFiStatusChange);
 	ADDLOGF_INFO("Registered for wifi changes\r\n");
 	ADDLOGF_INFO("Connecting to SSID [%s]\r\n", wifi_ssid);
-	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT))
-	{
-		HAL_FastConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
-	}
-	else
-	{
-		HAL_ConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
-	}
+	HAL_ConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
 	// don't set g_connectToWiFi = 0; here!
 	// this would overwrite any changes, e.g. from Main_OnWiFiStatusChange !
 	// so don't do this here, but e.g. set in Main_OnWiFiStatusChange if connected!!!

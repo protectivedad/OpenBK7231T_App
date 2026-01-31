@@ -371,6 +371,22 @@ void HAL_WiFi_SetupStatusCallback(void (*cb)(int code))
 
 void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t *ip)
 {
+	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT)) {
+		if(g_cfg.fcdata.channel != 0 &&
+			strnlen(g_cfg.fcdata.psk, 64) == 64 &&
+			g_cfg.fcdata.security_type != 0 &&
+			!(g_cfg.fcdata.bssid[0] == 0 && g_cfg.fcdata.bssid[1] == 0 && g_cfg.fcdata.bssid[2] == 0 &&
+			g_cfg.fcdata.bssid[3] == 0 && g_cfg.fcdata.bssid[4] == 0 && g_cfg.fcdata.bssid[5] == 0))
+		{
+			HAL_FastConnectToWiFi(oob_ssid, connect_key, &g_cfg.staticIP);
+			return;
+		} else {
+			ADDLOG_INFO(LOG_FEATURE_GENERAL, "Fast connect data is empty, connecting normally");
+		}
+	} else {
+		HAL_DisableEnhancedFastConnect();
+	}
+
 	g_bOpenAccessPointMode = 0;
 
 	network_InitTypeDef_st network_cfg;
@@ -402,45 +418,33 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticI
 
 void HAL_FastConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t* ip)
 {
-	if(strnlen(g_cfg.fcdata.psk, 64) == 64 &&
-		g_cfg.fcdata.channel != 0 &&
-		g_cfg.fcdata.security_type != 0 &&
-		!(g_cfg.fcdata.bssid[0] == 0 && g_cfg.fcdata.bssid[1] == 0 && g_cfg.fcdata.bssid[2] == 0 &&
-		g_cfg.fcdata.bssid[3] == 0 && g_cfg.fcdata.bssid[4] == 0 && g_cfg.fcdata.bssid[5] == 0))
+	ADDLOG_INFO(LOG_FEATURE_GENERAL, "We have fast connection data, connecting...");
+	network_InitTypeDef_adv_st network_cfg;
+	memset(&network_cfg, 0, sizeof(network_InitTypeDef_adv_st));
+	strcpy(network_cfg.ap_info.ssid, oob_ssid);
+	memcpy(network_cfg.key, g_cfg.fcdata.psk, 64);
+	network_cfg.key_len = 64;
+	memcpy(network_cfg.ap_info.bssid, g_cfg.fcdata.bssid, sizeof(g_cfg.fcdata.bssid));
+
+	if(ip->localIPAddr[0] == 0)
 	{
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "We have fast connection data, connecting...");
-		network_InitTypeDef_adv_st network_cfg;
-		memset(&network_cfg, 0, sizeof(network_InitTypeDef_adv_st));
-		strcpy(network_cfg.ap_info.ssid, oob_ssid);
-		memcpy(network_cfg.key, g_cfg.fcdata.psk, 64);
-		network_cfg.key_len = 64;
-		memcpy(network_cfg.ap_info.bssid, g_cfg.fcdata.bssid, sizeof(g_cfg.fcdata.bssid));
-
-		if(ip->localIPAddr[0] == 0)
-		{
-			network_cfg.dhcp_mode = DHCP_CLIENT;
-			g_bStaticIP = false;
-		}
-		else
-		{
-			network_cfg.dhcp_mode = DHCP_DISABLE;
-			convert_IP_to_string(network_cfg.local_ip_addr, ip->localIPAddr);
-			convert_IP_to_string(network_cfg.net_mask, ip->netMask);
-			convert_IP_to_string(network_cfg.gateway_ip_addr, ip->gatewayIPAddr);
-			convert_IP_to_string(network_cfg.dns_server_ip_addr, ip->dnsServerIpAddr);
-			g_bStaticIP = true;
-		}
-		network_cfg.ap_info.channel = g_cfg.fcdata.channel;
-		network_cfg.ap_info.security = g_cfg.fcdata.security_type;
-		network_cfg.wifi_retry_interval = 100;
-
-		bk_wlan_start_sta_adv(&network_cfg);
+		network_cfg.dhcp_mode = DHCP_CLIENT;
+		g_bStaticIP = false;
 	}
 	else
 	{
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Fast connect data is empty, connecting normally");
-		HAL_ConnectToWiFi(oob_ssid, connect_key, ip);
+		network_cfg.dhcp_mode = DHCP_DISABLE;
+		convert_IP_to_string(network_cfg.local_ip_addr, ip->localIPAddr);
+		convert_IP_to_string(network_cfg.net_mask, ip->netMask);
+		convert_IP_to_string(network_cfg.gateway_ip_addr, ip->gatewayIPAddr);
+		convert_IP_to_string(network_cfg.dns_server_ip_addr, ip->dnsServerIpAddr);
+		g_bStaticIP = true;
 	}
+	network_cfg.ap_info.channel = g_cfg.fcdata.channel;
+	network_cfg.ap_info.security = g_cfg.fcdata.security_type;
+	network_cfg.wifi_retry_interval = 100;
+
+	bk_wlan_start_sta_adv(&network_cfg);
 }
 
 void HAL_DisableEnhancedFastConnect()
