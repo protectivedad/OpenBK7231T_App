@@ -34,14 +34,15 @@ extern u8* wpas_get_sta_psk(void);
 static void (*g_wifiStatusCallback)(int code);
 
 // lenght of "192.168.103.103" is 15 but we also need a NULL terminating character
-static char g_IP[32] = "unknown";
 static int g_bOpenAccessPointMode = 0;
 char *get_security_type(int type);
 bool g_bStaticIP = false, g_needFastConnectSave = false;
 
 IPStatusTypedef ipStatus;
+
 // This must return correct IP for both SOFT_AP and STATION modes,
 // because, for example, javascript control panel requires it
+// Must be called to populate the ipStatus
 const char* HAL_GetMyIPString() {
 
 	memset(&ipStatus, 0x0, sizeof(IPStatusTypedef));
@@ -51,21 +52,22 @@ const char* HAL_GetMyIPString() {
 	else {
 		bk_wlan_get_ip_status(&ipStatus, STATION);
 	}
-
-	strncpy(g_IP, ipStatus.ip, 16);
-	return g_IP;
+	return ipStatus.ip;
 }
 const char* HAL_GetMyGatewayString() {
-	strncpy(g_IP, ipStatus.gate, 16);
-	return g_IP;
+	if (&ipStatus == 0)
+		HAL_GetMyIPString();
+	return ipStatus.gate;
 }
 const char* HAL_GetMyDNSString() {
-	strncpy(g_IP, ipStatus.dns, 16);
-	return g_IP;
+	if (&ipStatus == 0)
+		HAL_GetMyIPString();
+	return ipStatus.dns;
 }
 const char* HAL_GetMyMaskString() {
-	strncpy(g_IP, ipStatus.mask, 16);
-	return g_IP;
+	if (&ipStatus == 0)
+		HAL_GetMyIPString();
+	return ipStatus.mask;
 }
 
 ////////////////////
