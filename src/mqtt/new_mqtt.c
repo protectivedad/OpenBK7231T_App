@@ -2184,9 +2184,9 @@ void MQTT_FastConnect() {
 	int ret = MQTT_do_connect(mqtt_client);
 	MQTT_Mutex_Free();
 	if (ret == ERR_RTE) {
+		mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED + 1;
 		return;
 	}
-	mqtt_loopsWithDisconnected = 0;
 	ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect, return %i", xTaskGetTickCount(), __func__, ret);
 }
 
