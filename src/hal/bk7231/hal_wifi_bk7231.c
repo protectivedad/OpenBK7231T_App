@@ -171,12 +171,14 @@ void HAL_PrintNetworkInfo()
 
 		int cipher = bk_sta_cipher_type();
 
+		sprintf(g_wifi_bssid, MACSTR, MAC2STR(linkStatus.bssid));
+		g_wifi_channel = linkStatus.channel;
 		ADDLOG_INFO(LOG_FEATURE_GENERAL, 
-			"sta:rssi=%d,ssid=%s,bssid=" MACSTR ",channel=%d,cipher_type:%s",
+			"sta:rssi=%d,ssid=%s,bssid=%s,channel=%d,cipher_type:%s",
 			linkStatus.wifi_strength, 
 			ssid, 
-			MAC2STR(linkStatus.bssid), 
-			linkStatus.channel,
+			g_wifi_bssid, 
+			g_wifi_channel,
 			get_security_type(cipher)
 			);
 

@@ -521,9 +521,6 @@ void Main_OnWiFiStatusChange(int code)
 #endif
 
 		if (!bSafeMode) {
-			HAL_GetWiFiBSSID(g_wifi_bssid);
-			HAL_GetWiFiChannel(&g_wifi_channel);
-
 			if (Main_HasFastConnect())
 				MQTT_FastConnect();
 
