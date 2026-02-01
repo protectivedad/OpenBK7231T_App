@@ -483,24 +483,12 @@ void Main_OnWiFiStatusChange(int code)
 		ADDLOGF_INFO("%s - WIFI_STA_CONNECTING - %i\r\n", __func__, code);
 		break;
 	case WIFI_STA_DISCONNECTED:
-		// try to connect again in few seconds
-		// if we are already disconnected, why must we call disconnect again?
-#if PLATFORM_BEKEN
-		if (Main_bHasWiFiConnected)
-			HAL_DisconnectFromWifi();
-#endif
-		// if we have fast connect then do three quick retries
-		static uint32_t fastConnectCounter = 3;
-		if (Main_HasFastConnect() && fastConnectCounter--) {
-			if (!fastConnectCounter)
-				HAL_DisableEnhancedFastConnect();
-			else
-				g_connectToWiFi = 1;
-		} else if(g_secondsElapsed < 30)
-			g_connectToWiFi = 5;
-		else
-			g_connectToWiFi = 15;
-
+		{
+			static uint32_t fastConnectCounter = 3;
+			if (CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT) && fastConnectCounter--)
+				if (!fastConnectCounter)
+					HAL_DisableEnhancedFastConnect();
+		}
 		Main_bHasWiFiConnected = false;
 #if ENABLE_PING_WATCHDOG
 		g_timeSinceLastPingReply = -1;
