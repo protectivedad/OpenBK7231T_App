@@ -932,9 +932,11 @@ void Main_OnEverySecond()
 		if (g_secondsElapsed > bootCompleteSeconds)
 		{
 			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n", bootCompleteSeconds);
-			// TODO: for battery devices need to check to make sure writing to flash is safe
+			HAL_GetWiFiBSSID(g_wifi_bssid);
+			HAL_GetWiFiChannel(g_wifi_channel);
+
 			if (Battery_safeToUpdate()) {
-				HAL_PrintNetworkInfo();
+				HAL_saveEnhancedFastConnect();
 				HAL_FlashVars_SaveBootComplete();
 				CFG_SafeToWrite(true);
 			}

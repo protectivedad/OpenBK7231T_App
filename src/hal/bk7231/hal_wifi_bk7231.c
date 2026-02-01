@@ -138,6 +138,47 @@ char *get_security_type(int type) {
 	}
 }
 
+void HAL_saveEnhancedFastConnect() {
+	// nothing needs doing or we are not in a position to do it
+	if (!g_needFastConnectSave || !sta_ip_is_start())
+		return;
+
+	g_needFastConnectSave = false;
+
+	int32_t cipher = bk_sta_cipher_type();
+	if (cipher < SECURITY_TYPE_WPA_TKIP || cipher > SECURITY_TYPE_WPA2_MIXED) {
+		ADDLOG_WARN(LOG_FEATURE_GENERAL, "Fast connect is not supported with current AP encryption.");
+		HAL_DisableEnhancedFastConnect();
+		return;
+	}
+
+	LinkStatusTypeDef linkStatus;
+	memset(&linkStatus, 0x0, sizeof(LinkStatusTypeDef));
+	bk_wlan_get_link_status(&linkStatus);
+
+	char psks[65];
+	uint8_t* psk = wpas_get_sta_psk();
+
+	for(int i = 0; i < 32 && sprintf(psks + i * 2, "%02x", psk[i]) == 2; i++);
+
+	if (linkStatus.channel != g_cfg.fcdata.channel ||
+		linkStatus.security != g_cfg.fcdata.security_type ||
+		memcmp(g_cfg.fcdata.bssid, linkStatus.bssid, 6) != 0 ||
+		memcmp((char*)psks, g_cfg.fcdata.psk, 64) != 0
+	) {
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Saved fast connect data differ to current one, saving...");
+		g_cfg.fcdata.channel = linkStatus.channel;
+		g_cfg.fcdata.security_type = linkStatus.security;
+		memcpy(g_cfg.fcdata.bssid, linkStatus.bssid, 6);
+		memcpy(g_cfg.fcdata.psk, psks, sizeof(g_cfg.fcdata.psk));
+		g_cfg_pendingChanges++;
+
+		ADDLOG_DEBUG(LOG_FEATURE_GENERAL, 
+			"sta:rssi=%d,bssid=" MACSTR ",channel=%d,cipher_type:%s",
+			linkStatus.wifi_strength, MAC2STR(g_cfg.fcdata.bssid), g_cfg.fcdata.channel, get_security_type(cipher));
+	}
+}
+
 void HAL_PrintNetworkInfo()
 {
 	IPStatusTypedef ipStatus;
@@ -171,64 +212,15 @@ void HAL_PrintNetworkInfo()
 
 		int cipher = bk_sta_cipher_type();
 
-		sprintf(g_wifi_bssid, MACSTR, MAC2STR(linkStatus.bssid));
-		g_wifi_channel = linkStatus.channel;
 		ADDLOG_INFO(LOG_FEATURE_GENERAL, 
-			"sta:rssi=%d,ssid=%s,bssid=%s,channel=%d,cipher_type:%s",
+			"sta:rssi=%d,ssid=%s,bssid=" MACSTR ",channel=%d,cipher_type:%s",
 			linkStatus.wifi_strength, 
 			ssid, 
-			g_wifi_bssid, 
-			g_wifi_channel,
+			MAC2STR(linkStatus.bssid), 
+			linkStatus.channel,
 			get_security_type(cipher)
 			);
 
-		// bk_wlan_get_link_status doesn't work in handler when static ip is configured
-		if(g_needFastConnectSave && CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT) && cipher != SECURITY_TYPE_AUTO)
-		{
-			// if we have SAE, mixed WPA3 (BK uses SAE not PSK in that case), WEP, Open, OWE or auto, then disable connection via psk
-#if PLATFORM_BEKEN_NEW
-			if(cipher <= SECURITY_TYPE_WEP || cipher >= BK_SECURITY_TYPE_WPA3_SAE)
-#else
-			if(cipher <= SECURITY_TYPE_WEP)
-#endif
-			{
-				// if we ignore that, and use psk - bk will fail to connect.
-				// If we use password instead of psk, then first attempt to connect will almost always fail.
-				// And even if it succeeds, first connect is not faster.
-				ADDLOG_WARN(LOG_FEATURE_GENERAL, "Fast connect is not supported with current AP encryption.");
-				if(g_cfg.fcdata.channel != 0)
-				{
-					g_cfg.fcdata.channel = 0;
-					g_cfg_pendingChanges++;
-				}
-			}
-			else
-			{
-				char psks[65];
-				//const char* wifi_ssid, * wifi_pass;
-				//wifi_ssid = CFG_GetWiFiSSID();
-				//wifi_pass = CFG_GetWiFiPass();
-				//unsigned char psk[32];
-				//pbkdf2_sha1(wifi_pass, (u8*)wifi_ssid, strlen(wifi_ssid), 4096, psk, 32);
-				uint8_t* psk = wpas_get_sta_psk();
-
-				for(int i = 0; i < 32 && sprintf(psks + i * 2, "%02x", psk[i]) == 2; i++);
-
-				if(memcmp((char*)psks, g_cfg.fcdata.psk, 64) != 0 ||
-					memcmp(g_cfg.fcdata.bssid, linkStatus.bssid, 6) != 0 ||
-					linkStatus.channel != g_cfg.fcdata.channel ||
-					linkStatus.security != g_cfg.fcdata.security_type)
-				{
-					ADDLOG_INFO(LOG_FEATURE_GENERAL, "Saved fast connect data differ to current one, saving...");
-					memcpy(g_cfg.fcdata.bssid, linkStatus.bssid, 6);
-					g_cfg.fcdata.channel = linkStatus.channel;
-					g_cfg.fcdata.security_type = linkStatus.security;
-					memcpy(g_cfg.fcdata.psk, psks, sizeof(g_cfg.fcdata.psk));
-					g_cfg_pendingChanges++;
-				}
-			}
-			g_needFastConnectSave = false;
-		}
 	}
 
 	if (uap_ip_is_start())
@@ -299,7 +291,7 @@ void wl_status(void* ctxt)
 {
 
 	rw_evt_type stat = *((rw_evt_type*)ctxt);
-	//ADDLOGF_INFO("wl_status %d\r\n", stat);
+	ADDLOGF_DEBUG("wl_status %d\r\n", stat);
 
 	switch (stat) {
 	case RW_EVT_STA_IDLE:
@@ -338,7 +330,6 @@ void wl_status(void* ctxt)
 		if (g_wifiStatusCallback != 0) {
 			g_wifiStatusCallback(WIFI_STA_CONNECTED);
 		}
-		g_needFastConnectSave = true;
 		break;
 
 		/* for softap mode */
@@ -383,9 +374,13 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticI
 			HAL_FastConnectToWiFi(oob_ssid, connect_key, &g_cfg.staticIP);
 			return;
 		} else {
+			// fast connect data is the same until it is not, if it has been disabled
+			// or this is the first connect save the new fast connect information
+			g_needFastConnectSave = true;
 			ADDLOG_INFO(LOG_FEATURE_GENERAL, "Fast connect data is empty, connecting normally");
 		}
 	} else {
+		// if we have switched off enhanced fast connect disable stored data
 		HAL_DisableEnhancedFastConnect();
 	}
 
@@ -449,12 +444,12 @@ void HAL_FastConnectToWiFi(const char* oob_ssid, const char* connect_key, obkSta
 	bk_wlan_start_sta_adv(&network_cfg);
 }
 
-void HAL_DisableEnhancedFastConnect()
-{
-	if(g_cfg.fcdata.channel != 0)
-	{
+// disables fast connect data only if enabled
+void HAL_DisableEnhancedFastConnect() {
+	if(g_cfg.fcdata.channel != 0) {
 		g_cfg.fcdata.channel = 0;
 		g_cfg_pendingChanges++;
+		ADDLOG_INFO("%s - Fast connect data cleared", __func__);
 	}
 }
 
