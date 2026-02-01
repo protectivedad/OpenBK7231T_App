@@ -965,6 +965,10 @@ void Main_OnEverySecond()
 		{
 			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n", bootCompleteSeconds);
 			HAL_FlashVars_SaveBootComplete();
+			// temporary solution to ensure fast connect data is saved before module
+			// is turned off, IMHO fast connect data save should be split and put in its
+			// own function with a proper hal_wifi API call
+			HAL_PrintNetworkInfo();
 			//g_bootFailures = HAL_FlashVars_GetBootFailures();
 			g_bBootMarkedOK = true;
 		}
