@@ -424,6 +424,10 @@ static int g_SSIDSwitchAfterTry = 3;// switch to opposite SSID after
 static int g_SSIDSwitchCnt = 0;     // switch counter
 #endif
 
+bool Main_hasEnhancedFastConnect() {
+	return CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT);
+}
+
 void CheckForSSID12_Switch() {
 #if ALLOW_SSID2
 	// nothing to do if SSID2 is unset 
@@ -435,7 +439,8 @@ void CheckForSSID12_Switch() {
 	g_SSIDSwitchCnt = 0;
 	g_SSIDactual ^= 1;	// toggle SSID 
 	ADDLOGF_INFO("WiFi SSID: switching to SSID%i\r\n", g_SSIDactual + 1);
-	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT)) HAL_DisableEnhancedFastConnect();
+	if(Main_hasEnhancedFastConnect())
+		HAL_DisableEnhancedFastConnect();
 #endif
 }
 
@@ -487,7 +492,7 @@ void Main_OnWiFiStatusChange(int code)
 	case WIFI_STA_DISCONNECTED:
 		{
 			static uint32_t fastConnectCounter = 3;
-			if (CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT) && fastConnectCounter--)
+			if (Main_hasEnhancedFastConnect() && fastConnectCounter--)
 				if (!fastConnectCounter)
 					HAL_DisableEnhancedFastConnect();
 		}
@@ -498,6 +503,12 @@ void Main_OnWiFiStatusChange(int code)
 		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED - %i\r\n", __func__, code);
 		break;
 	case WIFI_STA_AUTH_FAILED:
+		// during enhanced fast connect maybe connecting to new AP?
+		// clear previous and hopefully next time is will find the new AP
+		if (Main_hasEnhancedFastConnect()) {
+			HAL_DisableEnhancedFastConnect();
+			break;
+		}
 		// try to connect again in few seconds
 		// for me first auth will often fail, so retry more aggressively during startup
 		// the maximum of 6 tries during first 30 seconds should be acceptable
@@ -941,6 +952,7 @@ void Main_OnEverySecond()
 			HAL_GetWiFiChannel(g_wifi_channel);
 
 			if (Battery_safeToUpdate()) {
+				HAL_PrintNetworkInfo();
 				HAL_saveEnhancedFastConnect();
 				HAL_FlashVars_SaveBootComplete();
 				CFG_SafeToWrite(true);
