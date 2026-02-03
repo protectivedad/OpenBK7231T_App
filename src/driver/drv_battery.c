@@ -166,9 +166,7 @@ static void Battery_init() {
 	CMD_RegisterCommand("Battery_cycle", Battery_cycle, NULL);
 
 	if ((g_pin_rel != -1) && (g_pin_adc != -1)) {
-		HAL_PIN_SetOutputValue(g_pin_rel, g_val_rel);
-		HAL_ADC_Read(g_pin_adc);
-		HAL_PIN_SetOutputValue(g_pin_rel, !g_val_rel);
+		g_measureTrigger = true;
 	}
 
 	ADDLOGF_TIMING("%i - %s - Registered ADC pin %i, with relay pin %i, activated with %i", xTaskGetTickCount(), __func__, g_pin_adc, g_pin_rel, g_val_rel);
