@@ -1085,7 +1085,7 @@ void Main_OnEverySecond()
 		g_bWantPinDeepSleep = 0;
 		MQTT_disconnectClient();
 // may be necessary to enusre led is off when asleep not sure yet
-//		PIN_set_wifi_led(0);
+		Output_setWifiLED(false);
 		PINS_BeginDeepSleepWithPinWakeUp(g_pinDeepSleepWakeUp);
 		return;
 	}
@@ -1095,9 +1095,6 @@ void Main_OnEverySecond()
 
 //////////////////////////////////////////////////////
 // Quick tick
-
-#define WIFI_LED_FAST_BLINK_DURATION 250
-#define WIFI_LED_SLOW_BLINK_DURATION 500
 
 unsigned int g_timeMs = 0;
 static uint32_t g_last_time = 0;
