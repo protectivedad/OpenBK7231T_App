@@ -64,6 +64,9 @@ jobs:
                 include:
                     - platform: OpenBK7231N
                       variant: doorsensor
+                    - platform: OpenBK7231N_ALT
+                      variant: doorsensor
+                      gcc: apt
                     - platform: OpenBK7238
                       variant: doorsensor
                       gcc: apt
