@@ -28,6 +28,22 @@ uint32_t g_wifiPins;
 #define WIFI_LED_FAST_BLINK_DURATION 250
 #define WIFI_LED_SLOW_BLINK_DURATION 500
 
+void Output_setWifiLED(bool newValue) {
+	if (!g_wifiPins || !g_enable_pins)
+		return;
+
+	uint32_t usedIndex;
+	uint32_t wifiPins = g_wifiPins;
+	for (usedIndex = 0; wifiPins && (usedIndex < g_registeredPinCount); usedIndex++) {
+		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
+		if (!BIT_CHECK(wifiPins, pinIndex))
+			continue; // not my pin
+		
+		HAL_PIN_SetOutputValue(pinIndex, (PIN_GetPinRoleForPinIndex(pinIndex) == IOR_LED_WIFI_n) ? !newValue : newValue);
+		BIT_CLEAR(wifiPins, pinIndex);
+	}
+}
+
 static void LED_quickTick() {
 	if (!g_wifiPins || !g_enable_pins)
 		return;
