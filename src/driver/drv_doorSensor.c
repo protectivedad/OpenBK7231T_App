@@ -132,7 +132,7 @@ static bool DoorSensor_AssignPin(uint32_t pinIndex) {
 // returns true when pin is found
 static bool DoorSensor_activatePin(uint32_t pinIndex) {
 	if (DoorSensor_AssignPin(pinIndex)) {
-		bool pinValue = !HAL_PIN_ReadDigitalInput(g_registeredPin);
+		bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
 		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Activate pin %i with falling = %i", __func__, pinIndex, pinValue);
 		PIN_setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? pinValue : g_ds_defaultWakeEdge);
 		g_ds_lastChState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
@@ -269,7 +269,7 @@ void DoorSensor_quickTick() {
 		g_ds_lastChState = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !g_ds_lastPinState : g_ds_lastPinState;
 		DoorSensor_clearTimers();
 		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), g_ds_lastChState, 0);
-		PIN_setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? g_ds_lastChState : g_ds_defaultWakeEdge);
+		PIN_setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? !g_ds_lastChState : g_ds_defaultWakeEdge);
 		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, g_ds_lastChState);
 	}
 }
