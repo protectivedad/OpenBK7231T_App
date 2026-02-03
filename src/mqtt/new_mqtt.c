@@ -94,6 +94,8 @@ static int g_maxBroadcastItemsPublishedPerSecond = 1;
 // interval for automatic publish of tasmota tele/sensor and tele/state
 static short g_teleState_interval = 120;
 static short g_teleSensor_interval = 3;
+// set when do_connect is called unset after callback
+bool MQTT_waitingCallback;
 
 /////////////////////////////////////////////////////////////
 // mqtt receive buffer, so we can action in our threads, not
@@ -1108,6 +1110,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 	const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 	LWIP_UNUSED_ARG(client);
 	ADDLOGF_TIMING("%i - %s - Status: %i", xTaskGetTickCount(), __func__, status);
+	MQTT_waitingCallback = false;
 
 	//   ADDLOGF_INFO("MQTT client < removed name > connection cb: status %d\n",  (int)status);
 	 //  ADDLOGF_INFO("MQTT client \"%s\" connection cb: status %d\n", client_info->client_id, (int)status);
@@ -2180,14 +2183,16 @@ void MQTT_FastConnect() {
 	UNLOCK_TCPIP_CORE();
 
 	mqtt_connect_events++;
-	// routine should try reconnecting but might fail anyway
+
 	int ret = MQTT_do_connect(mqtt_client);
 	MQTT_Mutex_Free();
-	if (ret == ERR_RTE) {
+	if (ret == ERR_OK) {
+		MQTT_waitingCallback = true;
+		ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect", xTaskGetTickCount(), __func__);
+	} else {
 		mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED + 1;
-		return;
+		ADDLOGF_WARN("%s - Unable to connect returned %i", __func__, ret);
 	}
-	ADDLOGF_TIMING("%i - %s - Continue with MQTT fast connect, return %i", xTaskGetTickCount(), __func__, ret);
 }
 
 // clears just connected flag and processes items
@@ -2227,7 +2232,7 @@ int MQTT_RunQuickTick(){
 // return true/false on connected/disconnected
 bool MQTT_RunEverySecondUpdate()
 {
-	if (!mqtt_initialised || Main_IsOpenAccessPointMode())
+	if (!mqtt_initialised || MQTT_waitingCallback || Main_IsOpenAccessPointMode())
 		return false;
 
 	// check OTA right away and stop processing
@@ -2304,12 +2309,17 @@ bool MQTT_RunEverySecondUpdate()
 #endif
 			}
 			UNLOCK_TCPIP_CORE();
-			if (MQTT_do_connect(mqtt_client) != ERR_RTE) {
-				mqtt_loopsWithDisconnected = 0;
+
 			mqtt_connect_events++;
-			}
+
+			int ret = MQTT_do_connect(mqtt_client);
+			MQTT_Mutex_Free();
+			if (ret == ERR_OK) {
+				MQTT_waitingCallback = true;
+				mqtt_loopsWithDisconnected = 0;
+			} else
+				ADDLOGF_WARN("%s - Unable to connect returned %i", __func__, ret);
 		}
-		MQTT_Mutex_Free();
 		return false;
 	}
 
