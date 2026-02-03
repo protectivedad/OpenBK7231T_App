@@ -701,6 +701,21 @@ float g_wifi_temperature = 0;
 #endif
 #endif
 
+// run periodically to check if boot conditions have changed to allow
+// things to happen
+void Main_periodicTasks() {
+	HAL_PrintNetworkInfo();
+	if (Battery_safeToUpdate()) {
+		ADDLOGF_INFO("Enabling flash writes");
+		HAL_saveEnhancedFastConnect();
+		HAL_FlashVars_SaveBootComplete();
+		CFG_SafeToWrite(true);
+	} else {
+		ADDLOGF_INFO("Disabling flash writes");
+		CFG_SafeToWrite(false);
+	}
+}
+
 static byte g_secondsSpentInLowMemoryWarning = 0;
 void Main_OnEverySecond()
 {
@@ -934,7 +949,7 @@ void Main_OnEverySecond()
 	if (!(g_secondsElapsed % 60))
 #endif // ENABLE_QUIET_MODE
 	{
-		HAL_PrintNetworkInfo();
+		Main_periodicTasks();
 	}
 	// IR TESTING ONLY!!!!
 #ifdef PLATFORM_BK7231T
@@ -951,12 +966,7 @@ void Main_OnEverySecond()
 			HAL_GetWiFiBSSID(g_wifi_bssid);
 			HAL_GetWiFiChannel(g_wifi_channel);
 
-			if (Battery_safeToUpdate()) {
-				HAL_PrintNetworkInfo();
-				HAL_saveEnhancedFastConnect();
-				HAL_FlashVars_SaveBootComplete();
-				CFG_SafeToWrite(true);
-			}
+			Main_periodicTasks();
 			g_bBootMarkedOK = true;
 		}
 	}
