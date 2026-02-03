@@ -92,6 +92,8 @@ static commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, 
 	// strlen("DoorSensor_SetEdge") == 6
 	if (Tokenizer_GetArgsCount() == 1) {
 		g_ds_defaultWakeEdge = Tokenizer_GetArgInteger(0);
+		if (g_ds_defaultWakeEdge != 2)
+			PIN_setGPIActive(g_registeredPin, 1, g_ds_defaultWakeEdge);
 	}
 
 	return CMD_RES_OK;
@@ -269,7 +271,8 @@ void DoorSensor_quickTick() {
 		g_ds_lastChState = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !g_ds_lastPinState : g_ds_lastPinState;
 		DoorSensor_clearTimers();
 		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), g_ds_lastChState, 0);
-		PIN_setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? !g_ds_lastChState : g_ds_defaultWakeEdge);
+		if (g_ds_defaultWakeEdge == 2)
+			PIN_setGPIActive(g_registeredPin, 1, !g_ds_lastChState);
 		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, g_ds_lastChState);
 	}
 }
