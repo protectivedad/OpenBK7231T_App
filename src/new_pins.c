@@ -122,7 +122,7 @@ void PIN_setGPIActive(uint32_t pinIndex, int active, int falling) {
 #if ENABLE_DEEPSLEEP
 void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	Digital_setEdges();
-	ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map, g_gpio_edge_map);
+	// ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map, g_gpio_edge_map);
 #ifdef PLATFORM_BEKEN_NEW
 	PS_DEEP_CTRL_PARAM params;
 	params.gpio_index_map = g_gpio_index_map;
@@ -137,6 +137,9 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	{
 		params.wake_up_way = PS_DEEP_WAKEUP_GPIO;
 	}
+	bk_printf ("\r\n");
+	bk_printf ( "---enter deep sleep :stay up / down 0x%x 0x%x \r\n",
+		params.gpio_stay_hi_map, params.gpio_stay_lo_map);
 	bk_enter_deep_sleep_mode(&params);
 #elif PLATFORM_BEKEN
 	// NOTE: this function:
