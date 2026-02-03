@@ -1364,8 +1364,6 @@ void Main_Init_Before_Delay()
 #else
 	ADDLOGF_INFO("%s", __func__);
 #endif
-	// read or initialise the boot count flash area
-	HAL_FlashVars_IncreaseBootCount();
 	
 	g_bootFailures = HAL_FlashVars_GetBootFailures();
 	if (g_bootFailures > RESTARTS_REQUIRED_FOR_SAFE_MODE)
@@ -1386,17 +1384,10 @@ void Main_Init_Before_Delay()
 	system_register_idle_callback(isidle);
 #endif
 #endif
-	CFG_InitAndLoad();
 
 #if ENABLE_LITTLEFS
 	LFSAddCmds();
 #endif
-
-	// only initialise certain things if we are not in AP mode
-	if (!bSafeMode)
-	{
-		Main_Init_BeforeDelay_Unsafe(true);
-	}
 
 	ADDLOGF_INFO("%s done", __func__);
 	bk_printf("\r\%s done\r\n", __func__);
@@ -1490,7 +1481,6 @@ void Main_Init_After_Delay()
 			Main_ScheduleHomeAssistantDiscovery(1);
 		}
 #endif
-		Main_Init_AfterDelay_Unsafe(true);
 	}
 
 	ADDLOGF_INFO("%s done", __func__);
@@ -1518,12 +1508,28 @@ void Main_Init()
 	CMD_FreeAllCommands();
 #endif
 
+	// read config details
+	CFG_InitAndLoad();
+
+	// read or initialise the boot count flash area
+	HAL_FlashVars_IncreaseBootCount();
+
 	// do things we want to happen immediately on boot
+	// sets safe mode and enhanced fast connect
 	Main_Init_Before_Delay();
+
+	// only initialise certain things if we are not in AP mode
+	if (!bSafeMode)
+		Main_Init_BeforeDelay_Unsafe(true);
+
 	// delay until TCP/IP stack is ready
 	Main_Init_Delay();
+	
 	// do things we want after TCP/IP stack is ready
 	Main_Init_After_Delay();
+
+	if (!bSafeMode)
+		Main_Init_AfterDelay_Unsafe(true);
 
 }
 
