@@ -38,7 +38,7 @@ uint32_t setting_timeRequiredUntilDeepSleep = 60;
 uint32_t g_driverIndex;
 
 // this is the invert of the initial state of the pin on wake
-uint32_t g_ds_defaultWakeEdge = 2;
+// uint32_t g_ds_defaultWakeEdge = 2;
 bool g_ds_lastPinState = false;
 bool g_ds_lastChState = false;
 
@@ -91,9 +91,9 @@ static commandResult_t DoorSensor_SetEdge(const void* context, const char* cmd, 
 	}
 	// strlen("DoorSensor_SetEdge") == 6
 	if (Tokenizer_GetArgsCount() == 1) {
-		g_ds_defaultWakeEdge = Tokenizer_GetArgInteger(0);
-		if (g_ds_defaultWakeEdge != 2)
-			PIN_setGPIActive(g_registeredPin, 1, g_ds_defaultWakeEdge);
+		uint32_t ds_defaultWakeEdge = Tokenizer_GetArgInteger(0);
+		if (ds_defaultWakeEdge != 2)
+			PIN_setGPIActive(g_registeredPin, 1, ds_defaultWakeEdge);
 	}
 
 	return CMD_RES_OK;
@@ -136,7 +136,7 @@ static bool DoorSensor_activatePin(uint32_t pinIndex) {
 	if (DoorSensor_AssignPin(pinIndex)) {
 		bool pinValue = HAL_PIN_ReadDigitalInput(g_registeredPin);
 		ADDLOG_INFO(LOG_FEATURE_DRV, "%s - Activate pin %i with falling = %i", __func__, pinIndex, pinValue);
-		PIN_setGPIActive(g_registeredPin, 1, (g_ds_defaultWakeEdge == 2) ? pinValue : g_ds_defaultWakeEdge);
+		PIN_setGPIActive(g_registeredPin, 1, !pinValue);
 		g_ds_lastChState = CHANNEL_Get(PIN_GetPinChannelForPinIndex(g_registeredPin));
 		g_ds_lastPinState = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !g_ds_lastChState : g_ds_lastChState;
 	} else {
@@ -271,8 +271,8 @@ void DoorSensor_quickTick() {
 		g_ds_lastChState = CFG_HasFlag(OBK_FLAG_DOORSENSOR_INVERT_STATE) ? !g_ds_lastPinState : g_ds_lastPinState;
 		DoorSensor_clearTimers();
 		CHANNEL_Set(PIN_GetPinChannelForPinIndex(g_registeredPin), g_ds_lastChState, 0);
-		if (g_ds_defaultWakeEdge == 2)
-			PIN_setGPIActive(g_registeredPin, 1, !g_ds_lastChState);
+		// if (g_ds_defaultWakeEdge == 2)
+		// 	PIN_setGPIActive(g_registeredPin, 1, !g_ds_lastChState);
 		ADDLOGF_TIMING("%i - %s - Door Sensor channel is being set to state %i", xTaskGetTickCount(), __func__, g_ds_lastChState);
 	}
 }
