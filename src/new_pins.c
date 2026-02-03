@@ -138,6 +138,7 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	{
 		params.wake_up_way = PS_DEEP_WAKEUP_GPIO;
 	}
+	params.gpio_stay_hi_map = g_gpio_index_map;
 	bk_printf ("\r\n");
 	bk_printf ( "---enter deep sleep :stay up / down: 0x%x 0x%x \r\n",
 		params.gpio_stay_hi_map, params.gpio_stay_lo_map);
