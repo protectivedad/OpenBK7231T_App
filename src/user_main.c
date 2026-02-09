@@ -41,6 +41,8 @@
 #include "driver/drv_uart.h"
 
 #if PLATFORM_BEKEN
+#include <task.h>
+
 #include <mcu_ps.h>
 #include <fake_clock_pub.h>
 #include <BkDriverWdg.h>

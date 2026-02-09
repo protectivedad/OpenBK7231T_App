@@ -172,8 +172,8 @@ OBKInterruptType g_modes[PLATFORM_GPIO_MAX];
 
 #include "BkDriverTimer.h"
 #include "BkDriverGpio.h"
-#include "sys_timer.h"
-#include "gw_intf.h"
+//#include "sys_timer.h"
+//#include "gw_intf.h"
 
 void Beken_Interrupt(unsigned char pinNum) {
 	if (g_handlers[pinNum]) {

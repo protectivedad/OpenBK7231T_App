@@ -5,7 +5,7 @@
 #include <saradc_pub.h>
 #include <drv_model_pub.h>
 #include <rtos_pub.h>
-#include <rtos_error.h>
+// #include <rtos_error.h>
 #include <sys_ctrl_pub.h>
 #include "../../logging/logging.h"
 #include "../../new_common.h"
