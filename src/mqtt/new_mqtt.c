@@ -3,8 +3,8 @@
 
 #if ENABLE_MQTT 
 
-#include <rtos_pub.h>
-#include <rtos_error.h>
+// #include <rtos_pub.h>
+// #include <rtos_error.h>
 
 #include "new_mqtt.h"
 #include "../new_common.h"
@@ -19,6 +19,7 @@
 #include "../driver/drv_deviceclock.h"
 #include "../hal/hal_ota.h"
 #include <math.h>
+#include <semphr.h>
 #ifndef WINDOWS
 #include <lwip/dns.h>
 #endif
