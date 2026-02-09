@@ -62,6 +62,8 @@ jobs:
             fail-fast: false
             matrix:
                 include:
+                    - platform: OpenBK7231T
+                      variant: default
                     - platform: OpenBK7231N
                       variant: doorsensor
                     - platform: OpenBK7231N_ALT
