@@ -91,6 +91,7 @@ float g_channelValuesFloats[CHANNEL_MAX] = { 0 };
  // these map directly to void bk_enter_deep_sleep(uint32_t gpio_index_map,uint32_t gpio_edge_map);
 uint32_t g_gpio_index_map;
 uint32_t g_gpio_edge_map; // note: 0->rising, 1->falling
+uint32_t g_floating_map;
 
 #if PLATFORM_XRADIO
 void SetWUPIO(int index, int pull, int edge)
@@ -114,9 +115,10 @@ void SetWUPIO(int index, int pull, int edge)
 }
 #endif
 
-void PIN_setGPIActive(uint32_t pinIndex, int active, int falling) {
+void PIN_setGPIActive(uint32_t pinIndex, bool active, bool falling, bool floating) {
 	BIT_SET_TO(g_gpio_index_map, pinIndex, active);
 	BIT_SET_TO(g_gpio_edge_map, pinIndex, falling);
+	BIT_SET_TO(g_floating_map, pinIndex, floating);
 }
 
 #if ENABLE_DEEPSLEEP
@@ -124,22 +126,21 @@ void PINS_BeginDeepSleepWithPinWakeUp(unsigned int wakeUpTime) {
 	Digital_setEdges();
 	// ADDLOG_INFO(LOG_FEATURE_GENERAL, "Index map: %i, edge: %i", g_gpio_index_map, g_gpio_edge_map);
 #ifdef PLATFORM_BEKEN_NEW
-	bk_wlan_ps_wakeup_with_gpio(MANUAL_MODE_IDLE, g_gpio_index_map, g_gpio_edge_map);
-	// PS_DEEP_CTRL_PARAM params;
-	// memset(&params, 0, sizeof(params));
-	// params.gpio_index_map = g_gpio_index_map;
-	// params.gpio_edge_map = g_gpio_edge_map;
-	// params.sleep_mode = MANUAL_MODE_IDLE;
-	// params.wake_up_way = PS_DEEP_WAKEUP_GPIO;
-	// if(wakeUpTime) {
-	// 	params.wake_up_way |= PS_DEEP_WAKEUP_RTC;
-	// 	params.sleep_time = wakeUpTime;
-	// }
-	// params.gpio_stay_hi_map = g_gpio_index_map;
-	// bk_printf ("\r\n");
-	// bk_printf ( "---enter deep sleep :stay up / down: 0x%x 0x%x \r\n",
-	// 	params.gpio_stay_hi_map, params.gpio_stay_lo_map);
-	// bk_enter_deep_sleep_mode(&params);
+	PS_DEEP_CTRL_PARAM params;
+	memset(&params, 0, sizeof(params));
+	params.gpio_index_map = g_gpio_index_map;
+	params.gpio_edge_map = g_gpio_edge_map;
+	params.sleep_mode = MANUAL_MODE_IDLE;
+	params.wake_up_way = PS_DEEP_WAKEUP_GPIO;
+	if(wakeUpTime) {
+		params.wake_up_way |= PS_DEEP_WAKEUP_RTC;
+		params.sleep_time = wakeUpTime;
+	}
+	sctrl_set_deep_sleep_gpio_floating_map(g_floating_map);
+	bk_printf("\r\n---floating map: 0x%x\r\n", sctrl_get_deep_sleep_gpio_floating_map());
+	bk_printf ("---enter deep sleep :stay up / down: 0x%x 0x%x \r\n",
+		params.gpio_stay_hi_map, params.gpio_stay_lo_map);
+	bk_enter_deep_sleep_mode(&params);
 #elif PLATFORM_BEKEN
 	// NOTE: this function:
 	// void bk_enter_deep_sleep(UINT32 gpio_index_map,UINT32 gpio_edge_map)
@@ -257,7 +258,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		case IOR_IRRecv:
 			falling = 1;
 			// add to active inputs
-			PIN_setGPIActive(index, 1, falling);
+			PIN_setGPIActive(index, 1, falling, 0);
 			break;
 #endif
 #if ENABLE_DRIVER_BRIDGE
@@ -502,7 +503,7 @@ static void PIN_ProcessOldPinRole(int index) {
 			return;
 		}
 		// remove from active inputs
-		PIN_setGPIActive(index, 0, 0);
+		PIN_setGPIActive(index, 0, 0, 0);
 		switch (role)
 		{
 		case IOR_ADC_Button:

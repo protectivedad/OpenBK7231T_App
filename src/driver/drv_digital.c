@@ -27,9 +27,11 @@ uint32_t g_lastValidState;
 uint32_t g_digitalCount;
 uint32_t g_dynamicWakeEdge = 0xFFFFFFFF;
 uint32_t g_defaultWakeEdge = 0x00000000;
+uint32_t g_dynamicFloating = 0xFFFFFFFF;
+uint32_t g_defaultFloating = 0x00000000;
 
 #if ENABLE_DEEPSLEEP
-void Digital_setWakeUpEdge(uint32_t pinIndex, uint32_t edgeCode) {
+void Digital_setWakeUpEdge(uint32_t pinIndex, uint32_t edgeCode, uint32_t floatingCode) {
 	if (edgeCode == 2) {
 		BIT_CLEAR(g_defaultWakeEdge, pinIndex);
 		BIT_SET(g_dynamicWakeEdge, pinIndex);
@@ -37,15 +39,26 @@ void Digital_setWakeUpEdge(uint32_t pinIndex, uint32_t edgeCode) {
 		BIT_CLEAR(g_dynamicWakeEdge, pinIndex);
 		BIT_SET_TO(g_defaultWakeEdge, pinIndex, edgeCode);
 	}
+	if (floatingCode == 2) {
+		BIT_CLEAR(g_defaultFloating, pinIndex);
+		BIT_SET(g_dynamicFloating, pinIndex);
+	} else {
+		BIT_CLEAR(g_dynamicFloating, pinIndex);
+		BIT_SET_TO(g_defaultFloating, pinIndex, floatingCode);
+	}
 }
-void Digital_setAllWakeUpEdges(uint32_t edgeCode) {
+
+void Digital_setAllWakeUpEdges(uint32_t edgeCode, uint32_t floatingCode) {
 	g_dynamicWakeEdge = g_defaultWakeEdge = 0x00000000;
-	if (edgeCode == 0)
-		return;
+	g_dynamicFloating = g_defaultFloating = 0x00000000;
 	if (edgeCode == 2)
 		g_dynamicWakeEdge = 0xFFFFFFFF;
 	else if (edgeCode == 1)
 		g_defaultWakeEdge = 0xFFFFFFFF;
+	if (floatingCode == 2)
+		g_dynamicFloating = 0xFFFFFFFF;
+	else if (floatingCode == 1)
+		g_defaultFloating = 0xFFFFFFFF;
 }
 
 void Digital_setEdges() {
@@ -89,7 +102,7 @@ void Digital_setEdges() {
 // #endif
 // 			SetWUPIO(i, pull, falling);
 // #else
-		PIN_setGPIActive(pinIndex, 1, falling);
+		PIN_setGPIActive(pinIndex, 1, falling, falling);
 // #endif
 		if (!BIT_CLEAR(driverPins, pinIndex))
 			break;
@@ -107,10 +120,12 @@ commandResult_t CMD_Digital_setEdge(const void* context, const char* cmd, const 
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
 	// strlen("DSEdge") == 6
-	if (Tokenizer_GetArgsCount() > 1) // Digital_setEdge [Edge] [Pin]
-		Digital_setWakeUpEdge(Tokenizer_GetArgInteger(1),Tokenizer_GetArgInteger(0));
+	if (Tokenizer_GetArgsCount() > 2) // Digital_setEdge [Edge] [Floating] [Pin]
+		Digital_setWakeUpEdge(Tokenizer_GetArgInteger(2), Tokenizer_GetArgInteger(0), Tokenizer_GetArgInteger(1));
+	else if (Tokenizer_GetArgsCount() == 2) // Digital_setEdge [Edge] [Floating]
+		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0), Tokenizer_GetArgInteger(1));
 	else // Digital_setEdge [Edge]
-		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0));
+		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0), g_defaultFloating);
 
 	return CMD_RES_OK;
 }
@@ -248,7 +263,7 @@ static bool Digital_activatePin(uint32_t pinIndex) {
 	else
 		HAL_PIN_Setup_Input(pinIndex);
 
-	PIN_setGPIActive(pinIndex, 1, falling);
+	PIN_setGPIActive(pinIndex, 1, falling, falling);
 	BIT_SET_TO(g_lastValidState, pinIndex, channelValue);
 	BIT_SET(g_driverPins, pinIndex);
 	return true;
@@ -256,7 +271,7 @@ static bool Digital_activatePin(uint32_t pinIndex) {
 
 static void Digital_releasePin(uint32_t pinIndex) {
 	BIT_CLEAR(g_driverPins, pinIndex);
-	PIN_setGPIActive(pinIndex, 0, 0);
+	PIN_setGPIActive(pinIndex, 0, 0, 0);
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_DigitalInput_n:
 	case IOR_DigitalInput:
@@ -275,15 +290,15 @@ static void Digital_stopDriver() {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
 		if (!BIT_CHECK(g_driverPins, pinIndex))
 			continue;
-		PIN_setGPIActive(pinIndex, 0, 0);
+		PIN_setGPIActive(pinIndex, 0, 0, 0);
 		BIT_CLEAR(g_driverPins, pinIndex);
 	}
 }
 
 static void Digital_init() {
 #if ENABLE_DEEPSLEEP
-	//cmddetail:{"name":"Digital_setEdge","args":"[edgeCode][optionalPinIndex]",
-	//cmddetail:"descr":"Deep sleep (PinDeepSleep) wake configuration command. 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising. Default is 2. Second argument is optional and allows to set per-pin DSEdge instead of setting it for all pins.",
+	//cmddetail:{"name":"Digital_setEdge","args":"[edgeCode] [optional floatingCode] [optional PinIndex]",
+	//cmddetail:"descr":"Deep sleep (PinDeepSleep) wake configuration command. 0 means always wake up on rising edge, 1 means on falling, 2 means if state is high, use falling edge, if low, use rising. Default is 2. Second argument is optional and allows to set floating state for pin, 0 means no floating, 1 means floating, 2 means use default (floating for pullup, no floating for pulldown). Third argument is optional pin index, if not provided, edge will be set for all digital input pins, if provided, only for that pin.",
 	//cmddetail:"fn":"CMD_Digital_setEdge","file":"driver/drv_digital.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("Digital_setEdge", CMD_Digital_setEdge, NULL);
