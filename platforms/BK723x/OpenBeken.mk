@@ -1,4 +1,4 @@
-OBK_DIR = ./app
+OBK_DIR = ../../src
 
 INCLUDES += -I$(OBK_DIR)/../include
 INCLUDES += -I./fixes
