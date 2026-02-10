@@ -89,10 +89,6 @@ sdk/OpenBK7231T/apps/$(APP_NAME):
 	@echo Create symlink for $(APP_NAME) into sdk folder
 	ln -s "$(shell pwd)/" "sdk/OpenBK7231T/apps/$(APP_NAME)"
 
-sdk/OpenBK7231N/apps/$(APP_NAME):
-	@echo Create symlink for $(APP_NAME) into sdk folder
-	ln -s "$(shell pwd)/" "sdk/OpenBK7231N/apps/$(APP_NAME)"
-
 sdk/OpenXR809/project/oxr_sharedApp/shared:
 	@echo Create symlink for $(APP_NAME) into sdk folder
 	ln -s "$(shell pwd)/" "sdk/OpenXR809/project/oxr_sharedApp/shared"
@@ -131,18 +127,10 @@ sdk/OpenLN882H/project/OpenBeken/app:
 	@mkdir -p "sdk/OpenLN882H/project/OpenBeken"
 	ln -s "$(shell pwd)/" "sdk/OpenLN882H/project/OpenBeken/app"
 
-.PHONY: prebuild_OpenBK7231N prebuild_OpenBK7231T prebuild_OpenBL602 prebuild_OpenLN882H 
+.PHONY: prebuild_OpenBK7231T prebuild_OpenBL602 prebuild_OpenLN882H 
 .PHONY: prebuild_OpenW600 prebuild_OpenW800 prebuild_OpenXR809 prebuild_OpenXR806 prebuild_OpenXR872 prebuild_ESPIDF prebuild_OpenTR6260
-.PHONY: prebuild_OpenRTL87X0C prebuild_OpenBK7238 prebuild_OpenBK7231N_ALT prebuild_OpenBK7231U
-.PHONY: prebuild_OpenBK7231N_ALT prebuild_OpenBK7231T_ALT prebuild_OpenBK7252
-
-prebuild_OpenBK7231N: berry
-	git submodule update --init --recursive --depth=1 sdk/OpenBK7231N
-	@if [ -e platforms/BK7231N/pre_build.sh ]; then \
-		echo "prebuild found for OpenBK7231N"; \
-		sh platforms/BK7231N/pre_build.sh; \
-	else echo "prebuild for OpenBK7231N not found ... "; \
-	fi
+.PHONY: prebuild_OpenRTL87X0C prebuild_OpenBK7238 prebuild_OpenBK7231U
+.PHONY: prebuild_OpenBK7231N prebuild_OpenBK7231T_ALT prebuild_OpenBK7252
 
 prebuild_OpenBK7231T: berry
 	git submodule update --init --recursive --depth=1 sdk/OpenBK7231T
@@ -295,7 +283,7 @@ prebuild_OpenBK7238: berry
 	else echo "prebuild for OpenBK7238 not found ... "; \
 	fi
 
-prebuild_OpenBK7231N_ALT: berry
+prebuild_OpenBK7231N: berry
 	git submodule update --init --recursive --depth=1 sdk/beken_freertos_sdk
 	@if [ -e platforms/BK723x/pre_build_7231n.sh ]; then \
 		echo "prebuild found for OpenBK7231N"; \
@@ -393,11 +381,6 @@ OpenBK7231T: prebuild_OpenBK7231T
 	mkdir -p output
 	if [ ! -d "$(MBEDTLS)" ]; then wget -q "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v2.28.5.tar.gz"; tar -xf v2.28.5.tar.gz -C output; rm -f v2.28.5.tar.gz; mv $(MBEDTLS)/library/base64.c $(MBEDTLS)/library/base64_mbedtls.c; fi 
 	$(MAKE) APP_NAME=OpenBK7231T TARGET_PLATFORM=bk7231t SDK_PATH=sdk/OpenBK7231T APPS_BUILD_PATH=../bk7231t_os OBK_VARIANT=$(OBK_VARIANT) build-BK7231
-
-OpenBK7231N: prebuild_OpenBK7231N
-	mkdir -p output
-	if [ ! -d "$(MBEDTLS)" ]; then wget -q "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v2.28.5.tar.gz"; tar -xf v2.28.5.tar.gz -C output; rm -f v2.28.5.tar.gz; mv $(MBEDTLS)/library/base64.c $(MBEDTLS)/library/base64_mbedtls.c; fi
-	$(MAKE) APP_NAME=OpenBK7231N TARGET_PLATFORM=bk7231n SDK_PATH=sdk/OpenBK7231N APPS_BUILD_PATH=../bk7231n_os OBK_VARIANT=$(OBK_VARIANT) build-BK7231
 
 .PHONY: OpenXR872
 OpenXR872: prebuild_OpenXR872 sdk/OpenXR872/project/demo/hello_demo/shared
@@ -654,15 +637,15 @@ OpenBK7252N: prebuild_OpenBK7252N
 	#cp sdk/beken_freertos_sdk/out/bk7252n_Tuya_QIO.bin output/$(APP_VERSION)/OpenBK7252N_Tuya_QIO_${APP_VERSION}.bin
 	#cp sdk/beken_freertos_sdk/out/bk7252n_Tuya_UA.bin output/$(APP_VERSION)/OpenBK7252N_Tuya_UA_${APP_VERSION}.bin
 
-.PHONY: OpenBK7231N_ALT
-OpenBK7231N_ALT: prebuild_OpenBK7231N_ALT
-	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7231n $(APP_VERSION)_ALT
+.PHONY: OpenBK7231N
+OpenBK7231N: prebuild_OpenBK7231N
+	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7231n $(APP_VERSION)
 	mkdir -p output/$(APP_VERSION)
-	cp sdk/beken_freertos_sdk/out/bk7231n_QIO.bin output/$(APP_VERSION)/OpenBK7231N_ALT_QIO_${APP_VERSION}.bin
-	cp sdk/beken_freertos_sdk/out/bk7231n.bin output/$(APP_VERSION)/OpenBK7231N_ALT_${APP_VERSION}.bin
-	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7231N_ALT_${APP_VERSION}.rbl
-	cp sdk/beken_freertos_sdk/out/bk7231n_UA.bin output/$(APP_VERSION)/OpenBK7231N_ALT_UA_${APP_VERSION}.bin
-	cp sdk/beken_freertos_sdk/out/BK7231M_QIO.bin output/$(APP_VERSION)/OpenBK7231M_ALT_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231n_QIO.bin output/$(APP_VERSION)/OpenBK7231N_QIO_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/bk7231n.bin output/$(APP_VERSION)/OpenBK7231N_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/app.rbl output/$(APP_VERSION)/OpenBK7231N_${APP_VERSION}.rbl
+	cp sdk/beken_freertos_sdk/out/bk7231n_UA.bin output/$(APP_VERSION)/OpenBK7231N_UA_${APP_VERSION}.bin
+	cp sdk/beken_freertos_sdk/out/BK7231M_QIO.bin output/$(APP_VERSION)/OpenBK7231M_QIO_${APP_VERSION}.bin
 
 .PHONY: OpenBK7231T_ALT
 OpenBK7231T_ALT: prebuild_OpenBK7231T_ALT
@@ -740,8 +723,10 @@ clean:
 	-test -d ./platforms/ESP8266/build && cmake --build ./platforms/ESP8266/build --target clean
 	-test -d ./sdk/OpenECR6600 && cd sdk/OpenECR6600 && make BOARD_DIR=$(ECRDIR)/Boards/ecr6600/standalone APP_NAME=OpenBeken TOPDIR=$(ECRDIR) GCC_PATH=$(ECRDIR)/tool/nds32le-elf-mculib-v3s/bin/ clean
 	-test -d ./sdk/OpenBK7231T && $(MAKE) -C sdk/OpenBK7231T/platforms/bk7231t/bk7231t_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
-	-test -d ./sdk/OpenBK7231N && $(MAKE) -C sdk/OpenBK7231N/platforms/bk7231n/bk7231n_os APP_BIN_NAME=$(APP_NAME) USER_SW_VER=$(APP_VERSION) clean
 	-$(RM) -r $(BUILD_DIR)
+	-git clean -xdf sdk/
+	-git -C sdk/beken_freertos_sdk clean -xdf .
+
 
 # Example upload command - import the following snippet into Node-RED and update the IPs in the variables below
 # This will stage the rbl binary on the Node-RED server and trigger a OTA request to for the BK chip to pull it automatically
