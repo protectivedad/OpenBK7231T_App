@@ -19,7 +19,11 @@ int32_t g_pin_adc = -1, g_pin_rel = -1, g_val_rel = -1;
 uint32_t g_battcycle = 1, g_battcycleref = 10;
 float g_battvoltage = 0.0, g_battlevel = 0.0;
 uint32_t g_lastbattvoltage = 0, g_lastbattlevel = 0;
+#if PLATFORM_BEKEN_NEW
+float g_vref = 4800, g_vdivider = 2.01, g_maxbatt = 3200, g_minbatt = 2500, g_adcbits = 4096;
+#else
 float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
+#endif
 uint32_t g_driverIndex = 0;
 bool g_measureTrigger;
 
