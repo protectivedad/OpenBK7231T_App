@@ -295,7 +295,7 @@ void http_setup(http_request_t* request, const char* type) {
 	poststr(request, "\r\n"); // end headers with double CRLF
 	poststr(request, "\r\n");
 }
-static void http_setup_gz(http_request_t* request, const char* type) {
+void http_setup_gz(http_request_t* request, const char* type) {
 	hprintf255(request, httpHeader, request->responseCode, type);
 	poststr(request, "\r\n"); // next header
 	poststr(request, httpCorsHeaders);

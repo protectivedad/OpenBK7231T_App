@@ -329,6 +329,10 @@ static commandResult_t cmnd_lfsexec(const void * context, const char *cmd, const
 	}
 	return CMD_RES_OK;
 }
+#else
+byte *LFS_ReadFile(const char *fname) {
+	return 0;
+}
 #endif // ENABLE_LITTLEFS
 
 static commandResult_t cmnd_SSID1(const void * context, const char *cmd, const char *args, int cmdFlags) {

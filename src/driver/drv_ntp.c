@@ -2,10 +2,12 @@
 // Based on my previous work here:
 // https://www.elektroda.pl/rtvforum/topic3712112.html
 #include "../obk_config.h"
+
+#include "../new_common.h"
+
 #if ENABLE_NTP
 //#include <time.h>
 
-#include "../new_common.h"
 #include "../new_cfg.h"
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
@@ -383,4 +385,8 @@ bool NTP_IsTimeSynced()
     return g_synced;
 }
 
+#else
+bool NTP_IsTimeSynced() {
+	return false;
+}
 #endif // #if ENABLE_NTP
