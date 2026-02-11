@@ -32,6 +32,7 @@
 #include "lwip/apps/mqtt_priv.h"
 #include "apps/altcp_tls/altcp_tls_mbedtls_structs.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/error.h"
 struct altcp_tls_config {
 	mbedtls_ssl_config conf;
 	mbedtls_x509_crt* cert;
@@ -2575,7 +2576,6 @@ bool MQTT_IsReady() {
 #if MQTT_USE_TLS
 #ifdef MBEDTLS_ENTROPY_HARDWARE_ALT
 #include "fake_clock_pub.h"
-#include "mbedtls/error.h"
 int mbedtls_hardware_poll(void* data, unsigned char* output, size_t len, size_t* olen) {
 	int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 	((void)data);
