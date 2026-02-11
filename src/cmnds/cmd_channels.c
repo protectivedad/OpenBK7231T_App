@@ -652,4 +652,7 @@ bool CHANNEL_ShouldAddTogglePrefixToUI(int ch) {
 		return true;
 	return false;
 }
+bool CHANNEL_HasLabel(int ch) {
+	return false;
+}
 #endif // ENABLE_CMD_CHANNEL

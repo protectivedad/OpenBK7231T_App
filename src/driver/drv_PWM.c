@@ -272,4 +272,7 @@ uint32_t PWM_maxPWM(uint32_t channelIndex) {
 bool PWM_isPWM(uint32_t channelIndex) {
 	return false;
 }
+uint32_t PWM_countChannels() {
+	return 0;
+}
 #endif // ENABLE_DRIVER_PWM
