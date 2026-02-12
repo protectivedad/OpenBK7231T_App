@@ -922,6 +922,8 @@ OSStatus rtos_suspend_thread(beken_thread_t thread);
 
 #else
 
+#include <FreeRTOS.h>
+#include <semphr.h>
 #include "gw_intf.h"
 #include "wlan_ui_pub.h"
 #include "mem_pub.h"

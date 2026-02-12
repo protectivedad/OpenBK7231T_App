@@ -212,7 +212,7 @@ uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	return true;
 }
 
-void Output_onChanged(uint32_t channel, uint32_t iVal) {
+void Output_onChanged(uint32_t channel, int32_t iVal) {
 	if (!g_relayPins || !g_enable_pins)
 		return;
 

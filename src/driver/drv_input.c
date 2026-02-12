@@ -78,7 +78,7 @@ void Button_OnPressRelease(uint32_t pinIndex) {
 // function. So this is what we will do.
 
 // called from quick tick only
-static uint32_t PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton_s* button) {
+static void PIN_Input_Handler(uint32_t pinIndex, uint32_t pinRole, pinButton_s* button) {
 	/*-----------------State machine-------------------*/
 	switch (button->state) {
 	case 0:
@@ -253,10 +253,7 @@ void Input_quickTick() {
 		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
 		if (!BIT_CHECK(driverPins, pinIndex))
 			continue; // not my pin
-		static uint32_t g_times[PLATFORM_GPIO_MAX];
-		static uint32_t g_times2[PLATFORM_GPIO_MAX];
 
-		uint32_t debounceMS = CFG_HasFlag(OBK_FLAG_BTN_INSTANTTOUCH) ? 100 : 250;
 		uint32_t pinRole = PIN_GetPinRoleForPinIndex(pinIndex);
 		bool pinValue = HAL_PIN_ReadDigitalInput(pinIndex);
 		switch (pinRole) {

@@ -362,9 +362,9 @@ bool Digital_isDigital(uint32_t channelIndex) {
 		case IOR_DigitalInput_NoPup:
 			return true;
 		}
-
+		BIT_CLEAR(driverPins, pinIndex);
 	}
-
+	return false;
 }
 #else
 void Digital_setEdges() {

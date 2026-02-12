@@ -7,6 +7,7 @@
 #include "cmd_local.h"
 #include "../new_pins.h"
 #include "../new_cfg.h"
+#include "../driver/drv_public.h"
 #if ENABLE_LITTLEFS
 	#include "../littlefs/our_lfs.h"
 #endif

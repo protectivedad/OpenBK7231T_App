@@ -11,6 +11,7 @@
 #include "lwip/ip_addr.h"
 #include "lwip/inet.h"
 #include "../httpserver/new_http.h"
+#include "drv_public.h"
 
 static const char* dgr_group = "239.255.250.250";
 static int dgr_port = 4447;

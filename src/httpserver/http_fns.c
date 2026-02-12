@@ -23,6 +23,7 @@
 #include "../driver/drv_ntp.h"
 #include "../driver/drv_deviceclock.h"		// to set clock via Javascript in pmntp
 #include "../driver/drv_local.h"
+#include "../driver/drv_public.h"
 #ifdef PLATFORM_BEKEN
 #include "start_type_pub.h"
 #endif

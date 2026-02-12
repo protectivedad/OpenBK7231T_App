@@ -25,7 +25,7 @@ typedef struct driver_s {
 	void(*onEverySecond)();
 	void(*appendHTML)(http_request_t* request, int bPreState);
 	void(*runQuickTick)();
-	void(*onChannelChanged)(int ch, int val);
+	void(*onChannelChanged)(uint32_t ch, int32_t val);
 	void(*onHassDiscovery)(const char *topic);
 	uint32_t(*frameworkRequest)(uint32_t obkfRequest, uint32_t arg);
 	bool bLoaded;
@@ -85,7 +85,7 @@ static driver_t g_drivers[] = {
 	Digital_frameworkRequest,                // frameworkRequest
 	false,                                   // loaded
 	},
-#endif ENABLE_DRIVER_DIGITAL
+#endif // ENABLE_DRIVER_DIGITAL
 #if ENABLE_DRIVER_PWM
 	{ "PWM",                                 // Driver Name
 	NULL,                                    // onEverySecond

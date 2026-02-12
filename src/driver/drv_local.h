@@ -5,7 +5,7 @@
 
 uint32_t Output_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void Output_quickTick();
-void Output_onChanged(uint32_t channel, uint32_t iVal);
+void Output_onChanged(uint32_t channel, int32_t iVal);
 
 uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 

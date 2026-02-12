@@ -451,7 +451,7 @@ void HAL_DisableEnhancedFastConnect() {
 	if(g_cfg.fcdata.channel != 0) {
 		g_cfg.fcdata.channel = 0;
 		g_cfg_pendingChanges++;
-		ADDLOG_INFO("%s - Fast connect data cleared", __func__);
+		ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - Fast connect data cleared", __func__);
 	}
 }
 
