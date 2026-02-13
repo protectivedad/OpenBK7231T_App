@@ -6,6 +6,7 @@
 
 #include "../../beken378/app/config/param_config.h"
 
+#include <timers.h>
 
 // main timer tick every 1s
 beken_timer_t g_main_timer_1s;

@@ -118,5 +118,7 @@ uint32_t TIME_GetCurrentTimeWithoutOffset();
 bool TIME_IsTimeSynced();
 int TIME_GetTimesZoneOfsSeconds();
 
+bool NTP_IsTimeSynced();
+
 #endif /* __DRV_PUBLIC_H__ */
 

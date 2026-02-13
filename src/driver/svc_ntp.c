@@ -245,7 +245,6 @@ void NTP_CheckForReceive() {
     unsigned short highWord;
     unsigned short lowWord;
     unsigned int secsSince1900;
-    struct tm *ltm;
     ntp_packet packet = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     ptr = (byte*)&packet;
 

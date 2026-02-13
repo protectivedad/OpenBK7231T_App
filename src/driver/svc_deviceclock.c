@@ -55,7 +55,6 @@ void TIME_setDeviceTimeOffset(int offs){
 commandResult_t SetTimeZoneOfs(const void *context, const char *cmd, const char *args, int cmdFlags) {
 	int a, b;
 	const char *arg;
-	int oldOfs = g_UTCoffset;
 
     Tokenizer_TokenizeString(args,0);
 	// following check must be done after 'Tokenizer_TokenizeString',
