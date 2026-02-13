@@ -4,10 +4,10 @@
 #include "../cmnds/cmd_public.h"
 #include "../mqtt/new_mqtt.h"
 #include "../logging/logging.h"
-#include "drv_local.h"
 #include "../hal/hal_pins.h"
 #include "../hal/hal_flashVars.h"
-
+#include "drv_local.h"
+#include "drv_public.h"
 /*
 // sensitivity pin
 setPinRole 26 PWM_scriptOnly
@@ -71,14 +71,14 @@ void PIR_OnEverySecond() {
 			int motion = CHANNEL_Get(ch_motion);
 			if (motion) {
 				g_timeLeft = g_onTime;
-				LED_SetEnableAll(true);
+				Output_setLED(true);
 			}
 		}
 		if (g_timeLeft > 0) {
 			g_timeLeft--;
 			if (g_timeLeft <= 0) {
 				// turn off
-				LED_SetEnableAll(false);
+				Output_setLED(false);
 			}
 		}
 	}

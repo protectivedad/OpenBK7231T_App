@@ -98,6 +98,7 @@ uint32_t Output_relayCount();
 bool Output_isPowerRelay(uint32_t channel);
 bool Output_isRelay(uint32_t channel);
 void Output_setWifiLED(bool newValue);
+void Output_setLED(bool newValue);
 
 uint32_t Digital_digitalCount();
 bool Digital_isDigital(uint32_t channelIndex);
