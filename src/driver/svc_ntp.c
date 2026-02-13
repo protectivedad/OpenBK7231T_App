@@ -51,42 +51,23 @@ typedef struct
 
 } ntp_packet;              // Total: 384 bits or 48 bytes.
 
-#define MAKE_WORD(hi, lo) hi << 8 | lo
-
 // NTP time since 1900 to unix time (since 1970)
 // Number of seconds to ad
 #define NTP_OFFSET 2208988800L
 
-static int g_ntp_socket = 0;
+uint32_t g_ntp_socket;
 static struct sockaddr_in g_address;
-static int adrLen;
+uint32_t adrLen;
 // in seconds, before next retry
-static int g_ntp_delay = 0;
-static bool g_synced = false;
+uint32_t g_ntp_delay;
+bool g_synced = false;
 // time offset (time zone?) in seconds
 //#define CFG_DEFAULT_TIMEOFFSETSECONDS (-8 * 60 * 60)
-static int g_timeOffsetSeconds = 0;
+int32_t g_timeOffsetSeconds;
 // current time - this may be 32 or 64 bit, depending on platform
 // don't use as global variable, use functions to access and manipulate "clock" in "svc_deviceclock.c"
 time_t g_ntpTime;
-static unsigned int g_ntp_syncinterval=60;
-
-int NTP_GetTimesZoneOfsSeconds()
-{
-    return g_timeOffsetSeconds;
-}
-
-// set offset seconds directly
-void NTP_SetTimesZoneOfsSeconds(int o) {
-/*
-	g_ntpTime -= g_timeOffsetSeconds;	// sub old offset
-	g_timeOffsetSeconds = o;		// set new offset
-	g_ntpTime += g_timeOffsetSeconds;	// add offset again
-*/	
-	g_timeOffsetSeconds = o;		// set new offset
-	TIME_setDeviceTimeOffset(g_timeOffsetSeconds);
-}
-
+uint32_t g_ntp_syncinterval;
 
 //Set custom NTP server
 commandResult_t NTP_SetServer(const void *context, const char *cmd, const char *args, int cmdFlags) {
@@ -101,13 +82,13 @@ commandResult_t NTP_SetServer(const void *context, const char *cmd, const char *
 	}
     newValue = Tokenizer_GetArg(0);
     CFG_SetNTPServer(newValue);
-    ADDLOG_INFO(LOG_FEATURE_NTP, "NTP server set to %s", newValue);
+    ADDLOGF_INFO("NTP server set to %s", newValue);
     return CMD_RES_OK;
 }
 
 //Display settings used by the NTP driver
 commandResult_t NTP_Info(const void *context, const char *cmd, const char *args, int cmdFlags) {
-    ADDLOG_INFO(LOG_FEATURE_NTP, "Server=%s, Time offset=%d", CFG_GetNTPServer(), TIME_GetTimesZoneOfsSeconds());
+    ADDLOGF_INFO("Server=%s, Time offset=%d", CFG_GetNTPServer(), TIME_GetTimesZoneOfsSeconds());
     return CMD_RES_OK;
 }
 
@@ -127,8 +108,8 @@ void NTP_SetSimulatedTime(unsigned int timeNow) {
 	b_ntp_simulatedTime = true;
 }
 #endif
-void NTP_Init() {
 
+void NTP_Init() {
 #if WINDOWS
 	b_ntp_simulatedTime = false;
 #endif
@@ -143,20 +124,18 @@ void NTP_Init() {
 	//cmddetail:"examples":""}
     CMD_RegisterCommand("ntp_info", NTP_Info, NULL);
     
-    g_ntp_syncinterval = Tokenizer_GetArgIntegerDefault(1, 60);
-
-    ADDLOG_INFO(LOG_FEATURE_NTP, "NTP driver initialized with server=%s, offset=%d, syncing every %i seconds", CFG_GetNTPServer(), g_timeOffsetSeconds, g_ntp_syncinterval);
+    ADDLOGF_INFO("NTP driver initialized with server=%s, offset=%d, syncing every %i seconds", CFG_GetNTPServer(), g_timeOffsetSeconds, g_ntp_syncinterval);
     g_synced = false;
 }
 
 // if driver is stopped, we need to make sure, we don't keep NTP in state "synched"
 void NTP_Stop() {
-    ADDLOG_INFO(LOG_FEATURE_NTP, "NTP driver stopped");
+    ADDLOGF_INFO("NTP driver stopped");
     g_synced = false;
 }
 
 void NTP_Shutdown() {
-    if(g_ntp_socket != 0) {
+    if(g_ntp_socket) {
 #if WINDOWS
         closesocket(g_ntp_socket);
 #else
@@ -165,17 +144,17 @@ void NTP_Shutdown() {
     }
     g_ntp_socket = 0;
     // can attempt in next 10 seconds
-    g_ntp_delay = g_ntp_syncinterval-1;
+    g_ntp_delay = g_ntp_syncinterval;
 }
+
 void NTP_SendRequest(bool bBlocking) {
     byte *ptr;
 	const char *adrString;
     //int i, recv_len;
     //char buf[64];
-    ntp_packet packet = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    ntp_packet packet = {};
 
     adrLen = sizeof(g_address);
-    memset( &packet, 0, sizeof( ntp_packet ) );
     ptr = (byte*)&packet;
     // Initialize values needed to form NTP request
     // (see URL above for details on the packets)
@@ -194,7 +173,7 @@ void NTP_SendRequest(bool bBlocking) {
     if ((g_ntp_socket=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP )) == -1)
     {
         g_ntp_socket = 0;
-        ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_SendRequest: failed to create socket");
+        ADDLOGF_INFO("%s - failed to create socket", __func__);
         return;
     }
 
@@ -202,7 +181,7 @@ void NTP_SendRequest(bool bBlocking) {
 
 	adrString = CFG_GetNTPServer();
 	if (adrString == 0 || adrString[0] == 0) {
-		ADDLOG_INFO(LOG_FEATURE_NTP, "NTP_SendRequest: somehow ntp server in config was empty, setting non-empty");
+		ADDLOGF_INFO("%s - somehow ntp server in config was empty, setting non-empty", __func__);
 		CFG_SetNTPServer(DEFAULT_NTP_SERVER);
 		adrString = CFG_GetNTPServer();
 	}
@@ -215,11 +194,11 @@ void NTP_SendRequest(bool bBlocking) {
     // Send the message to server:
     if(sendto(g_ntp_socket, &packet, sizeof(packet), 0,
          (struct sockaddr*)&g_address, adrLen) < 0) {
-        ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_SendRequest: Unable to send message");
+        ADDLOGF_INFO("%s - Unable to send message", __func__);
         NTP_Shutdown();
 		// quick next frame attempt
 		if (g_secondsElapsed < 60) {
-			g_ntp_delay = 0;
+			g_ntp_delay = 1;
 		}
         return;
     }
@@ -230,7 +209,7 @@ void NTP_SendRequest(bool bBlocking) {
 #if WINDOWS
 #else
         if(fcntl(g_ntp_socket, F_SETFL, O_NONBLOCK)) {
-            ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_SendRequest: failed to make socket non-blocking!");
+            ADDLOGF_INFO("%s - failed to make socket non-blocking!", __func__);
         }
 #endif
     }
@@ -238,76 +217,65 @@ void NTP_SendRequest(bool bBlocking) {
     // can attempt in next 10 seconds
     g_ntp_delay = 10;
 }
+
 void NTP_CheckForReceive() {
-    byte *ptr;
-    int i, recv_len;
-    //struct tm * ptm;
-    unsigned short highWord;
-    unsigned short lowWord;
-    unsigned int secsSince1900;
-    ntp_packet packet = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    ptr = (byte*)&packet;
+    int32_t recv_len;
+    uint32_t secsSince1900;
+    ntp_packet packet;
+    uint8_t *ptr = (uint8_t*)&packet;
 
     // Receive the server's response:
-    i = sizeof(packet);
-    recv_len = recv(g_ntp_socket, ptr, i, 0);
+    recv_len = recv(g_ntp_socket, &packet, sizeof(packet), 0);
 
-    if(recv_len < 0){
-			ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_CheckForReceive: Error while receiving server's msg");
-        return;
-    }
-    highWord = MAKE_WORD(ptr[40], ptr[41]);
-    lowWord = MAKE_WORD(ptr[42], ptr[43]);
-    // combine the four bytes (two words) into a long integer
-    // this is NTP time (seconds since Jan 1 1900):
-    secsSince1900 = highWord << 16 | lowWord;
+    if(recv_len < 0 || recv_len != sizeof(packet)) {
+		ADDLOGF_INFO("%s - failed to receive packet, recv_len=%i", __func__, recv_len);
+		return;
+	}
+    secsSince1900 = ptr[43] | ptr[42] << 8 | ptr[41] << 16 | ptr[40] << 24;
 	ADDLOGF_TIMING("%i - %s - Seconds since Jan 1 1900 = %u", xTaskGetTickCount(), __func__, secsSince1900);
-    ADDLOG_INFO(LOG_FEATURE_NTP,"Seconds since Jan 1 1900 = %u",secsSince1900);
+    ADDLOGF_INFO("Seconds since Jan 1 1900 = %u", secsSince1900);
 
    	TIME_setDeviceTime((uint32_t) (secsSince1900 - NTP_OFFSET) );
-   	ADDLOG_INFO(LOG_FEATURE_NTP,"Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
+   	ADDLOGF_INFO("Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
 	if (g_synced == false)
 		EventHandlers_FireEvent(CMD_EVENT_NTP_STATE, 1);
     g_synced = true;
     NTP_Shutdown();
-
 }
 
 void NTP_SendRequest_BlockingMode() {
     NTP_Shutdown();
     NTP_SendRequest(true);
     NTP_CheckForReceive();
-
 }
 
-void NTP_onEverySecond()
-{
-    if(Main_HasWiFiConnected()==0)
-        return;
-#if WINDOWS
-	if (b_ntp_simulatedTime) {
-		return;
-	}
-#endif
+void NTP_onEverySecond() {
     if (OTA_GetProgress() != -1)
         return;
-    if(g_ntp_socket == 0) {
+
+	if(Main_HasWiFiConnected()==0)
+        return;
+
+	if (!g_synced && !g_ntp_delay)
+		NTP_SendRequest(false);
+
+	if (!g_ntp_syncinterval && !g_ntp_delay)
+		return;
+
+    if(!g_ntp_socket) {
         // if no socket, this is a reconnect delay
-        if(g_ntp_delay > 0) {
+        if(g_ntp_delay) {
             g_ntp_delay--;
             return;
         }
         NTP_SendRequest(false);
     } else {
-        NTP_CheckForReceive();
-        // if socket exists, this is a disconnect timeout
-        if(g_ntp_delay > 0) {
+		NTP_CheckForReceive();
+        if(g_ntp_delay) {
             g_ntp_delay--;
-            if(g_ntp_delay<=0) {
-                // disconnect and force reconnect
+            if(!g_ntp_delay)
                 NTP_Shutdown();
-            }
-        }
+		}        	
     }
 }
 
@@ -315,17 +283,6 @@ void NTP_appendHTML(http_request_t* request, int bPreState)
 {
 	if (bPreState)
 		return;
-/*
-    struct tm *ltm;
-    g_ntpTime=(time_t)TIME_GetCurrentTime();
-
-    ltm = gmtime(&g_ntpTime);
-    if (g_synced == true)
-        hprintf255(request, "<h5>NTP (%s): local Time  %s </h5>",
-			CFG_GetNTPServer(),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
-    else 
-        hprintf255(request, "<h5>NTP: Syncing with %s....</h5>",CFG_GetNTPServer());
-*/
     //  if NTP is synced, we'll print time with deviceclocks HTTP information
     if (g_synced != true)
         hprintf255(request, "<h5>NTP: Syncing with %s....</h5>",CFG_GetNTPServer());

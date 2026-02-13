@@ -25,7 +25,7 @@
 // "eoch" on startup of device; If we add g_secondsElapsed we get the actual time  
 uint32_t g_epochOnStartup = 0;
 // UTC offset
-int g_UTCoffset = 0;
+int32_t g_UTCoffset = 0;
 void TIME_setDeviceTime(uint32_t time){
 	ADDLOG_DEBUG(LOG_FEATURE_RAW, "TIME_setDeviceTime - time = %lu - g_secondsElapsed =%lu \r\n",time,g_secondsElapsed);
 #if (ENABLE_DRIVER_DS3231)
@@ -76,9 +76,6 @@ commandResult_t SetTimeZoneOfs(const void *context, const char *cmd, const char 
 	else {
 		g_UTCoffset = Tokenizer_GetArgInteger(0) * 60 * 60;
 	}
-#if WINDOWS
-	NTP_SetTimesZoneOfsSeconds(g_UTCoffset);
-#endif
 #if ENABLE_TIME_DST
     	setDST();	// check if local time is DST or not and set offset
 #endif
@@ -543,27 +540,21 @@ uint32_t temp=0;
 
 };
 
-uint32_t TIME_GetCurrentTimeWithoutOffset(){ 	// ... same forNTP_GetCurrentTimeWithoutOffset()...
+uint32_t TIME_GetCurrentTimeWithoutOffset() {
 	if (g_epochOnStartup > 10) {
 		return g_epochOnStartup + g_secondsElapsed;
 	}
 	return  0;
 };
 
-bool TIME_IsTimeSynced(){ 				// ... and for NTP_IsTimeSynced()
-	if (g_epochOnStartup > 10) {
+bool TIME_IsTimeSynced() {
+	if (g_epochOnStartup > 10)
 		return true;
-	}
-#if ENABLE_NTP
-	if (NTP_IsTimeSynced() == true) {
-		return true;
-	}
-#endif
+
 	return  false;
 }
 
-int TIME_GetTimesZoneOfsSeconds()			// ... and for NTP_GetTimesZoneOfsSeconds()
-{
+int TIME_GetTimesZoneOfsSeconds() {
 	if (g_epochOnStartup > 10) {
 		return g_UTCoffset 
 #if ENABLE_TIME_DST
@@ -580,9 +571,9 @@ void TIME_appendHTML(http_request_t *request, int bPreState)
 		return;
 	uint32_t tempt=TIME_GetCurrentTime();
 #if ENABLE_NTP
-	char ntpinfo[50]={0};
+	char ntpinfo[50] = {0};
 	if (NTP_IsTimeSynced()){
-		sprintf(ntpinfo," (NTP-Server: %s)",CFG_GetNTPServer());
+		sprintf(ntpinfo," (NTP-Server: %s)", CFG_GetNTPServer());
 	}
 #endif
 	if (TIME_IsTimeSynced()) hprintf255(request, "<h5>Local clock: %s"
