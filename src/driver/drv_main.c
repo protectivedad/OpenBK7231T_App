@@ -111,17 +111,36 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif // ENABLE_DRIVER_DIGITAL
-#if ENABLE_DRIVER_PWM
-	{ "PWM",                                 // Driver Name
-	NULL,                                    // onEverySecond
-	NULL,                                    // appendHTML
-	NULL,                                    // runQuickTick
-	PWM_onChanged,                           // onChannelChanged
+#if ENABLE_DRIVER_DOORSENSOR
+	//drvdetail:{"name":"DoorSensor",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"DoorSensor is using deep sleep to preserve battery. This is used for devices without TuyaMCU, where BK deep sleep and wakeup on GPIO is used. This drives requires you to set a DoorSensor pin. Change on door sensor pin wakes up the device. If there are no changes for some time, device goes to sleep. See example [here](https://www.elektroda.com/rtvforum/topic3960149.html). If your door sensor does not wake up in certain pos, please use DSEdge command (try all 3 options, default is 2). ",
+	//drvdetail:"requires":""}
+	{ "DoorSensor",                          // Driver Name
+	DoorSensor_onEverySecond,                // onEverySecond
+	DoorSensor_appendHTML,                   // appendHTML
+	DoorSensor_quickTick,                    // runQuickTick
+	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
-	PWM_frameworkRequest,                    // frameworkRequest
+	DoorSensor_frameworkRequest,             // frameworkRequest
 	false,                                   // loaded
 	},
-#endif // ENABLE_DRIVER_PWM
+#endif
+#if ENABLE_DRIVER_BATTERY
+	//drvdetail:{"name":"Battery",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"Custom mechanism to measure battery level with ADC and an optional relay. See [example here](https://www.elektroda.com/rtvforum/topic3959103.html).",
+	//drvdetail:"requires":""}
+	{ "Battery",                             // Driver Name
+	Battery_onEverySecond,                   // onEverySecond
+	Battery_appendHTML,                      // appendHTML
+	Battery_quickTick,                       // runQuickTick
+	NULL,                                    // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	Battery_frameworkRequest,                // frameworkRequest
+	false,                                   // loaded
+	},
+#endif
 #if ENABLE_DRIVER_TUYAMCU
 	//drvdetail:{"name":"TuyaMCU",
 	//drvdetail:"title":"TODO",
@@ -137,6 +156,19 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif
+// not ported yet
+#if 0
+#if ENABLE_DRIVER_PWM
+	{ "PWM",                                 // Driver Name
+	NULL,                                    // onEverySecond
+	NULL,                                    // appendHTML
+	NULL,                                    // runQuickTick
+	PWM_onChanged,                           // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	PWM_frameworkRequest,                    // frameworkRequest
+	false,                                   // loaded
+	},
+#endif // ENABLE_DRIVER_PWM
 #ifdef ENABLE_DRIVER_GIRIERMCU
 	//drvdetail:{"name":"GirierMCU",
 	//drvdetail:"title":"GirierMCU",
@@ -955,21 +987,6 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif
-#if ENABLE_DRIVER_DOORSENSOR
-	//drvdetail:{"name":"DoorSensor",
-	//drvdetail:"title":"TODO",
-	//drvdetail:"descr":"DoorSensor is using deep sleep to preserve battery. This is used for devices without TuyaMCU, where BK deep sleep and wakeup on GPIO is used. This drives requires you to set a DoorSensor pin. Change on door sensor pin wakes up the device. If there are no changes for some time, device goes to sleep. See example [here](https://www.elektroda.com/rtvforum/topic3960149.html). If your door sensor does not wake up in certain pos, please use DSEdge command (try all 3 options, default is 2). ",
-	//drvdetail:"requires":""}
-	{ "DoorSensor",                          // Driver Name
-	DoorSensor_onEverySecond,                // onEverySecond
-	DoorSensor_appendHTML,                   // appendHTML
-	DoorSensor_quickTick,                    // runQuickTick
-	NULL,                                    // onChannelChanged
-	NULL,                                    // onHassDiscovery
-	DoorSensor_frameworkRequest,             // frameworkRequest
-	false,                                   // loaded
-	},
-#endif
 #endif
 #if ENABLE_DRIVER_ADCBUTTON
 	//drvdetail:{"name":"ADCButton",
@@ -1344,21 +1361,6 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif
-#if ENABLE_DRIVER_BATTERY
-	//drvdetail:{"name":"Battery",
-	//drvdetail:"title":"TODO",
-	//drvdetail:"descr":"Custom mechanism to measure battery level with ADC and an optional relay. See [example here](https://www.elektroda.com/rtvforum/topic3959103.html).",
-	//drvdetail:"requires":""}
-	{ "Battery",                             // Driver Name
-	Battery_onEverySecond,                   // onEverySecond
-	Battery_appendHTML,                      // appendHTML
-	Battery_quickTick,                       // runQuickTick
-	NULL,                                    // onChannelChanged
-	NULL,                                    // onHassDiscovery
-	Battery_frameworkRequest,                // frameworkRequest
-	false,                                   // loaded
-	},
-#endif
 #if ENABLE_DRIVER_BKPARTITIONS
 	//drvdetail:{"name":"BKPartitions",
 	//drvdetail:"title":"TODO",
@@ -1439,7 +1441,8 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif
-	//{ "", NULL, NULL, NULL, NULL, NULL, NULL, NULL, false },
+#endif
+	//{ "", NULL, NULL, NULL, NULL, NULL, NULL, false },
 };
 
 static const int g_numDrivers = sizeof(g_drivers) / sizeof(g_drivers[0]);
