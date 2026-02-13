@@ -20,8 +20,6 @@
 #include "../cJSON/cJSON.h"
 #endif
 #include <time.h>
-#include "../driver/drv_ntp.h"
-#include "../driver/drv_deviceclock.h"		// to set clock via Javascript in pmntp
 #include "../driver/drv_local.h"
 #include "../driver/drv_public.h"
 #ifdef PLATFORM_BEKEN
@@ -346,6 +344,7 @@ int http_fn_index(http_request_t* request) {
 #endif
 #ifndef OBK_DISABLE_ALL_DRIVERS
 		DRV_AppendInformationToHTTPIndexPage(request, true);
+		SVC_appendHTML(request, true);
 #endif
 
 		poststr(request, "<div id=\"state\">"); // replaceable content follows
@@ -725,6 +724,7 @@ int http_fn_index(http_request_t* request) {
 	poststr(request, "</table>");
 #ifndef OBK_DISABLE_ALL_DRIVERS
 	DRV_AppendInformationToHTTPIndexPage(request, false);
+	SVC_appendHTML(request, false);
 #endif
 
 	if (1) {

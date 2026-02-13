@@ -7,7 +7,6 @@
 
 #include "../driver/drv_openWeatherMap.h"
 #include "../driver/drv_ir.h"
-#include "../driver/drv_ntp.h"
 #include "../driver/drv_local.h"
 #include "../driver/drv_public.h"
 #include "../driver/drv_uart.h"
@@ -22,7 +21,6 @@
 #include "be_vm.h"
 #include "berry.h"
 #include "../libraries/obktime/obktime.h"	// for time functions
-#include "../driver/drv_deviceclock.h"
 bvm *g_vm = NULL;
 
 typedef struct berryInstance_s

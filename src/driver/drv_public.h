@@ -1,6 +1,8 @@
 #ifndef __DRV_PUBLIC_H__
 #define __DRV_PUBLIC_H__
 
+#include <stdint.h>
+#include <stdbool.h>
 #include "../httpserver/new_http.h"
 
 typedef enum energySensor_e {
@@ -49,6 +51,12 @@ typedef struct energySensorNames_s {
 
 extern int g_dhtsCount;
 
+void SVC_Generic_Init();
+void SVC_Autostart();
+void SVC_appendHTML(http_request_t* request, int bPreState);
+void SVC_onEverySecond();
+void SVC_runQuickTick();
+
 void DRV_Generic_Init();
 void DRV_Autostart();
 uint32_t DRV_SendRequest(uint32_t driverIndex, uint32_t OBKFRequest, uint32_t arg);
@@ -75,7 +83,7 @@ void SM2235_Write(float* rgbcw);
 void KP18058_Write(float *rgbcw);
 void DRV_DGR_OnLedDimmerChange(int iVal);
 void DRV_DGR_OnLedEnableAllChange(int iVal);
-void DRV_DGR_OnLedFinalColorsChange(byte rgbcw[5]);
+void DRV_DGR_OnLedFinalColorsChange(uint8_t rgbcw[5]);
 
 // OBK_POWER etc
 float DRV_GetReading(energySensor_t type);
@@ -101,6 +109,13 @@ bool PWM_isPWM(uint32_t channelIndex);
 void PWM_onChanged(uint32_t channelIndex, float iVal);
 
 bool Battery_safeToUpdate();
+
+void TIME_setDeviceTime(uint32_t time);
+void TIME_setDeviceTimeOffset(int offs);
+uint32_t TIME_GetCurrentTime();
+uint32_t TIME_GetCurrentTimeWithoutOffset();
+bool TIME_IsTimeSynced();
+int TIME_GetTimesZoneOfsSeconds();
 
 #endif /* __DRV_PUBLIC_H__ */
 

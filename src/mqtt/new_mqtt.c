@@ -15,8 +15,6 @@
 #include "../cmnds/cmd_public.h"
 #include "../hal/hal_wifi.h"
 #include "../driver/drv_public.h"
-#include "../driver/drv_ntp.h"
-#include "../driver/drv_deviceclock.h"
 #include "../hal/hal_ota.h"
 #include <math.h>
 #include <semphr.h>

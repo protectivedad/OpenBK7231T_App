@@ -8,7 +8,6 @@
 #include "../hal/hal_pins.h"
 #include "drv_public.h"
 #include "drv_local.h"
-#include "drv_deviceclock.h"
 //#include <time.h>
 #include "../libraries/obktime/obktime.h"	// for time functions
 

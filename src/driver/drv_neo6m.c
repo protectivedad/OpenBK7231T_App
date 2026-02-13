@@ -20,7 +20,6 @@ static char fakelat[12]={0};
 static char fakelong[12]={0};
 static char tempstr[50]; 
 
-#include "drv_deviceclock.h"
 static bool setclock2gps=false;
 #if ENABLE_TIME_SUNRISE_SUNSET
 static bool setlatlong2gps=false;

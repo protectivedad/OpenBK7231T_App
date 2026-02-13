@@ -364,12 +364,12 @@ commandResult_t GirierMCU_LinkGirierMCUOutputToChannel(const void* context, cons
 	return CMD_RES_OK;
 }
 
-bool GirierMCU_IsChannelUsedByGirierMCU(int channel) {
-	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "_IsChannelUsedByGirierMCU(channel=%d) called", channel);
+bool GirierMCU_IsChannelUsedByGirierMCU(uint32_t channelIndex) {
+	ADDLOG_DEBUG(LOG_FEATURE_TUYAMCU, "_IsChannelUsedByGirierMCU(channel=%d) called", channelIndex);
 	girierMCUMapping_t* mapping;
 
 	// find mapping
-	mapping = GirierMCU_FindDefForChannel(channel);
+	mapping = GirierMCU_FindDefForChannel(channelIndex);
 
 	if (mapping == 0) {
 		return false;
@@ -377,16 +377,16 @@ bool GirierMCU_IsChannelUsedByGirierMCU(int channel) {
 	return true;
 }
 
-void GirierMCU_OnChannelChanged(int channel, int iVal) {
+void GirierMCU_OnChannelChanged(uint32_t channelIndex, int32_t iVal) {
 	ADDLOG_DEBUG(
 		LOG_FEATURE_TUYAMCU,
 		"_OnChannelChanged(channel=%d, iVal=%d) called", 
-		channel, iVal
+		channelIndex, iVal
 	);
 	girierMCUMapping_t* mapping;
 
 	// find mapping
-	mapping = GirierMCU_FindDefForChannel(channel);
+	mapping = GirierMCU_FindDefForChannel(channelIndex);
 
 	if (mapping == 0) {
 		return;
@@ -401,7 +401,7 @@ void GirierMCU_OnChannelChanged(int channel, int iVal) {
 	ADDLOG_DEBUG(
 		LOG_FEATURE_TUYAMCU,
 		"g_dimmerRangeMax:%d, g_dimmerRangeMin:%d, mapped dp %i value %d to %d\n",
-		g_dimmerRangeMax, g_dimmerRangeMin,  channel, iVal, mappediVal
+		g_dimmerRangeMax, g_dimmerRangeMin,  channelIndex, iVal, mappediVal
 	);
 
 	// this might be a callback from CHANNEL_Set in GirierMCU_ApplyMapping. If we should set exactly the

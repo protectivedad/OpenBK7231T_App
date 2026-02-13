@@ -11,7 +11,6 @@
 #include "../cmnds/cmd_public.h"
 #include "../hal/hal_wifi.h"
 #include "../driver/drv_public.h"
-#include "../driver/drv_ntp.h"
 
 // Maximum lenght of both string value and publish name in MQTT deduper
 #define DEDUPER_MAX_STRING_LEN 32

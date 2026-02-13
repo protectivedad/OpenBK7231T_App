@@ -60,7 +60,7 @@ int get_g_uart_init_counter() {
   return fuartbuf->g_uart_init_counter;
 }
 
-void UART_InitReceiveRingBufferEx(int auartindex, int size){
+void UART_InitReceiveRingBufferEx(uint32_t auartindex, uint32_t size){
   uartbuf_t* fuartbuf=UART_GetBufFromPort(auartindex);
   //XJIKKA 20241122 - Note that the actual usable buffer size must be g_recvBufSize-1, 
     //otherwise there would be no difference between an empty and a full buffer.
@@ -73,12 +73,12 @@ void UART_InitReceiveRingBufferEx(int auartindex, int size){
     fuartbuf->g_recvBufOut = 0;
 }
 
-void UART_InitReceiveRingBuffer(int size) {
+void UART_InitReceiveRingBuffer(uint32_t size) {
   int fuartindex = UART_GetSelectedPortIndex();
   UART_InitReceiveRingBufferEx(fuartindex, size);
 }
 
-int UART_GetReceiveRingBufferSizeEx(int auartindex) {
+int UART_GetReceiveRingBufferSizeEx(uint32_t auartindex) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   return fuartbuf->g_recvBufSize;
 }
@@ -88,7 +88,7 @@ int UART_GetReceiveRingBufferSize() {
   return UART_GetReceiveRingBufferSizeEx(fuartindex);
 }
 
-int UART_GetDataSizeEx(int auartindex) {
+int UART_GetDataSizeEx(uint32_t auartindex) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   return (fuartbuf->g_recvBufIn >= fuartbuf->g_recvBufOut
                 ? fuartbuf->g_recvBufIn - fuartbuf->g_recvBufOut
@@ -100,28 +100,28 @@ int UART_GetDataSize() {
   return UART_GetDataSizeEx(fuartindex);
 }
 
-byte UART_GetByteEx(int auartindex, int idx) {
+byte UART_GetByteEx(uint32_t auartindex, uint32_t idx) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   return fuartbuf->g_recvBuf[(fuartbuf->g_recvBufOut + idx) % fuartbuf->g_recvBufSize];
 }
 
-byte UART_GetByte(int idx) {
+byte UART_GetByte(uint32_t idx) {
   int fuartindex = UART_GetSelectedPortIndex();
   return UART_GetByteEx(fuartindex, idx);
 }
 
-void UART_ConsumeBytesEx(int auartindex, int idx) {
+void UART_ConsumeBytesEx(uint32_t auartindex, uint32_t idx) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   fuartbuf->g_recvBufOut += idx;
   fuartbuf->g_recvBufOut %= fuartbuf->g_recvBufSize;
 }
 
-void UART_ConsumeBytes(int idx) {
+void UART_ConsumeBytes(uint32_t idx) {
   int fuartindex = UART_GetSelectedPortIndex();
   UART_ConsumeBytesEx(fuartindex, idx);
 }
 
-void UART_AppendByteToReceiveRingBufferEx(int auartindex, int rc) {
+void UART_AppendByteToReceiveRingBufferEx(uint32_t auartindex, uint8_t rc) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   if (fuartbuf->g_recvBufSize <= 0) {
       //if someone (uartFakeHex) send data without init, and if flag 26 changes(UART)
@@ -150,12 +150,12 @@ void UART_AppendByteToReceiveRingBufferEx(int auartindex, int rc) {
     }
 }
 
-void UART_AppendByteToReceiveRingBuffer(int rc) {
+void UART_AppendByteToReceiveRingBuffer(uint8_t rc) {
   int fuartindex = UART_GetSelectedPortIndex();
   UART_AppendByteToReceiveRingBufferEx(fuartindex, rc);
 }
 
-void UART_SendByteEx(int auartindex, byte b) {
+void UART_SendByteEx(uint32_t auartindex, byte b) {
 #ifdef UART_2_UARTS_CONCURRENT
   HAL_UART_SendByteEx(auartindex, b);
 #else
@@ -247,7 +247,7 @@ void UART_ResetForSimulator() {
   }
 }
 
-int UART_InitUARTEx(int auartindex, int baud, int parity, bool hwflowc)
+int UART_InitUARTEx(uint32_t auartindex, uint32_t baud, uint32_t parity, bool hwflowc)
 {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   fuartbuf->g_uart_init_counter++;
@@ -259,19 +259,19 @@ int UART_InitUARTEx(int auartindex, int baud, int parity, bool hwflowc)
   return fuartbuf->g_uart_init_counter;
 }
 
-int UART_InitUART(int baud, int parity, bool hwflowc) {
+int UART_InitUART(uint32_t baud, uint32_t parity, bool hwflowc) {
   int fuartindex = UART_GetSelectedPortIndex();
   return UART_InitUARTEx(fuartindex, baud, parity, hwflowc);
 }
 
-void UART_LogBufState(int auartindex) {
+void UART_LogBufState(uint32_t auartindex) {
   uartbuf_t* fuartbuf = UART_GetBufFromPort(auartindex);
   ADDLOG_WARN(LOG_INFO,
     "Uart ix %d inbuf %i inptr %i outptr %i \n",
     auartindex, UART_GetDataSizeEx(auartindex), fuartbuf->g_recvBufIn, fuartbuf->g_recvBufOut
   );
 }
-void UART_DebugTool_Run(int auartindex) {
+void UART_DebugTool_Run(uint32_t auartindex) {
 	byte b;
 	char tmp[128];
 	char *p = tmp;
@@ -307,7 +307,7 @@ void UART_RunEverySecond() {
 // uartInit 115200
 // uartSendASCII Hello123
 commandResult_t CMD_UART_Init(const void *context, const char *cmd, const char *args, int cmdFlags) {
-    int baud;
+    uint32_t baud;
 
     Tokenizer_TokenizeString(args, 0);
     // following check must be done after 'Tokenizer_TokenizeString',

@@ -1,5 +1,22 @@
 #pragma once
 
+typedef enum obkFramework_e {
+	// no arg, return false if failed
+	OBKF_Init,
+	// no arg, no return
+	OBKF_Stop,
+	// accepts: driver index, no return
+	OBKF_PinRoles,
+	// accepts: pin index, returns false if pin not found
+	OBKF_AcquirePin,
+	// accepts: pin index
+	OBKF_ReleasePin,
+	// accepts: pin role, returns number of channels
+	OBKF_NoOfChannels,
+	// accepts: pin role, returns true to publish
+	OBKF_ShouldPublish
+} obkFramework_t;
+
 #include "../httpserver/new_http.h"
 #include "../cmnds/cmd_public.h"
 
@@ -19,7 +36,14 @@ uint32_t PWM_countChannels();
 uint32_t PWM_countPins();
 #endif // ENABLE_DRIVER_PWM
 
-uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+uint32_t TIME_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void TIME_appendHTML(http_request_t* request, int bPreState);
+void TIME_onEverySecond();
+
+uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void NTP_appendHTML(http_request_t* request, int bPreState);
+void NTP_onEverySecond();uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+
 void TuyaMCU_quickTick();
 void TuyaMCU_appendHTML(http_request_t* request, int bPreState);
 void TuyaMCU_onEverySecond();

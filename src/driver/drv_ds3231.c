@@ -8,7 +8,6 @@
 //#include <time.h>
 #include "../libraries/obktime/obktime.h"	// for time functions
 
-#include "drv_deviceclock.h"
 
 
 #define DS3231_I2C_ADDR (0x68 << 1)

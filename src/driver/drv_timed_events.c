@@ -12,8 +12,6 @@
 #include "../logging/logging.h"
 #include "../hal/hal_ota.h"
 
-#include "drv_deviceclock.h"
-
 #define M_PI   3.14159265358979323846264338327950288
 #define LOG_FEATURE LOG_FEATURE_NTP
 

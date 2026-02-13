@@ -18,13 +18,9 @@ int TIME_GetSunrise();
 int TIME_GetSunset();
 // drv_timed_events.c
 int TIME_Print_EventList();
-void TIME_setDeviceTime(uint32_t time);
-void TIME_setDeviceTimeOffset(int offs);
 int TIME_GetEventTime(int id);
 int TIME_RemoveEvent(int id);
 int TIME_ClearEvents();
-void TIME_Init();
-void TIME_OnEverySecond();
 commandResult_t SetTimeZoneOfs(const void *context, const char *cmd, const char *args, int cmdFlags);
 commandResult_t SetDeviceTime(const void *context, const char *cmd, const char *args, int cmdFlags);
 
@@ -44,11 +40,6 @@ void TIME_CalculateSunrise(byte *outHour, byte *outMinute);
 void TIME_CalculateSunset(byte *outHour, byte *outMinute);
 #endif	// to #if ENABLE_CALENDAR_EVENTS
 #endif
-uint32_t TIME_GetCurrentTime(); 			// might replace for NTP_GetCurrentTime() to return time regardless of NTP present/running
-uint32_t TIME_GetCurrentTimeWithoutOffset(); 		// ... same for NTP_GetCurrentTimeWithoutOffset()...
-bool TIME_IsTimeSynced(); 				// ... and for NTP_IsTimeSynced()
-
-int TIME_GetTimesZoneOfsSeconds();			// ... and for NTP_GetTimesZoneOfsSeconds()
 
 #if ENABLE_TIME_DST
 int Time_IsDST();
@@ -64,7 +55,6 @@ void fix_DSTforEvents(int minutes);	// inside "drv_timed_events.c"
 uint32_t RuleToTime(uint8_t dayOfWeek, uint8_t month, uint8_t weekNum, uint8_t hour, uint16_t year);
 void getDSTtransition(uint32_t * DST);
 #endif
-void TIME_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 
 
 #endif /* __DRV_DEVICECLOCK_H__ */

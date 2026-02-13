@@ -7,10 +7,6 @@
 #include "drv_cse7766.h"
 #include "drv_ir.h"
 #include "drv_rc.h"
-#include "drv_local.h"
-#include "drv_ntp.h"
-#include "drv_deviceclock.h"
-#include "drv_public.h"
 #include "drv_ssdp.h"
 #include "drv_test_drivers.h"
 #include "drv_girierMCU.h"
@@ -19,6 +15,9 @@
 #include "drv_ds1820_full.h"
 #include "drv_ds1820_common.h"
 #include "drv_ds3231.h"
+
+#include "drv_local.h"
+#include "drv_public.h"
 
 typedef struct driver_s {
 	const char* name;
@@ -31,24 +30,50 @@ typedef struct driver_s {
 	bool bLoaded;
 } driver_t;
 
+typedef struct service_s {
+	const char* name;
+	void(*onEverySecond)();
+	void(*appendHTML)(http_request_t* request, int bPreState);
+	void(*runQuickTick)();
+	uint32_t(*frameworkRequest)(uint32_t obkfRequest, uint32_t arg);
+	bool bLoaded;
+} service_t;
+
+static service_t g_services[] = {
+#if ENABLE_DRIVER_DEVICECLOCK
+	//drvdetail:{"name":"TIME",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"TODO",
+	//drvdetail:"requires":""}
+	{ "Time",                                // Driver Name
+	TIME_onEverySecond,                      // onEverySecond
+	TIME_appendHTML,                         // appendHTML
+	NULL,                                    // runQuickTick
+	TIME_frameworkRequest,                   // frameworkRequest
+   	false,                                   // loaded
+	},
+#endif
+#if ENABLE_NTP
+	//drvdetail:{"name":"NTP",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"NTP driver is required to get current time and date from web. Without it, there is no correct datetime. Put 'startDriver NTP' in short startup line or autoexec.bat to run it on start.",
+	//drvdetail:"requires":""}
+	{ "NTP",                                 // Driver Name
+	NTP_onEverySecond,                       // onEverySecond
+	NTP_appendHTML,                          // appendHTML
+	NULL,                                    // runQuickTick
+	NTP_frameworkRequest,                    // frameworkRequest
+   	false,                                   // loaded
+	}
+#endif
+};
+
+static const int g_numServices = sizeof(g_services) / sizeof(g_services[0]);
 
 void GirierMCU_RunEverySecond();
 
 // startDriver BL0937
 static driver_t g_drivers[] = {
-	//drvdetail:{"name":"Null",
-	//drvdetail:"title":"TODO",
-	//drvdetail:"descr":"General input/output controls",
-	//drvdetail:"requires":""}
-	{ "Null",                                // Driver Name
-	NULL,                                    // onEverySecond
-	NULL,                                    // appendHTML
-	NULL,                                    // runQuickTick
-	NULL,                                    // onChannelChanged
-	NULL,                                    // onHassDiscovery
-	NULL,                                    // frameworkRequest
-	false,                                   // loaded
-	},
 	//drvdetail:{"name":"Output",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"General input/output controls",
@@ -366,22 +391,6 @@ static driver_t g_drivers[] = {
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	false,                                   // loaded
-	},
-#endif
-#if ENABLE_NTP
-	//drvdetail:{"name":"NTP",
-	//drvdetail:"title":"TODO",
-	//drvdetail:"descr":"NTP driver is required to get current time and date from web. Without it, there is no correct datetime. Put 'startDriver NTP' in short startup line or autoexec.bat to run it on start.",
-	//drvdetail:"requires":""}
-	{ "NTP",                                 // Driver Name
-	NTP_Init,                                // Init
-	NTP_OnEverySecond,                       // onEverySecond
-	NTP_AppendInformationToHTTPIndexPage,    // appendHTML
-	NULL,                                    // runQuickTick
-   	NTP_Stop,                                // stopFunction
-   	NULL,                                    // onChannelChanged
-   	NULL,                                    // onHassDiscovery
-   	false,                                   // loaded
 	},
 #endif
 #if ENABLE_DRIVER_DS3231
@@ -1433,7 +1442,6 @@ static driver_t g_drivers[] = {
 	//{ "", NULL, NULL, NULL, NULL, NULL, NULL, NULL, false },
 };
 
-
 static const int g_numDrivers = sizeof(g_drivers) / sizeof(g_drivers[0]);
 
 bool DRV_IsRunning(const char* name) {
@@ -1476,10 +1484,6 @@ void DRV_OnEverySecond() {
 			}
 		}
 	}
-#if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
-	// unconditionally run TIME unless explicitly disabled
-	TIME_OnEverySecond();
-#endif
 	DRV_Mutex_Free();
 }
 void DRV_RunQuickTick() {
@@ -1604,16 +1608,135 @@ void DRV_Generic_Init() {
 			g_drivers[driverIndex].frameworkRequest(OBKF_PinRoles, driverIndex);
 		}
 	}
-#if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
-	// init TIME unconditionally on start unless explicitly disabled
-	TIME_Init();
-#endif
+}
+
+void SVC_onEverySecond() {
+	if (DRV_Mutex_Take(100) == false)
+		return;
+
+	for (int i = 0; i < g_numServices; i++) {
+		if (g_services[i].bLoaded) {
+			if (g_services[i].onEverySecond != 0) {
+				g_services[i].onEverySecond();
+			}
+		}
+	}
+	DRV_Mutex_Free();
+}
+
+void SVC_runQuickTick() {
+	if (DRV_Mutex_Take(0) == false)
+		return;
+	for (int i = 0; i < g_numServices; i++) {
+		if (g_services[i].bLoaded && g_services[i].runQuickTick)
+			g_services[i].runQuickTick();
+	}
+	DRV_Mutex_Free();
+}
+
+void SVC_StopDriver(const char* name) {
+	if (DRV_Mutex_Take(100) == false)
+		return;
+
+	for (int i = 0; i < g_numServices; i++) {
+		if (*name == '*' || !stricmp(g_services[i].name, name)) {
+			if (g_services[i].bLoaded) {
+				if (g_services[i].frameworkRequest) {
+					g_services[i].frameworkRequest(OBKF_Stop, 0);
+				}
+				g_services[i].bLoaded = false;
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "Service %s stopped.", g_services[i].name);
+			}
+			else {
+				if (*name != '*') {
+					ADDLOG_INFO(LOG_FEATURE_MAIN, "Service %s not running.", name);
+				}
+			}
+		}
+	}
+	DRV_Mutex_Free();
+}
+
+void SVC_StartDriver(const char* name) {
+	if (DRV_Mutex_Take(100) == false)
+		return;
+
+	for (int i = 0; i < g_numServices; i++) {
+		if (!stricmp(g_services[i].name, name)) {
+			if (g_services[i].bLoaded) {
+				ADDLOG_WARN(LOG_FEATURE_MAIN, "Service %s - Already loaded", name);
+			} else {
+				if (g_services[i].frameworkRequest) {
+					g_services[i].bLoaded = g_services[i].frameworkRequest(OBKF_Init, 0);
+				} else {
+					g_services[i].bLoaded = true;
+				}
+				ADDLOG_INFO(LOG_FEATURE_MAIN, "%s - %s", name, g_services[i].bLoaded ? "Started" : "Failed");
+			}
+			break;
+		}
+	}
+	DRV_Mutex_Free();
+}
+
+static commandResult_t SVC_Start(const void* context, const char* cmd, const char* args, int cmdFlags) {
+	Tokenizer_TokenizeString(args, 0);
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1)) {
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+	SVC_StartDriver(Tokenizer_GetArg(0));
+	return CMD_RES_OK;
+}
+
+static commandResult_t SVC_Stop(const void* context, const char* cmd, const char* args, int cmdFlags) {
+	Tokenizer_TokenizeString(args, 0);
+
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1)) {
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+
+	SVC_StopDriver(Tokenizer_GetArg(0));
+	return CMD_RES_OK;
+}
+
+void SVC_Generic_Init() {
+	//cmddetail:{"name":"startService","args":"[DriverName]",
+	//cmddetail:"descr":"Starts driver",
+	//cmddetail:"fn":"DRV_Start","file":"driver/drv_main.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("startService", SVC_Start, NULL);
+	//cmddetail:{"name":"stopDriver","args":"[DriverName]",
+	//cmddetail:"descr":"Stops driver",
+	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("stopService", SVC_Stop, NULL);
+}
+
+void SVC_Autostart() {
+	if (!DRV_Mutex_Take(100)) 
+		return;
+	for (uint32_t serviceIndex = 0; serviceIndex < g_numServices; serviceIndex++) {
+		if (!g_services[serviceIndex].bLoaded) {
+			g_services[serviceIndex].bLoaded = true;
+			if (g_services[serviceIndex].frameworkRequest)
+				g_services[serviceIndex].frameworkRequest(OBKF_Init, serviceIndex);
+		}
+	}
+	DRV_Mutex_Free();
 }
 
 uint32_t DRV_SendRequest(uint32_t driverIndex, uint32_t OBKFRequest, uint32_t arg) {
 	if (g_drivers[driverIndex].frameworkRequest)
 		return g_drivers[driverIndex].frameworkRequest(OBKFRequest, arg);
+	return 0;
 }
+
 // interate through registered pins and autostart any drivers associated
 // with the pin
 void DRV_Autostart() {
@@ -1658,9 +1781,6 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-#if !defined(OBK_DISABLE_ALL_DRIVERS) && ENABLE_DRIVER_DEVICECLOCK
-	TIME_AppendInformationToHTTPIndexPage(request, bPreState);
-#endif
 	for (i = 0; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			c_active++;
@@ -1691,5 +1811,42 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 			hprintf255(request, ")");
 		}
 		hprintf255(request, ", total: %i</h5>", g_numDrivers);
+	}
+}
+
+void SVC_appendHTML(http_request_t* request, int bPreState) {
+	int c_active = 0;
+
+	if (DRV_Mutex_Take(100) == false) {
+		return;
+	}
+	for (int i = 0; i < g_numServices; i++) {
+		if (g_services[i].bLoaded) {
+			c_active++;
+			if (g_services[i].appendHTML) {
+				g_services[i].appendHTML(request, bPreState);
+			}
+		}
+	}
+	DRV_Mutex_Free();
+
+	if (bPreState == false) {
+		hprintf255(request, "<h5>%i services active", c_active);
+		if (c_active > 0) {
+			// generate active drivers list in (  )
+			bool isFirst = false;
+			for (int i = 0; i < g_numServices; i++) {
+				if (g_services[i].bLoaded) {
+					if (isFirst == false) {
+						isFirst = true;
+						hprintf255(request, " (%s", g_services[i].name);
+					} else {
+						hprintf255(request, ", %s", g_services[i].name);
+					}
+				}
+			}
+			hprintf255(request, ")");
+		}
+		hprintf255(request, ", total: %i</h5>", g_numServices);
 	}
 }

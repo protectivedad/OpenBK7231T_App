@@ -24,10 +24,10 @@ https://developer.tuya.com/en/docs/iot/tuyacloudlowpoweruniversalserialaccesspro
 #include "../hal/hal_wifi.h"
 #include "../mqtt/new_mqtt.h"
 #include "drv_uart.h"
-#include "drv_public.h"
 #include <time.h>
-#include "drv_deviceclock.h"
 #include "../rgb2hsv.h"
+#include "drv_local.h"
+#include "drv_public.h"
 
 #define LOG_FEATURE LOG_FEATURE_TUYAMCU
 

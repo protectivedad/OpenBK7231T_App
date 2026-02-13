@@ -5,23 +5,6 @@
 
 #define test12321321  321321321
 
-typedef enum obkFramework_e {
-	// no arg, return false if failed
-	OBKF_Init,
-	// no arg, no return
-	OBKF_Stop,
-	// accepts: driver index, no return
-	OBKF_PinRoles,
-	// accepts: pin index, returns false if pin not found
-	OBKF_AcquirePin,
-	// accepts: pin index
-	OBKF_ReleasePin,
-	// accepts: pin role, returns number of channels
-	OBKF_NoOfChannels,
-	// accepts: pin role, returns true to publish
-	OBKF_ShouldPublish
-} obkFramework_t;
-
 typedef enum ioRole_e {
 	//iodetail:{"name":"None",
 	//iodetail:"title":"TODO",

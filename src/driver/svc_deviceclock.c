@@ -12,12 +12,13 @@
 #include "../httpserver/new_http.h"
 #include "../logging/logging.h"
 
-#include "drv_deviceclock.h"
+#include "drv_local.h"
+#include "drv_public.h"
+#include "svc_deviceclock.h"
 #include "../libraries/obktime/obktime.h"
 // functions for handling device time even without NTP driver present
 // using "g_epochOnStartup" and "g_UTCoffset" if NTP not present (or not synced)
 
-#include "drv_ntp.h"
 #include <stdbool.h>
 
 
@@ -467,7 +468,7 @@ int Time_IsDST(){
 #endif
 
 
-void TIME_Init() {
+void TIME_init() {
 
 #if ENABLE_TIME_SUNRISE_SUNSET
 	//cmddetail:{"name":"time_setLatLong","args":"[Latlong]",
@@ -513,9 +514,7 @@ void TIME_Init() {
     ADDLOG_INFO(LOG_FEATURE_NTP, "CLOCK driver initialized.");
 }
 
-void TIME_OnEverySecond()
-{
-
+void TIME_onEverySecond() {
 #if ENABLE_CALENDAR_EVENTS
 	TIME_RunEvents(TIME_GetCurrentTime(), TIME_IsTimeSynced());
 #endif
@@ -531,7 +530,7 @@ void TIME_OnEverySecond()
 }
 
 
-uint32_t TIME_GetCurrentTime(){ 			// replacement for NTP_GetCurrentTime() to return time regardless of NTP present/running
+uint32_t TIME_GetCurrentTime(){
 // if we use "LOCAL_CLOCK", NTP will set this clock if enabled, so no further check needed
 uint32_t temp=0;
 	if (g_epochOnStartup > 10) {
@@ -575,7 +574,8 @@ int TIME_GetTimesZoneOfsSeconds()			// ... and for NTP_GetTimesZoneOfsSeconds()
 	}	// no "else" needed, will return 0 anyway if we don't return here
 	return 0;
 }
-void TIME_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState)
+
+void TIME_appendHTML(http_request_t *request, int bPreState)
 {
 	if (bPreState)
 		return;
@@ -602,6 +602,26 @@ void TIME_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreStat
 #endif
 	);
 }
+
+
+// framework request function
+uint32_t TIME_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
+	switch (obkfRequest) {
+	case OBKF_Stop:
+		g_epochOnStartup = 0;
+		break;
+		
+	case OBKF_Init:
+		TIME_init();
+		break;
+
+	default:
+		break;
+	}
+
+	return true;
+}
+
 #else
 uint32_t TIME_GetCurrentTime() {
 	return g_secondsElapsed;

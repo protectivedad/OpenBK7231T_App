@@ -11,7 +11,6 @@
 #include "../logging/logging.h"
 #include "../hal/hal_pins.h"
 #include "../httpserver/new_http.h"
-#include "drv_ntp.h"
 
 /*
 startDriver widget

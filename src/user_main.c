@@ -12,8 +12,6 @@
 #include "driver/drv_public.h"
 //#include "ir/ir_local.h"
 
-#include "driver/drv_deviceclock.h"
-
 // Commands register, execution API and cmd tokenizer
 #include "cmnds/cmd_public.h"
 
@@ -36,7 +34,6 @@
 #endif
 
 
-#include "driver/drv_ntp.h"
 #include "driver/drv_ssdp.h"
 #include "driver/drv_uart.h"
 
@@ -788,6 +785,7 @@ void Main_OnEverySecond()
 	MQTT_Dedup_Tick();
 #endif
 #ifndef OBK_DISABLE_ALL_DRIVERS
+	SVC_onEverySecond();
 	DRV_OnEverySecond();
 #if defined(PLATFORM_BEKEN) || defined(WINDOWS) || defined(PLATFORM_BL602) || defined(PLATFORM_ESPIDF) \
  || defined (PLATFORM_RTL87X0C) || PLATFORM_ESP8266
@@ -1150,6 +1148,7 @@ void QuickTick(void* param)
 	RepeatingEvents_RunUpdate(g_deltaTimeMS * 0.001f);
 #endif
 #ifndef OBK_DISABLE_ALL_DRIVERS
+	SVC_runQuickTick();
 	DRV_RunQuickTick();
 #endif
 #ifdef WINDOWS
@@ -1276,6 +1275,7 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 	g_unsafeInitDone = true;
 #ifndef OBK_DISABLE_ALL_DRIVERS
+	SVC_Generic_Init();
 	DRV_Generic_Init();
 #endif
 #ifdef PLATFORM_BEKEN
@@ -1343,6 +1343,7 @@ void Main_Init_BeforeDelay_Unsafe(bool bAutoRunScripts) {
 #ifndef OBK_DISABLE_ALL_DRIVERS
 		if (!CFG_HasFlag(OBK_FLAG_DRV_DISABLE_AUTOSTART)) {
 			// autostart drivers
+			SVC_Autostart();
 			DRV_Autostart();
 		}
 #endif

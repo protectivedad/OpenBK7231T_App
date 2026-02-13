@@ -11,8 +11,6 @@
 #include "../mqtt/new_mqtt.h"
 #include "../hal/hal_ota.h"
 #include "drv_local.h"
-#include "drv_ntp.h"
-#include "drv_deviceclock.h"
 #include "drv_public.h"
 #include "drv_uart.h"
 #include "../cmnds/cmd_public.h" //for enum EventCode

@@ -8,15 +8,16 @@
 #if ENABLE_NTP
 //#include <time.h>
 
+#include "drv_local.h"
+#include "drv_public.h"
 #include "../new_cfg.h"
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
 #include "../httpserver/new_http.h"
 #include "../logging/logging.h"
 #include "../hal/hal_ota.h"
-#include "drv_deviceclock.h"	// for TIME_Init()
 #include "../libraries/obktime/obktime.h"	// for time functions
-#include "drv_ntp.h"
+#include "svc_ntp.h"
 
 #define LOG_FEATURE LOG_FEATURE_NTP
 
@@ -66,7 +67,7 @@ static bool g_synced = false;
 //#define CFG_DEFAULT_TIMEOFFSETSECONDS (-8 * 60 * 60)
 static int g_timeOffsetSeconds = 0;
 // current time - this may be 32 or 64 bit, depending on platform
-// don't use as global variable, use functions to access and manipulate "clock" in "drv_deviceclock.c"
+// don't use as global variable, use functions to access and manipulate "clock" in "svc_deviceclock.c"
 time_t g_ntpTime;
 static unsigned int g_ntp_syncinterval=60;
 
@@ -131,11 +132,6 @@ void NTP_Init() {
 #if WINDOWS
 	b_ntp_simulatedTime = false;
 #endif
-	//cmddetail:{"name":"ntp_timeZoneOfs","args":"[Value]",
-	//cmddetail:"descr":"Sets the time zone offset in hours. Also supports HH:MM syntax if you want to specify value in minutes. For negative values, use -HH:MM syntax, for example -5:30 will shift time by 5 hours and 30 minutes negative.",
-	//cmddetail:"fn":"SetTimeZoneOfs","file":"driver/drv_ntp.c","requires":"",
-	//cmddetail:"examples":""}
-    CMD_RegisterCommand("ntp_timeZoneOfs",SetTimeZoneOfs, NULL);
 	//cmddetail:{"name":"ntp_setServer","args":"[ServerIP]",
 	//cmddetail:"descr":"Sets the NTP server",
 	//cmddetail:"fn":"NTP_SetServer","file":"driver/drv_ntp.c","requires":"",
@@ -158,16 +154,6 @@ void NTP_Stop() {
     ADDLOG_INFO(LOG_FEATURE_NTP, "NTP driver stopped");
     g_synced = false;
 }
-
-// just for compatibility 
-unsigned int NTP_GetCurrentTime() {
-    return TIME_GetCurrentTime();
-}
-unsigned int NTP_GetCurrentTimeWithoutOffset() {
-	return TIME_GetCurrentTimeWithoutOffset();
-}
-
-
 
 void NTP_Shutdown() {
     if(g_ntp_socket != 0) {
@@ -265,12 +251,7 @@ void NTP_CheckForReceive() {
 
     // Receive the server's response:
     i = sizeof(packet);
-#if 0
-    recv_len = recvfrom(g_ntp_socket, ptr, i, 0,
-         (struct sockaddr*)&g_address, &adrLen);
-#else
     recv_len = recv(g_ntp_socket, ptr, i, 0);
-#endif
 
     if(recv_len < 0){
 			ADDLOG_INFO(LOG_FEATURE_NTP,"NTP_CheckForReceive: Error while receiving server's msg");
@@ -284,35 +265,11 @@ void NTP_CheckForReceive() {
 	ADDLOGF_TIMING("%i - %s - Seconds since Jan 1 1900 = %u", xTaskGetTickCount(), __func__, secsSince1900);
     ADDLOG_INFO(LOG_FEATURE_NTP,"Seconds since Jan 1 1900 = %u",secsSince1900);
 
-/*
-    g_ntpTime = secsSince1900 - NTP_OFFSET;
-    g_ntpTime += g_timeOffsetSeconds;
-*/
-   TIME_setDeviceTime((uint32_t) (secsSince1900 - NTP_OFFSET) );
-//    g_ntpTime=(time_t)TIME_GetCurrentTime();
-    ADDLOG_INFO(LOG_FEATURE_NTP,"Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
-//    ltm = gmtime(&g_ntpTime);
-//    ADDLOG_INFO(LOG_FEATURE_NTP, LTSTR, LTM2TIME(ltm));
-
-	if (g_synced == false) {
+   	TIME_setDeviceTime((uint32_t) (secsSince1900 - NTP_OFFSET) );
+   	ADDLOG_INFO(LOG_FEATURE_NTP,"Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
+	if (g_synced == false)
 		EventHandlers_FireEvent(CMD_EVENT_NTP_STATE, 1);
-		// so now clock is synced. If it wasn't set before, start "TIME_Init()" for timed events
-		// done in CMD_Init_Delayed()  in cmd_main.c
-//		if (! TIME_IsTimeSynced() ) TIME_Init();
-	}
     g_synced = true;
-#if 0
-    //ptm = gmtime (&g_ntpTime);
-    ptm = gmtime(&g_ntpTime);
-    if(ptm == 0) {
-        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime somehow returned 0\n");
-    } else {
-        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_year: %i\n",ptm->tm_year);
-        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_mon: %i\n",ptm->tm_mon);
-        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_mday: %i\n",ptm->tm_mday);
-        ADDLOG_INFO(LOG_FEATURE_NTP,"gmtime => tm_hour: %i\n",ptm->tm_hour  );
-    }
-#endif
     NTP_Shutdown();
 
 }
@@ -324,22 +281,17 @@ void NTP_SendRequest_BlockingMode() {
 
 }
 
-void NTP_OnEverySecond()
+void NTP_onEverySecond()
 {
-
     if(Main_HasWiFiConnected()==0)
-    {
         return;
-    }
 #if WINDOWS
 	if (b_ntp_simulatedTime) {
 		return;
 	}
 #endif
     if (OTA_GetProgress() != -1)
-    {
         return;
-    }
     if(g_ntp_socket == 0) {
         // if no socket, this is a reconnect delay
         if(g_ntp_delay > 0) {
@@ -360,7 +312,7 @@ void NTP_OnEverySecond()
     }
 }
 
-void NTP_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState)
+void NTP_appendHTML(http_request_t* request, int bPreState)
 {
 	if (bPreState)
 		return;
@@ -383,6 +335,24 @@ void NTP_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 bool NTP_IsTimeSynced()
 {
     return g_synced;
+}
+
+// framework request function
+uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
+	switch (obkfRequest) {
+	case OBKF_Stop:
+		NTP_Stop();
+		break;
+		
+	case OBKF_Init:
+		NTP_Init();
+		break;
+
+	default:
+		break;
+	}
+
+	return true;
 }
 
 #else

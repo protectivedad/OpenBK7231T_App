@@ -1,7 +1,6 @@
 #ifdef WINDOWS
 
 #include "selftest_local.h"
-#include "../driver/drv_ntp.h"
 
 int Simulator_GetNoChangeTimePassed();
 int Simulator_GetDoorSennsorAutomaticWakeUpAfterSleepTime();

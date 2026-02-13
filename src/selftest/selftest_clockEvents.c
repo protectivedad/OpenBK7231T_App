@@ -1,7 +1,6 @@
 #ifdef WINDOWS
 
 #include "selftest_local.h"
-#include "../driver/drv_ntp.h"
 
 static void ResetEventsAndChannels(int eventsCleared) {
 	SELFTEST_ASSERT(TIME_ClearEvents() == eventsCleared);
