@@ -2642,9 +2642,9 @@ int http_fn_cfg_pins(http_request_t* request) {
 		// print array with ["name_of_role",<Number of channnels for this role>]
 		// add space in front of roles with an included driver for sorting
 		if (PIN_getDriverForRole(i))
-			hprintf255(request, ",[\" %s\",%i]", htmlPinRoleNames[i],PIN_IOR_NofChan(i));
+			hprintf255(request, ",[\" %s\",%i]", pinRoleNames[i],PIN_IOR_NofChan(i));
 		else
-			hprintf255(request, ",[\"!%s\",%i]", htmlPinRoleNames[i],PIN_IOR_NofChan(i));
+			hprintf255(request, ",[\"!%s\",%i]", pinRoleNames[i],PIN_IOR_NofChan(i));
 	}
 	poststr(request, "];");
 

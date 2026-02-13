@@ -483,7 +483,7 @@ int PIN_ParsePinRoleName(const char* name) {
 	}
 
 	for (i = 0; i < IOR_Total_Options; i++) {
-		if (!stricmp(name, htmlPinRoleNames[i]))
+		if (!stricmp(name, pinRoleNames[i]))
 			return i;
 	}
 	return IOR_Total_Options;

@@ -19,8 +19,6 @@ extern const char htmlFooterReturnToMainPage[];
 extern const char htmlFooterRefreshLink[];
 extern const char htmlFooterReturnToCfgOrMainPage[];
 
-extern const char* htmlPinRoleNames[];
-
 extern const char* g_build_str;
 
 extern const char htmlHeadStyle[];

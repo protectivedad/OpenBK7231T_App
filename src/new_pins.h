@@ -5,101 +5,7 @@
 
 #define test12321321  321321321
 
-const char* const pinRoleNames[] = {
-	" ",
-	"Relay",
-	"Relay_n",
-	"Button",
-	"Button_n",
-	"LED",
-	"LED_n",
-	"PWM",
-	"WifiLED",
-	"WifiLED_n",
-	"Btn_Tgl_All",
-	"Btn_Tgl_All_n",
-	"dInput",
-	"dInput_n",
-	"TglChanOnTgl",
-	"dInput_NoPullUp",
-	"dInput_NoPullUp_n",
-	"BL0937SEL",
-	"BL0937CF",
-	"BL0937CF1",
-	"ADC",
-	"SM2135DAT",
-	"SM2135CLK",
-	"BP5758D_DAT",
-	"BP5758D_CLK",
-	"BP1658CJ_DAT",
-	"BP1658CJ_CLK",
-	"PWM_n",
-	"IRRecv",
-	"IRSend",
-	"Btn_NextColor",
-	"Btn_NextColor_n",
-	"Btn_NextDimmer",
-	"Btn_NextDimmer_n",
-	"AlwaysHigh",
-	"AlwaysLow",
-	"UCS1912_DIN",
-	"SM16703P_DIN",
-	"Btn_NextTemperature",
-	"Btn_NextTemperature_n",
-	"Btn_ScriptOnly",
-	"Btn_ScriptOnly_n",
-	"DHT11",
-	"DHT12",
-	"DHT21",
-	"DHT22",
-	"CHT83XX_SDA",
-	"CHT83XX_SCK",
-	"SHT3X_SDA",
-	"SHT3X_SCK",
-	"SoftSDA",
-	"SoftSCL",
-	"SM2235DAT",
-	"SM2235CLK",
-	"BridgeFWD",
-	"BridgeREV",
-	"Btn_SmartLED",
-	"Btn_SmartLED_n",
-	"DoorSensor",
-	"DoorSensor,nPup",
-	"Battery,ADC",
-	"Battery,Relay",
-	"TM1637_DIO",
-	"TM1637_CLK",
-	"BL0937SEL_n",
-	"DoorSensor,pd",
-	"SGP_CLK",
-	"SGP_DAT",
-	"ADC_Button",
-	"GN6932_CLK",
-	"GN6932_DAT",
-	"GN6932_STB",
-	"TM1638_CLK",
-	"TM1638_DAT",
-	"TM1638_STB",
-	"Battery,Relay_n",
-	"KP18058_CLK",
-	"KP18058_DAT",
-	"DS1820_IO",
-	"PWM_ScriptOnly",
-	"PWM_ScriptOnly_n",
-	"Counter_f",
-	"Counter_r",
-	"IRRecv_nPup",
-	"StripState",
-	"StripState_n",
-	"HLW_8112_SCSN",
-	"RCRecv",
-	"RCRecv_nPup",
-	"TuyaMCU,RX",
-	"TuyaMCU,TX",
-	"error",
-	"error",
-};
+extern const char* const pinRoleNames[];
 
 typedef enum ioRole_e {
 	//iodetail:{"name":"None",
@@ -756,6 +662,8 @@ typedef enum ioRole_e {
 #else
 #define IS_PIN_AIR_SENSOR_ROLE(role) (false)
 #endif
+
+extern const char* const g_channelTypeNames[];
 
 typedef enum channelType_e {
 	//chandetail:{"name":"Default",
@@ -1692,8 +1600,6 @@ const char* PIN_RoleToString(uint32_t role);
 // return number of channels used for a role
 // taken from code in http_fnc.c
 int PIN_IOR_NofChan(int test);
-
-extern const char* g_channelTypeNames[];
 
 // for drivers to register their use of a pin role
 uint32_t PIN_getDriverForRole(uint32_t pinRole);
