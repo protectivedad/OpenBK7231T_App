@@ -34,42 +34,28 @@ void Output_setWifiLED(bool newValue) {
 	if (!g_wifiPins || !g_enable_pins)
 		return;
 
-	uint32_t wifiPins = g_wifiPins;
-	for (uint32_t usedIndex = 0; wifiPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(wifiPins, pinIndex))
-			continue; // not my pin
-		
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_wifiPins, pinIndex,
 		HAL_PIN_SetOutputValue(pinIndex, (PIN_GetPinRoleForPinIndex(pinIndex) == IOR_LED_WIFI_n) ? !newValue : newValue);
-		BIT_CLEAR(wifiPins, pinIndex);
-	}
+	)
 }
 
 void Output_setLED(bool newValue) {
 	if (!g_enable_pins)
 		return;
 
-	uint32_t processPins = g_ledPins;
-	for (uint32_t usedIndex = 0; processPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(processPins, pinIndex))
-			continue; // not my pin
-		
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_ledPins, pinIndex,
 		HAL_PIN_SetOutputValue(pinIndex, (PIN_GetPinRoleForPinIndex(pinIndex) == IOR_LED_n) ? !newValue : newValue);
-		BIT_CLEAR(processPins, pinIndex);
-	}
+	)
 }
 
 static void LED_quickTick() {
 	if (!g_enable_pins)
 		return;
 
-	uint32_t processPins = g_wifiPins;
-	for (uint32_t usedIndex = 0; processPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(processPins, pinIndex))
-			continue; // not my pin
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_wifiPins, pinIndex,
 		static uint32_t wifiLedToggleTime = 0;
 		static bool wifi_ledState = false;
 
@@ -99,8 +85,7 @@ static void LED_quickTick() {
 				HAL_PIN_SetOutputValue(pinIndex, wifi_ledState);
 			}
 		}
-		BIT_CLEAR(processPins, pinIndex);
-	}
+	)
 }
 
 // basic output quick tick timer function
@@ -122,7 +107,7 @@ static bool Output_noOfChannels(int pinIORole) {
 		return true;
 
 	default:
-		break;
+		return false;
 	}
 }
 
@@ -244,16 +229,13 @@ void Output_onChanged(uint32_t channel, int32_t iVal) {
 	if (!g_enable_pins)
 		return;
 
-	uint32_t processPins = g_relayPins | g_ledPins;
-	for (uint32_t usedIndex = 0; processPins && usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(processPins, pinIndex))
-			continue; // not my pin
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_relayPins | g_ledPins, pinIndex,
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
 			continue; // channel not for pin
 
 		bool channelValue = (iVal > 0);
-		switch (pinIndex) {
+		switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 		case IOR_LED_n:
 		case IOR_Relay_n:
 			channelValue = !channelValue;
@@ -261,39 +243,27 @@ void Output_onChanged(uint32_t channel, int32_t iVal) {
 		case IOR_Relay:
 			HAL_PIN_SetOutputValue(pinIndex, channelValue);
 		}
-
-		BIT_CLEAR(processPins, pinIndex);
-	}
+	)
 }
 
 bool Output_isPowerRelay(uint32_t channel) {
-	uint32_t processPins = g_relayPins;
-	for (uint32_t usedIndex = 0; processPins && usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(processPins, pinIndex))
-			continue; // not my pin
-		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel) {
-			BIT_CLEAR(processPins, pinIndex);
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_relayPins, pinIndex,
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
 			continue; // channel not for pin
-		}
-		
+
 		return true;
-	}
+	)
 	return false;
 }
 
 bool Output_isRelay(uint32_t channel) {
-	uint32_t processPins = g_relayPins | g_ledPins;
-	for (uint32_t usedIndex = 0; processPins && usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(processPins, pinIndex))
-			continue; // not my pin
-		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel) {
-			BIT_CLEAR(processPins, pinIndex);
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_relayPins, pinIndex,
+		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
 			continue; // channel not for pin
-		}
 
 		return true;
-	}
+	)
 	return false;
 }

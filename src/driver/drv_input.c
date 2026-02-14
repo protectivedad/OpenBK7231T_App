@@ -247,13 +247,8 @@ void Input_quickTick() {
 	if (!g_driverPins || !g_enable_pins)
 		return;
 
-	uint32_t usedIndex;
-	uint32_t driverPins = g_driverPins;
-	for (usedIndex = 0; driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(driverPins, pinIndex))
-			continue; // not my pin
-
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
 		uint32_t pinRole = PIN_GetPinRoleForPinIndex(pinIndex);
 		bool pinValue = HAL_PIN_ReadDigitalInput(pinIndex);
 		switch (pinRole) {
@@ -294,9 +289,7 @@ void Input_quickTick() {
 			PIN_Input_Handler(pinIndex, pinRole, &g_buttons[pinIndex]);
 			break;
 		}
-		// clear processed pin and exit if no more left to process
-		BIT_CLEAR(driverPins, pinIndex);
-	}
+	)
 }
 
 static uint32_t Input_noOfChannels(uint32_t pinRole) {
@@ -375,12 +368,10 @@ static void Input_ReleasePin(uint32_t pinIndex) {
 }
 
 static void Input_StopDriver() {
-	for (uint32_t usedIndex = 0; g_driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(g_driverPins, pinIndex))
-			continue;
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
 		Input_ReleasePin(pinIndex);
-	}
+	)
 }
 
 static void Input_init() {
@@ -439,18 +430,15 @@ bool Input_isButton(uint32_t channelIndex) {
 	if (!g_driverPins)
 		return false;
 	
-	uint32_t driverPins = g_driverPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-	uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-	if (!BIT_CHECK(driverPins, pinIndex))
-		continue;
-	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
-	case IOR_Button:
-	case IOR_Button_n:
-		return true;
-	}
-	if (!BIT_CLEAR(driverPins, pinIndex))
-		break;
-	}
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
+		if (PIN_GetPinChannelForPinIndex(pinIndex) == channelIndex) {
+			switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
+			case IOR_Button:
+			case IOR_Button_n:
+				return true;
+			}
+		}
+	)
 	return false;
 }

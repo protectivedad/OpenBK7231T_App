@@ -588,7 +588,7 @@ void TuyaMCU_quickTick() {
 	uint32_t howMuchTheySaid;
 
 	// while they are saying something listen to what they said
-	while (howMuchTheySaid = TuyaMCU_listenToTuya())
+	while ((howMuchTheySaid = TuyaMCU_listenToTuya()))
 		TuyaMCU_tuyaSaidWhat(howMuchTheySaid);
 
 	if (!TuyaMCU_wifi_state)
@@ -712,12 +712,9 @@ uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 
 // lookup channel and determine is a TuyaMCU pin is assigned to it
 bool TuyaMCU_isTuyaMCU(uint32_t channelIndex) {
-	uint32_t driverPins = TuyaMCU_driverPins;
 
-	for (uint32_t usedIndex = 0; driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(driverPins, pinIndex))
-			continue; // not my pin
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(TuyaMCU_driverPins, pinIndex,
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channelIndex)
 			continue; // channel not assigned to pin
 		switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
@@ -725,8 +722,7 @@ bool TuyaMCU_isTuyaMCU(uint32_t channelIndex) {
 		case IOR_TuyaMCU_TX:
 			return true;
 		}
-		BIT_CLEAR(driverPins, pinIndex);
-	}
+	)
 	return false;
 }
 

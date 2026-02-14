@@ -42,8 +42,9 @@ void TIME_onEverySecond();
 
 uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void NTP_appendHTML(http_request_t* request, int bPreState);
-void NTP_onEverySecond();uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void NTP_onEverySecond();
 
+uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void TuyaMCU_quickTick();
 void TuyaMCU_appendHTML(http_request_t* request, int bPreState);
 void TuyaMCU_onEverySecond();

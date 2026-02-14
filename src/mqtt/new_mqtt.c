@@ -1189,7 +1189,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 static ip_addr_t mqtt_ip_resolved;
 static volatile int dns_in_progress_time;
 static volatile bool dns_resolved;
-void dnsFound(const char *name, ip_addr_t *ipaddr, void *arg) 
+void dnsFound(const char *name, const ip_addr_t *ipaddr, void *arg) 
 {       
 
 	if (NULL != ipaddr)
@@ -1221,7 +1221,6 @@ static int MQTT_do_connect(mqtt_client_t* client)
 	const char* mqtt_userName, * mqtt_host, * mqtt_pass, * mqtt_clientID;
 	int mqtt_port;
 	int res;
-	struct hostent* hostEntry;
 	char will_topic[CGF_MQTT_CLIENT_ID_SIZE + 16];
 	bool mqtt_use_tls, mqtt_verify_tls_cert;
 
@@ -1279,7 +1278,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 	mqtt_client_info.will_qos = 1;
 
 #ifdef WINDOWS
-	hostEntry = gethostbyname(mqtt_host);
+	struct hostent* hostEntry = gethostbyname(mqtt_host);
 	// host name/ip
 	if (NULL != hostEntry)
 	{
@@ -1549,7 +1548,6 @@ commandResult_t MQTT_PublishChannel(const void* context, const char* cmd, const 
 }
 commandResult_t MQTT_PublishCommand(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char* topic, * value;
-	OBK_Publish_Result ret;
 	int flags = 0;
 
 	Tokenizer_TokenizeString(args, TOKENIZER_ALLOW_QUOTES | TOKENIZER_ALLOW_ESCAPING_QUOTATIONS | TOKENIZER_EXPAND_EARLY);
@@ -1564,7 +1562,7 @@ commandResult_t MQTT_PublishCommand(const void* context, const char* cmd, const 
 	if (Tokenizer_GetArgIntegerDefault(2, 0) != 0) {
 		flags = OBK_PUBLISH_FLAG_RAW_TOPIC_NAME;
 	}
-	ret = MQTT_PublishMain_StringString(topic, value, flags);
+	MQTT_PublishMain_StringString(topic, value, flags);
 
 	return CMD_RES_OK;
 }
@@ -1577,7 +1575,6 @@ commandResult_t MQTT_PublishCommand(const void* context, const char* cmd, const 
 #if ENABLE_LITTLEFS
 commandResult_t MQTT_PublishFile(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char* topic, *fname;
-	OBK_Publish_Result ret;
 	int flags = 0;
 	byte*data;
 
@@ -1595,7 +1592,7 @@ commandResult_t MQTT_PublishFile(const void* context, const char* cmd, const cha
 	}
 	data = LFS_ReadFileExpanding(fname);
 	if (data) {
-		ret = MQTT_PublishMain_StringString(topic, (const char*)data, flags);
+		MQTT_PublishMain_StringString(topic, (const char*)data, flags);
 		free(data);
 	}
 
@@ -1607,7 +1604,6 @@ commandResult_t MQTT_PublishFile(const void* context, const char* cmd, const cha
 commandResult_t MQTT_PublishCommandInteger(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char* topic;
 	int value;
-	OBK_Publish_Result ret;
 	int flags = 0;
 
 	Tokenizer_TokenizeString(args, 0);
@@ -1622,7 +1618,7 @@ commandResult_t MQTT_PublishCommandInteger(const void* context, const char* cmd,
 	if (Tokenizer_GetArgIntegerDefault(2, 0) != 0) {
 		flags = OBK_PUBLISH_FLAG_RAW_TOPIC_NAME;
 	}
-	ret = MQTT_PublishMain_StringInt(topic, value, flags);
+	MQTT_PublishMain_StringInt(topic, value, flags);
 
 	return CMD_RES_OK;
 }
@@ -1632,7 +1628,6 @@ commandResult_t MQTT_PublishCommandInteger(const void* context, const char* cmd,
 commandResult_t MQTT_PublishCommandFloat(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char* topic;
 	float value;
-	OBK_Publish_Result ret;
 	int flags = 0;
 	int decimalPlaces;
 
@@ -1651,13 +1646,12 @@ commandResult_t MQTT_PublishCommandFloat(const void* context, const char* cmd, c
 	}
 	// optional fourth argument to set rounding
 	decimalPlaces = Tokenizer_GetArgIntegerDefault(3, -1);
-	ret = MQTT_PublishMain_StringFloat(topic, value, decimalPlaces, flags);
+	MQTT_PublishMain_StringFloat(topic, value, decimalPlaces, flags);
 
 	return CMD_RES_OK;
 }
 commandResult_t MQTT_PublishCommandDriver(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	const char* driver;
-	OBK_Publish_Result ret;
 
 	Tokenizer_TokenizeString(args, 0);
 
@@ -1666,7 +1660,7 @@ commandResult_t MQTT_PublishCommandDriver(const void* context, const char* cmd, 
 
 	char full[32];
 	sprintf(full,"driver/%s", driver);
-	ret = MQTT_PublishMain_StringInt(full, bOn, OBK_PUBLISH_FLAG_FORCE_REMOVE_GET);
+	MQTT_PublishMain_StringInt(full, bOn, OBK_PUBLISH_FLAG_FORCE_REMOVE_GET);
 
 	return CMD_RES_OK;
 }

@@ -1519,6 +1519,21 @@ extern char g_enable_pins;
 #define CHANNEL_SET_FLAG_SKIP_MQTT	2
 #define CHANNEL_SET_FLAG_SILENT		4
 
+// helper macro iterates through pins in a set and executes code for each pin
+// mypinindex is the variable name for the pin index that will be set in each
+// iteration, mycode is the code to execute for each pin, and mypins is the
+// set of pins to process (e.g. g_wifiPins)
+// processPins and usedIndex are reserved variable names used internally by the macro
+#define PINS_PROCESS_WITH_CODE(mypins, mypinindex, mycode) \
+	uint32_t processPins = (mypins); \
+	for (uint32_t usedIndex = 0; processPins && usedIndex < g_registeredPinCount; usedIndex++) { \
+		(mypinindex) = PIN_registeredPinIndex(usedIndex); \
+		if (!BIT_CHECK(processPins, mypinindex)) \
+			continue; \
+		BIT_CLEAR(processPins, mypinindex); \
+		{ mycode } \
+	}
+
 void PIN_ticks(void* param);
 
 #if ENABLE_DEEPSLEEP

@@ -64,14 +64,10 @@ static void Template_releasePin(uint32_t pinIndex) {
 }
 
 static void Template_stopDriver() {
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(g_driverPins, pinIndex))
-			continue;
-		// do something if required
-		if (!BIT_CLEAR(g_driverPins, pinIndex))
-			break;
-	}
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex, 
+		// TODO: add code to stop pin, e.g. set low, disable pullup, etc.;
+	)
 }
 
 static bool Template_shouldPublish(uint32_t pinRole) {
@@ -132,12 +128,9 @@ uint32_t Template_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 
 // lookup channel and determine is a Template pin is assigned to it
 bool Template_isTemplate(uint32_t channelIndex) {
-	uint32_t driverPins = g_driverPins;
 
-	for (uint32_t usedIndex = 0; driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(driverPins, pinIndex))
-			continue; // not my pin
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex, 
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channelIndex)
 			continue; // channel not assigned to pin
 		switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
@@ -145,7 +138,6 @@ bool Template_isTemplate(uint32_t channelIndex) {
 		case IOR_Template_n:
 			return true;
 		}
-		BIT_CLEAR(driverPins, pinIndex);
-	}
+	)
 	return false;
 }

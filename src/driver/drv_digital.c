@@ -65,11 +65,8 @@ void Digital_setEdges() {
 	if (!g_driverPins)
 		return;
 
-	uint32_t driverPins = g_driverPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(driverPins, pinIndex))
-			continue; // not my pin
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
 		uint32_t pinRole = PIN_GetPinRoleForPinIndex(pinIndex);
 		bool falling = false;
 		switch (pinRole) {
@@ -104,9 +101,7 @@ void Digital_setEdges() {
 // #else
 		PIN_setGPIActive(pinIndex, 1, falling, falling);
 // #endif
-		if (!BIT_CLEAR(driverPins, pinIndex))
-			break;
-	}
+	)
 }
 
 commandResult_t CMD_Digital_setEdge(const void* context, const char* cmd, const char* args, int cmdFlags) {
@@ -136,11 +131,8 @@ void Digital_quickTick() {
 	if (!g_driverPins)
 		return;
 
-	uint32_t driverPins = g_driverPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(driverPins, pinIndex))
-			continue; // not my pin
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
 		static uint32_t g_times[PLATFORM_GPIO_MAX];
 		static uint32_t g_times2[PLATFORM_GPIO_MAX];
 
@@ -223,10 +215,7 @@ void Digital_quickTick() {
 			break;
 			}
 		}
-		// clear processed pin and exit if no more left to process
-		if (!BIT_CLEAR(driverPins, pinIndex))
-			break;
-	}
+	)
 }
 
 uint32_t Digital_digitalCount() {
@@ -286,13 +275,11 @@ static void Digital_stopDriver() {
 	g_digitalCount = 0;
 	g_dynamicWakeEdge = 0xFFFFFFFF;
 	g_defaultWakeEdge = 0x00000000;
-	for (uint32_t usedIndex = 0; g_driverPins && (usedIndex < g_registeredPinCount); usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(g_driverPins, pinIndex))
-			continue;
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
 		PIN_setGPIActive(pinIndex, 0, 0, 0);
 		BIT_CLEAR(g_driverPins, pinIndex);
-	}
+	)
 }
 
 static void Digital_init() {
@@ -348,11 +335,8 @@ bool Digital_isDigital(uint32_t channelIndex) {
 	if (!g_driverPins)
 		return false;
 
-	uint32_t driverPins = g_driverPins;
-	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		uint32_t pinIndex = PIN_registeredPinIndex(usedIndex);
-		if (!BIT_CHECK(g_driverPins, pinIndex))
-			continue;
+	uint32_t pinIndex;
+	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex, 
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channelIndex)
 			continue;
 		switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
@@ -362,8 +346,7 @@ bool Digital_isDigital(uint32_t channelIndex) {
 		case IOR_DigitalInput_NoPup:
 			return true;
 		}
-		BIT_CLEAR(driverPins, pinIndex);
-	}
+	)
 	return false;
 }
 #else

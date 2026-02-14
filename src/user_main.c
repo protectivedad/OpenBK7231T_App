@@ -1125,7 +1125,7 @@ void QuickTick(void* param)
 	g_last_time = g_timeMs;
 
 	// do FastConnect daisy chaining
-	if (Main_HasFastConnect() && Main_bRunMQTTFastConnect) {
+	if (Main_bRunMQTTFastConnect) {
 		Main_bRunMQTTFastConnect = false;
 		MQTT_FastConnect();
 	}

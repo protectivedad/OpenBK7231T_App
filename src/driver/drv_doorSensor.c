@@ -33,14 +33,14 @@ uint32_t g_noChangeTimePassed; // time without change. Every event of the doorse
 uint32_t g_emergencyTimeWithNoConnection; // time without connection to MQTT. Extends the interval till Deep Sleep until connection is established or EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT
 
 int32_t  ds_registeredPin = -1; // pin found on initialization
-uint32_t setting_automaticWakeUpAfterSleepTime = 0;
+uint32_t setting_automaticWakeUpAfterSleepTime;
 uint32_t setting_timeRequiredUntilDeepSleep = 60;
 uint32_t g_driverIndex;
 
 // this is the invert of the initial state of the pin on wake
 uint32_t ds_defaultWakeEdge = 2;
 uint32_t ds_defaultFloating = 2;
-bool ds_lastPinState = false;
+bool ds_lastPinState;
 
 #define EMERGENCY_TIME_TO_SLEEP_WITHOUT_MQTT 60 * 5
 
