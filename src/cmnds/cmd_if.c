@@ -1,13 +1,13 @@
 #include "../obk_config.h"
 #include "../new_common.h"
 #include "cmd_local.h"
+#include "../new_cfg.h"
 
 #if ENABLE_OBK_IF
 
 #include "../httpserver/new_http.h"
 #include "../logging/logging.h"
 #include "../new_pins.h"
-#include "../new_cfg.h"
 #include "../driver/drv_public.h"
 #include "../hal/hal_flashVars.h"
 #include <ctype.h> // isspace

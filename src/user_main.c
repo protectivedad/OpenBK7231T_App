@@ -85,12 +85,6 @@ int g_prevTimeSinceLastPingReply = -1;
 int g_timeSinceLastPingReply = -1;
 // do not run pins or anything risky
 bool bSafeMode;
-// not really <time>, but rather a loop count, but it doesn't really matter much
-// start disabled.
-char g_wifi_bssid[33] = { "30:B5:C2:5D:70:72" };
-uint8_t g_wifi_channel = 12;
-// was it ran?
-static int g_bPingWatchDogStarted = 0;
 // current IP string, this is compared with IP returned from HAL
 // and if it changes, the MQTT publish is done
 static char g_currentIPString[32] = { 0 };
@@ -703,13 +697,16 @@ float g_wifi_temperature = 0;
 // run periodically to check if boot conditions have changed to allow
 // things to happen
 void Main_periodicTasks() {
+	static bool safeToUpdate;
 	HAL_PrintNetworkInfo();
-	if (Battery_safeToUpdate()) {
+	if (!safeToUpdate && Battery_safeToUpdate()) {
+		safeToUpdate = true;
 		ADDLOGF_INFO("Enabling flash writes");
 		HAL_saveEnhancedFastConnect();
 		HAL_FlashVars_SaveBootComplete();
 		CFG_SafeToWrite(true);
-	} else {
+	} else if (safeToUpdate && !Battery_safeToUpdate()) {
+		safeToUpdate = false;
 		ADDLOGF_INFO("Disabling flash writes");
 		CFG_SafeToWrite(false);
 	}
@@ -724,7 +721,12 @@ void Main_OnEverySecond()
 #if ! ( WINDOWS || PLATFORM_TXW81X  || PLATFORM_RDA5981) 
 	TimeOut_t myTimeout;	// to get uptime from xTicks - not working on WINDOWS and TXW81X and RDA5981
 #endif
-	const char* safe;
+	static const char* safe;
+	if (bSafeMode)
+		safe = "[SAFE] ";
+	else
+		safe = "";
+
 	int i;
 
 #ifdef WINDOWS
@@ -907,12 +909,6 @@ void Main_OnEverySecond()
 	vTaskSetTimeOutState( &myTimeout );
 	g_secondsElapsed = (int)((((uint64_t) myTimeout.xOverflowCount << (sizeof(portTickType)*8) | myTimeout.xTimeOnEntering)*portTICK_RATE_MS ) / 1000 );
 #endif
-	if (bSafeMode) {
-		safe = "[SAFE] ";
-	}
-	else {
-		safe = "";
-	}
 
 #ifndef ENABLE_QUIET_MODE
 	{
@@ -962,10 +958,7 @@ void Main_OnEverySecond()
 		int bootCompleteSeconds = CFG_GetBootOkSeconds();
 		if (g_secondsElapsed > bootCompleteSeconds)
 		{
-			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n", bootCompleteSeconds);
-			HAL_GetWiFiBSSID(g_wifi_bssid);
-			HAL_GetWiFiChannel(g_wifi_channel);
-
+			ADDLOGF_INFO("%s - Boot complete time reached (%i seconds)\n", safe, bootCompleteSeconds);
 			Main_periodicTasks();
 			g_bBootMarkedOK = true;
 		}

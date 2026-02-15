@@ -90,9 +90,8 @@ void OBK_timer_cb(void *a, uint32_t cmd){
 // NOTE: defer to a DIFFERENT function in timer thread, 
 // else **** we can't set the timer from within itself... ****
 void OBK_TriggerButtonPoll(){
-  OSStatus err;
   // note the 100 is ms to wait if timer queue full, NOT delay to function call.
-  err = OBK_rtos_callback_in_timer_thread( OBK_timer_cb, NULL, OBK_DEFER_BUTTON_POLL, 100);
+  OBK_rtos_callback_in_timer_thread( OBK_timer_cb, NULL, OBK_DEFER_BUTTON_POLL, 100);
 }
 
 
@@ -126,7 +125,6 @@ void process_quick_oneshot_timer(void *a, void*b){
 // NOTE: this one RESETS the timer if the timer is pending.
 // so many calls will result in delayed firing.
 void trigger_oneshot(uint32_t type){
-  OSStatus err;
   // note that we want (type) to be processed
   g_timer_triggers |= type;
   // will start or reset the oneshot timer.
@@ -134,16 +132,15 @@ void trigger_oneshot(uint32_t type){
   // if two calls are made before the timer fires, it will fire ONCE
   // 1ms after the last call....
   // the timer calls process_oneshot_timer
-  err = rtos_start_oneshot_timer(&g_timer_oneshot);
+  rtos_start_oneshot_timer(&g_timer_oneshot);
 }
 
 // NOTE: this one only triggers the timer if it's not already pending.
 // so many calls will result undelayed firing.
 // i.e. the timer will fire 50ms after the FIRST call when the timer is not pending
 void trigger_quick_oneshot(uint32_t type){
-  OSStatus err;
-  int fire = 1;
-  if (g_quick_timer_triggers) fire = 0;
+  bool fire = true;
+  if (g_quick_timer_triggers) fire = false;
   // note that we watn MQTT input to be processed
   g_quick_timer_triggers |= type;
   // will start or reset the oneshot timer.
@@ -151,7 +148,7 @@ void trigger_quick_oneshot(uint32_t type){
   // if two calls are made before the timer fires, it will fire ONCE
   // 1ms after the last call....
   // the timer calls process_oneshot_timer
-  if (fire) err = rtos_start_oneshot_timer(&g_quick_timer_oneshot);
+  if (fire) rtos_start_oneshot_timer(&g_quick_timer_oneshot);
 }
 
 

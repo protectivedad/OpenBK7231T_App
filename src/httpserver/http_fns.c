@@ -704,8 +704,8 @@ int http_fn_index(http_request_t* request) {
 		}
 	}
 
-	bool bForceShowSingleDimmer = 0;
 #if	ENABLE_DRIVER_GOSUNDSW2
+	bool bForceShowSingleDimmer = 0;
 	if (DRV_IsRunning("GosundSW2")) {
 		bForceShowSingleDimmer = 1;
 	}
@@ -2432,9 +2432,9 @@ int http_fn_ha_cfg(http_request_t* request) {
 #endif
 
 void runHTTPCommandInternal(http_request_t* request, const char *cmd) {
-	bool bEchoHack = strncmp(cmd, "echo", 4) == 0;
 	CMD_ExecuteCommand(cmd, COMMAND_FLAG_SOURCE_HTTP);
 #if ENABLE_TASMOTA_JSON
+	bool bEchoHack = strncmp(cmd, "echo", 4) == 0;
 	if (!bEchoHack) {
 		JSON_ProcessCommandReply(cmd, skipToNextWord(cmd), request, (jsonCb_t)hprintf255, COMMAND_FLAG_SOURCE_HTTP);
 	}

@@ -40,6 +40,7 @@
 #endif
 
 #ifdef PLATFORM_BEKEN_NEW
+#include <sys_ctrl_pub.h>
 #include "manual_ps_pub.h"
 #endif
 
@@ -429,8 +430,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 			return;
 		}
 
-		int falling = 0;
-
 		// init new role
 		switch (role)
 		{
@@ -438,7 +437,7 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		case IOR_IRRecv:
 			falling = 1;
 			// add to active inputs
-			PIN_setGPIActive(index, 1, falling, 0);
+			PIN_setGPIActive(index, 1, 1, 0);
 			break;
 #endif
 #if ENABLE_DRIVER_BRIDGE
@@ -697,17 +696,18 @@ static void PIN_ProcessOldPinRole(int index) {
 	}
 }
 
-static void PIN_remUsedPin(int index) {
-	int usedIndex;
-	for (usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
-		if (registeredPinDetails[usedIndex] != index)
-			continue;
-		break;
-	}
+static void PIN_remUsedPin(uint32_t index) {
+	uint32_t usedIndex;
+	for (usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++)
+		if (registeredPinDetails[usedIndex] == index)
+			break;
+
+	if (usedIndex == g_registeredPinCount)
+		return;
+
 	ADDLOG_DEBUG(LOG_FEATURE_GENERAL, "%s - Removed entry for pin index %i", __func__, usedIndex);
-	for (usedIndex++; usedIndex < g_registeredPinCount; usedIndex++) {
+	for (usedIndex++; usedIndex < g_registeredPinCount; usedIndex++)
 		registeredPinDetails[usedIndex - 1] = registeredPinDetails[usedIndex];
-	}
 	registeredPinDetails[g_registeredPinCount] = 0;
 	g_registeredPinCount--;
 }
@@ -764,12 +764,8 @@ void Channel_SaveInFlashIfNeeded(int ch) {
 // all items on the channel are processed
 static void Channel_OnChanged(int ch, int prevValue, int iFlags) {
 	int iVal;
-	int bOn;
-
-	//bOn = BIT_CHECK(g_channelStates,ch);
 	iVal = g_channelValues[ch];
 	g_channelValuesFloats[ch] = (float)iVal;
-	bOn = iVal > 0;
 
 #if ENABLE_I2C
 	I2C_OnChannelChanged(ch, iVal);
@@ -1012,7 +1008,6 @@ void CHANNEL_ClearAllChannels() {
 }
 
 void CHANNEL_Set_FloatPWM(int ch, float fVal, int iFlags) {
-	int i;
 	float prevValue = g_channelValuesFloats[ch];
 
 	g_channelValues[ch] = (int)fVal;
@@ -1248,10 +1243,10 @@ bool CHANNEL_IsInUse(int ch) {
 
 // TODO: Again think about channels
 bool CHANNEL_ShouldBePublished(int ch) {
-	for (int i = 0; i < g_registeredPinCount; i++) {
-		int pinIndex = registeredPinDetails[i];
-		int role = PIN_GetPinRoleForPinIndex(pinIndex);
-		int driverIndex = g_pinIORoleDriver[role];
+	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
+		uint32_t pinIndex = registeredPinDetails[usedIndex];
+		uint32_t role = PIN_GetPinRoleForPinIndex(pinIndex);
+		uint32_t driverIndex = g_pinIORoleDriver[role];
 		if (g_cfg.pins.channels[pinIndex] == ch) {
 			if (driverIndex) {
 				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, role);

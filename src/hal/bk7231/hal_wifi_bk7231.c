@@ -34,8 +34,7 @@ extern u8* wpas_get_sta_psk(void);
 static void (*g_wifiStatusCallback)(int code);
 
 // lenght of "192.168.103.103" is 15 but we also need a NULL terminating character
-static int g_bOpenAccessPointMode = 0;
-char *get_security_type(int type);
+static int g_bOpenAccessPointMode;
 bool g_bStaticIP = false, g_needFastConnectSave = false;
 
 IPStatusTypedef ipStatus;
@@ -44,28 +43,24 @@ IPStatusTypedef ipStatus;
 // because, for example, javascript control panel requires it
 // Must be called to populate the ipStatus
 const char* HAL_GetMyIPString() {
-
-	memset(&ipStatus, 0x0, sizeof(IPStatusTypedef));
-	if (g_bOpenAccessPointMode) {
+	if (g_bOpenAccessPointMode)
 		bk_wlan_get_ip_status(&ipStatus, SOFT_AP);
-	}
-	else {
+	else
 		bk_wlan_get_ip_status(&ipStatus, STATION);
-	}
 	return ipStatus.ip;
 }
 const char* HAL_GetMyGatewayString() {
-	if (&ipStatus == 0)
+	if (ipStatus.ip[0] == 0)
 		HAL_GetMyIPString();
 	return ipStatus.gate;
 }
 const char* HAL_GetMyDNSString() {
-	if (&ipStatus == 0)
+	if (ipStatus.ip[0] == 0)
 		HAL_GetMyIPString();
 	return ipStatus.dns;
 }
 const char* HAL_GetMyMaskString() {
-	if (&ipStatus == 0)
+	if (ipStatus.ip[0] == 0)
 		HAL_GetMyIPString();
 	return ipStatus.mask;
 }
@@ -96,7 +91,7 @@ const char* HAL_GetMACStr(char* macstr)
 	return macstr;
 }
 
-char *get_security_type(int type) {
+char *get_security_type(int32_t type) {
 //void print_security_type(int type) {
 	switch (type)
 	{
@@ -212,17 +207,14 @@ void HAL_PrintNetworkInfo()
 		bk_wlan_get_link_status(&linkStatus);
 		memcpy(ssid, linkStatus.ssid, 32);
 
-		int cipher = bk_sta_cipher_type();
-
 		ADDLOG_INFO(LOG_FEATURE_GENERAL, 
 			"sta:rssi=%d,ssid=%s,bssid=" MACSTR ",channel=%d,cipher_type:%s",
 			linkStatus.wifi_strength, 
 			ssid, 
 			MAC2STR(linkStatus.bssid), 
 			linkStatus.channel,
-			get_security_type(cipher)
+			get_security_type(bk_sta_cipher_type())
 			);
-
 	}
 
 	if (uap_ip_is_start())

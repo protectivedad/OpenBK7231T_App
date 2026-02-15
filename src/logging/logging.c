@@ -13,6 +13,7 @@
 #if PLATFORM_BEKEN
 #include "uart.h"
 #include "arm_arch.h"
+#include <timers.h>
 #endif
 
 extern uint8_t g_StartupDelayOver;
@@ -107,15 +108,12 @@ void LOG_SetRawSocketCallback(int newFD)
 static int http_getlog(http_request_t* request);
 static int http_getlograw(http_request_t* request);
 
-static void log_serial_thread(beken_thread_arg_t arg);
-
 static void startSerialLog();
 #ifndef ENABLE_REDUCED_ACCESS
 #define MAX_TCP_LOG_PORTS 2
 int tcp_log_ports[MAX_TCP_LOG_PORTS] = {-1, -1};
 
 static void log_server_thread(beken_thread_arg_t arg);
-static void log_client_thread(beken_thread_arg_t arg);
 static void startLogServer();
 
 static int tcpLogStarted = 0;
@@ -530,6 +528,8 @@ void startSerialLog() {
 #else
 
 #ifndef PLATFORM_BEKEN
+	static void log_serial_thread(beken_thread_arg_t arg);
+
 	OSStatus err = kNoErr;
 	err = rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,
 		"log_serial",
@@ -620,6 +620,7 @@ void log_server_thread(beken_thread_arg_t arg)
 					client_fd = -1;
 				}
 #else
+				static void log_client_thread(beken_thread_arg_t arg);
 				//addLog( "TCP Log Client %s:%d connected, fd: %d", client_ip_str, client_addr.sin_port, client_fd );
                 if (kNoErr
                     != rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY,

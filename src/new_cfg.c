@@ -595,8 +595,8 @@ void CFG_SetFlags(uint32_t first4bytes, uint32_t second4bytes) {
 		g_cfg_pendingChanges++;
 	}
 }
-void CFG_SetFlag(int flag, bool bValue) {
-	int *cfgValue;
+void CFG_SetFlag(uint32_t flag, bool bValue) {
+	uint32_t *cfgValue;
 	if (flag >= 32) {
 		cfgValue = &g_cfg.genericFlags2;
 		flag -= 32;
@@ -605,7 +605,7 @@ void CFG_SetFlag(int flag, bool bValue) {
 		cfgValue = &g_cfg.genericFlags;
 	}
 
-	int nf = *cfgValue;
+	uint32_t nf = *cfgValue;
 	if(bValue) {
 		BIT_SET(nf,flag);
 	} else {
@@ -622,7 +622,7 @@ void CFG_SetFlag(int flag, bool bValue) {
 #endif
 	}
 }
-void CFG_SetLoggerFlag(int flag, bool bValue) {
+void CFG_SetLoggerFlag(uint32_t flag, bool bValue) {
 	int *cfgValue;
 	cfgValue = &g_cfg.loggerFlags;
 
@@ -638,10 +638,10 @@ void CFG_SetLoggerFlag(int flag, bool bValue) {
 		g_cfg_pendingChanges++;
 	}
 }
-bool CFG_HasLoggerFlag(int flag) {
+bool CFG_HasLoggerFlag(uint32_t flag) {
 	return BIT_CHECK(g_cfg.loggerFlags, flag);
 }
-int CFG_GetFlags() {
+uint32_t CFG_GetFlags() {
 	return g_cfg.genericFlags;
 }
 uint64_t CFG_GetFlags64() {
@@ -649,7 +649,7 @@ uint64_t CFG_GetFlags64() {
 	//*pAllGenericFlags;
 	return (uint64_t)g_cfg.genericFlags | (uint64_t)g_cfg.genericFlags2 << 32;
 }
-bool CFG_HasFlag(int flag) {
+bool CFG_HasFlag(uint32_t flag) {
 	if (flag >= 32) {
 		flag -= 32;
 		return BIT_CHECK(g_cfg.genericFlags2, flag);
@@ -841,7 +841,7 @@ void CFG_SetDisableWebServer(byte value) {
 #endif
 // allows writing to flash no changes will write until this is set
 void CFG_SafeToWrite(bool allWriting) {
-	if (g_cfg_safeToWrite = allWriting)
+	if ((g_cfg_safeToWrite = allWriting))
 		CFG_Save_IfThereArePendingChanges();
 }
 void CFG_InitAndLoad() {

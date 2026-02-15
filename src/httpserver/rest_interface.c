@@ -10,6 +10,7 @@
 #include "../hal/hal_flashVars.h"
 #include "../littlefs/our_lfs.h"
 #include "lwip/sockets.h"
+#include "../new_cfg.h"
 
 #define DEFAULT_FLASH_LEN 0x200000
 
@@ -529,7 +530,6 @@ static int http_rest_get_lfs_file(http_request_t* request) {
 	else {
 		ADDLOG_DEBUG(LOG_FEATURE_API, "LFS open [%s] gives %d", fpath, lfsres);
 		if (lfsres >= 0) {
-			char* ext = fpath;
 			const char *mimetype = httpMimeTypeBinary;
 
 			if (isGzip) {
@@ -1303,7 +1303,6 @@ static int http_rest_post_flash_advanced(http_request_t* request) {
 
 static int http_rest_get_flash(http_request_t* request, int startaddr, int len) {
 	char* buffer;
-	int res;
 
 	if (startaddr < 0 || (startaddr + len > DEFAULT_FLASH_LEN)) {
 		return http_rest_error(request, -1, "requested flash read out of range");
@@ -1319,7 +1318,7 @@ static int http_rest_get_flash(http_request_t* request, int startaddr, int len) 
 		if (readlen > 1024) {
 			readlen = 1024;
 		}
-		res = HAL_FlashRead(buffer, readlen, startaddr);
+		HAL_FlashRead(buffer, readlen, startaddr);
 		startaddr += readlen;
 		len -= readlen;
 		postany(request, buffer, readlen);

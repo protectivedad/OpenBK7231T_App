@@ -142,7 +142,7 @@ int my_strnicmp(const char* a, const char* b, int len) {
 	return 0;
 }
 
-
+/* 
 /// @brief Write escaped data to the response.
 /// @param request
 /// @param str
@@ -199,8 +199,8 @@ static void poststr_escaped(http_request_t* request, char* str) {
 		postany(request, str, strlen(str));
 	}
 }
-
-void poststr_escapedForJSON(http_request_t* request, char* str) {
+ */
+void poststr_escapedForJSON(http_request_t* request, const char* str) {
 	if (str == NULL) {
 		postany(request, NULL, 0);
 		return;

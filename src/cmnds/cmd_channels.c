@@ -639,6 +639,7 @@ void CMD_InitChannelCommands(){
 }
 #else
 
+#include <stdio.h>
 #include <stdbool.h>
 const char *CHANNEL_GetLabel(int ch) {
 	static char tmp[8];
