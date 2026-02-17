@@ -25,11 +25,11 @@ extern void PIN_ticks(void *param);
 
 #if PLATFORM_BK7231T && !PLATFORM_BEKEN_NEW
 
-// realloc fix - otherwise calling realloc crashes.
-// Just fall back to os_realloc.
-_PTR realloc _PARAMS ((_PTR a, size_t b)) {
-	return os_realloc(a,b);
-}
+// // realloc fix - otherwise calling realloc crashes.
+// // Just fall back to os_realloc.
+// _PTR realloc _PARAMS ((_PTR a, size_t b)) {
+// 	return os_realloc(a,b);
+// }
 
 #endif
 
