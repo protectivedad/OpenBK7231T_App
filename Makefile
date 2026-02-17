@@ -132,7 +132,7 @@ sdk/OpenLN882H/project/OpenBeken/app:
 .PHONY: prebuild_OpenRTL87X0C prebuild_OpenBK7238 prebuild_OpenBK7231U
 .PHONY: prebuild_OpenBK7231N prebuild_OpenBK7231T_ALT prebuild_OpenBK7252
 
-prebuild_OpenBK7231T: berry
+prebuild_OpenBK7231T:
 	git submodule update --init --recursive --depth=1 sdk/OpenBK7231T
 	@if [ -e platforms/BK7231T/pre_build.sh ]; then \
 		echo "prebuild found for OpenBK7231T"; \
@@ -275,7 +275,7 @@ prebuild_OpenRTL8720D: berry
 	else echo "prebuild for OpenRTL8720D not found ... "; \
 	fi
 
-prebuild_OpenBK7238: berry
+prebuild_OpenBK7238:
 	git submodule update --init --recursive --depth=1 sdk/beken_freertos_sdk
 	@if [ -e platforms/BK723x/pre_build_7238.sh ]; then \
 		echo "prebuild found for OpenBK7238"; \
@@ -283,7 +283,7 @@ prebuild_OpenBK7238: berry
 	else echo "prebuild for OpenBK7238 not found ... "; \
 	fi
 
-prebuild_OpenBK7231N: berry
+prebuild_OpenBK7231N:
 	git submodule update --init --recursive --depth=1 sdk/beken_freertos_sdk
 	@if [ -e platforms/BK723x/pre_build_7231n.sh ]; then \
 		echo "prebuild found for OpenBK7231N"; \
@@ -291,7 +291,7 @@ prebuild_OpenBK7231N: berry
 	else echo "prebuild for OpenBK7231N not found ... "; \
 	fi
 
-prebuild_OpenBK7231U: berry
+prebuild_OpenBK7231U:
 	git submodule update --init --recursive --depth=1 sdk/beken_freertos_sdk
 	@if [ -e platforms/BK723x/pre_build_7231u.sh ]; then \
 		echo "prebuild found for OpenBK7231U"; \
@@ -299,7 +299,7 @@ prebuild_OpenBK7231U: berry
 	else echo "prebuild for OpenBK7231U not found ... "; \
 	fi
 
-prebuild_OpenBK7231T_ALT: berry
+prebuild_OpenBK7231T_ALT:
 	git submodule update --init --recursive --depth=1 sdk/beken_freertos_sdk
 	@if [ -e platforms/BK723x/pre_build_7231t.sh ]; then \
 		echo "prebuild found for OpenBK7231T"; \
@@ -608,7 +608,7 @@ OpenBK7238: prebuild_OpenBK7238
 
 .PHONY: OpenBK7231U
 OpenBK7231U: prebuild_OpenBK7231U
-	cd sdk/beken_freertos_sdk && sh build.sh bk7231u $(APP_VERSION)
+	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7231u $(APP_VERSION)
 	mkdir -p output/$(APP_VERSION)
 	cp sdk/beken_freertos_sdk/out/bk7231u_QIO.bin output/$(APP_VERSION)/OpenBK7231U_QIO_${APP_VERSION}.bin
 	cp sdk/beken_freertos_sdk/out/bk7231u.bin output/$(APP_VERSION)/OpenBK7231U_${APP_VERSION}.bin
@@ -649,7 +649,7 @@ OpenBK7231N: prebuild_OpenBK7231N
 
 .PHONY: OpenBK7231T_ALT
 OpenBK7231T_ALT: prebuild_OpenBK7231T_ALT
-	cd sdk/beken_freertos_sdk && sh build.sh bk7231 $(APP_VERSION)_ALT
+	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7231 $(APP_VERSION)_ALT
 	mkdir -p output/$(APP_VERSION)
 	cp sdk/beken_freertos_sdk/out/bk7231t_QIO.bin output/$(APP_VERSION)/OpenBK7231T_ALT_QIO_${APP_VERSION}.bin
 	cp sdk/beken_freertos_sdk/out/bk7231u.bin output/$(APP_VERSION)/OpenBK7231T_ALT_${APP_VERSION}.bin

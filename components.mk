@@ -1,22 +1,22 @@
-OBK_DIR = $(TOP_DIR)/apps/$(APP_BIN_NAME)/
+OBK_DIR = $(TOP_DIR)/../../
 
-BERRY_MODULEPATH = $(OBK_DIR)/src/berry/modules
-BERRY_SRCPATH = $(OBK_DIR)/libraries/berry/src/
+# BERRY_MODULEPATH = $(OBK_DIR)/src/berry/modules
+# BERRY_SRCPATH = $(OBK_DIR)/libraries/berry/src/
 
-include $(OBK_DIR)/libraries/berry.mk
+# include $(OBK_DIR)/libraries/berry.mk
 
-SRC_C += $(BERRY_SRC_C)
+# SRC_C += $(BERRY_SRC_C)
 
 CPPDEFINES += -DOBK_VARIANT=$(OBK_VARIANT)
 
-ifeq ($(TARGET_PLATFORM),bk7231n)
+ifeq ($(TARGET_PLATFORM),bk7231t)
 
 CFG_USE_MQTT_TLS ?= 0
 
 ifeq ($(CFG_USE_MQTT_TLS),1)
 
-MBEDTLS_DIR = $(TOP_DIR)/apps/$(APP_BIN_NAME)/output/mbedtls-2.28.5
-INCLUDES := -I$(MBEDTLS_DIR)/include -I$(TOP_DIR)/apps/$(APP_BIN_NAME)/src $(INCLUDES)
+MBEDTLS_DIR = $(TOP_DIR)/../../output/mbedtls-2.28.5
+INCLUDES := -I$(MBEDTLS_DIR)/include -I$(TOP_DIR)/../../src $(INCLUDES)
 MQTT_TLS_DEFS += -DMQTT_USE_TLS=1
 MQTT_TLS_DEFS += -DLWIP_ALTCP=1
 MQTT_TLS_DEFS += -DLWIP_ALTCP_TLS=1
@@ -77,4 +77,4 @@ SRC_C += ${MBEDTLS_DIR}/library/camellia.c
 SRC_C += ${MBEDTLS_DIR}/library/ssl_cli.c
 
 endif   #ifeq ($(CFG_USE_MQTT_TLS),1)
-endif   #ifeq ($(TARGET_PLATFORM),bk7231n)
+endif   #ifeq ($(TARGET_PLATFORM),bk7231t)
