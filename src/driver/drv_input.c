@@ -24,9 +24,9 @@ uint32_t BTN_SHORT_MS;
 uint32_t BTN_LONG_MS;
 uint32_t BTN_HOLD_REPEAT_MS;
 
-uint32_t g_lastValidState;
-uint32_t g_driverPins;
-uint32_t g_driverIndex;
+static uint32_t g_driverIndex;
+static uint32_t g_driverPins;
+static uint32_t g_lastValidState;
 
 #define BTN_DEBOUNCE_MS         50
 

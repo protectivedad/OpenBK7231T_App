@@ -40,6 +40,7 @@ typedef struct service_s {
 } service_t;
 
 static service_t g_services[] = {
+	{ "", NULL, NULL, NULL, NULL, false },
 #if ENABLE_DRIVER_DEVICECLOCK
 	//drvdetail:{"name":"TIME",
 	//drvdetail:"title":"TODO",
@@ -74,6 +75,7 @@ void GirierMCU_RunEverySecond();
 
 // startDriver BL0937
 static driver_t g_drivers[] = {
+	{ "", NULL, NULL, NULL, NULL, NULL, NULL, false },
 	//drvdetail:{"name":"Output",
 	//drvdetail:"title":"TODO",
 	//drvdetail:"descr":"General input/output controls",
@@ -1448,7 +1450,7 @@ static driver_t g_drivers[] = {
 static const int g_numDrivers = sizeof(g_drivers) / sizeof(g_drivers[0]);
 
 bool DRV_IsRunning(const char* name) {
-	for (int i = 0; i < g_numDrivers; i++) {
+	for (int i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded && !stricmp(name, g_drivers[i].name)) {
 			return true;
 		}
@@ -1480,7 +1482,7 @@ void DRV_OnEverySecond() {
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	for (i = 0; i < g_numDrivers; i++) {
+	for (i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			if (g_drivers[i].onEverySecond != 0) {
 				g_drivers[i].onEverySecond();
@@ -1492,7 +1494,7 @@ void DRV_OnEverySecond() {
 void DRV_RunQuickTick() {
 	if (DRV_Mutex_Take(0) == false)
 		return;
-	for (int i = 0; i < g_numDrivers; i++) {
+	for (int i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded && g_drivers[i].runQuickTick)
 			g_drivers[i].runQuickTick();
 	}
@@ -1505,7 +1507,7 @@ void DRV_OnChannelChanged(int channel, int iVal) {
 	//if(DRV_Mutex_Take(100)==false) {
 	//	return;
 	//}
-	for (i = 0; i < g_numDrivers; i++) {
+	for (i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			if (g_drivers[i].onChannelChanged != 0) {
 				g_drivers[i].onChannelChanged(channel, iVal);
@@ -1517,7 +1519,7 @@ void DRV_OnChannelChanged(int channel, int iVal) {
 // right now only used by simulator
 void DRV_ShutdownAllDrivers() {
 	int i;
-	for (i = 0; i < g_numDrivers; i++) {
+	for (i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			DRV_StopDriver(g_drivers[i].name);
 		}
@@ -1529,7 +1531,7 @@ void DRV_StopDriver(const char* name) {
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	for (i = 0; i < g_numDrivers; i++) {
+	for (i = 1; i < g_numDrivers; i++) {
 		if (*name == '*' || !stricmp(g_drivers[i].name, name)) {
 			if (g_drivers[i].bLoaded) {
 				if (g_drivers[i].frameworkRequest) {
@@ -1551,7 +1553,7 @@ void DRV_StartDriver(const char* name) {
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	for (int i = 0; i < g_numDrivers; i++) {
+	for (int i = 1; i < g_numDrivers; i++) {
 		if (!stricmp(g_drivers[i].name, name)) {
 			if (g_drivers[i].bLoaded) {
 				ADDLOG_WARN(LOG_FEATURE_MAIN, "Driver %s - Already loaded", name);
@@ -1606,7 +1608,7 @@ void DRV_Generic_Init() {
 	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopDriver", DRV_Stop, NULL);
-	for (uint32_t driverIndex = 0; driverIndex < g_numDrivers; driverIndex++) {
+	for (uint32_t driverIndex = 1; driverIndex < g_numDrivers; driverIndex++) {
 		if (g_drivers[driverIndex].frameworkRequest) {
 			g_drivers[driverIndex].frameworkRequest(OBKF_PinRoles, driverIndex);
 		}
@@ -1617,7 +1619,7 @@ void SVC_onEverySecond() {
 	if (DRV_Mutex_Take(100) == false)
 		return;
 
-	for (int i = 0; i < g_numServices; i++) {
+	for (int i = 1; i < g_numServices; i++) {
 		if (g_services[i].bLoaded) {
 			if (g_services[i].onEverySecond != 0) {
 				g_services[i].onEverySecond();
@@ -1630,7 +1632,7 @@ void SVC_onEverySecond() {
 void SVC_runQuickTick() {
 	if (DRV_Mutex_Take(0) == false)
 		return;
-	for (int i = 0; i < g_numServices; i++) {
+	for (int i = 1; i < g_numServices; i++) {
 		if (g_services[i].bLoaded && g_services[i].runQuickTick)
 			g_services[i].runQuickTick();
 	}
@@ -1641,7 +1643,7 @@ void SVC_StopDriver(const char* name) {
 	if (DRV_Mutex_Take(100) == false)
 		return;
 
-	for (int i = 0; i < g_numServices; i++) {
+	for (int i = 1; i < g_numServices; i++) {
 		if (*name == '*' || !stricmp(g_services[i].name, name)) {
 			if (g_services[i].bLoaded) {
 				if (g_services[i].frameworkRequest) {
@@ -1664,7 +1666,7 @@ void SVC_StartDriver(const char* name) {
 	if (DRV_Mutex_Take(100) == false)
 		return;
 
-	for (int i = 0; i < g_numServices; i++) {
+	for (int i = 1; i < g_numServices; i++) {
 		if (!stricmp(g_services[i].name, name)) {
 			if (g_services[i].bLoaded) {
 				ADDLOG_WARN(LOG_FEATURE_MAIN, "Service %s - Already loaded", name);
@@ -1724,7 +1726,7 @@ void SVC_Generic_Init() {
 void SVC_Autostart() {
 	if (!DRV_Mutex_Take(100)) 
 		return;
-	for (uint32_t serviceIndex = 0; serviceIndex < g_numServices; serviceIndex++) {
+	for (uint32_t serviceIndex = 1; serviceIndex < g_numServices; serviceIndex++) {
 		if (!g_services[serviceIndex].bLoaded) {
 			g_services[serviceIndex].bLoaded = true;
 			if (g_services[serviceIndex].frameworkRequest)
@@ -1766,7 +1768,7 @@ void DRV_OnHassDiscovery(const char *topic) {
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	for (i = 0; i < g_numDrivers; i++) {
+	for (i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			if (g_drivers[i].onHassDiscovery) {
 				g_drivers[i].onHassDiscovery(topic);
@@ -1784,7 +1786,7 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	for (i = 0; i < g_numDrivers; i++) {
+	for (i = 1; i < g_numDrivers; i++) {
 		if (g_drivers[i].bLoaded) {
 			c_active++;
 			if (g_drivers[i].appendHTML) {
@@ -1800,7 +1802,7 @@ void DRV_AppendInformationToHTTPIndexPage(http_request_t* request, int bPreState
 			j = 0;// printed 0 names so far
 			// generate active drivers list in (  )
 			hprintf255(request, " (");
-			for (i = 0; i < g_numDrivers; i++) {
+			for (i = 1; i < g_numDrivers; i++) {
 				if (g_drivers[i].bLoaded) {
 					// if at least one name printed, add separator
 					if (j != 0) {
@@ -1823,7 +1825,7 @@ void SVC_appendHTML(http_request_t* request, int bPreState) {
 	if (DRV_Mutex_Take(100) == false) {
 		return;
 	}
-	for (int i = 0; i < g_numServices; i++) {
+	for (int i = 1; i < g_numServices; i++) {
 		if (g_services[i].bLoaded) {
 			c_active++;
 			if (g_services[i].appendHTML) {
@@ -1838,7 +1840,7 @@ void SVC_appendHTML(http_request_t* request, int bPreState) {
 		if (c_active > 0) {
 			// generate active drivers list in (  )
 			bool isFirst = false;
-			for (int i = 0; i < g_numServices; i++) {
+			for (int i = 1; i < g_numServices; i++) {
 				if (g_services[i].bLoaded) {
 					if (isFirst == false) {
 						isFirst = true;

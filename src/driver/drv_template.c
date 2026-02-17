@@ -8,8 +8,8 @@
 #include "../new_cfg.h"
 #include "../logging/logging.h"
 
-uint32_t g_driverIndex;
-uint32_t g_driverPins;
+static uint32_t g_driverIndex;
+static uint32_t g_driverPins;
 
 // delete these and use proper ones 
 #define IOR_Template 1

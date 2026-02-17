@@ -20,45 +20,45 @@
 #include "../hal/hal_ota.h"
 #include "../quicktick.h"
 
-uint32_t g_driverIndex;
+static uint32_t g_driverIndex;
+static uint32_t g_driverPins;
+static uint32_t g_lastValidState;
 
-uint32_t g_driverPins;
-uint32_t g_lastValidState;
-uint32_t g_digitalCount;
-uint32_t g_dynamicWakeEdge = 0xFFFFFFFF;
-uint32_t g_defaultWakeEdge = 0x00000000;
-uint32_t g_dynamicFloating = 0xFFFFFFFF;
-uint32_t g_defaultFloating = 0x00000000;
+uint32_t dig_digitalCount;
+uint32_t dig_dynamicWakeEdge = 0xFFFFFFFF;
+uint32_t dig_defaultWakeEdge = 0x00000000;
+uint32_t dig_dynamicFloating = 0xFFFFFFFF;
+uint32_t dig_defaultFloating = 0x00000000;
 
 #if ENABLE_DEEPSLEEP
 void Digital_setWakeUpEdge(uint32_t pinIndex, uint32_t edgeCode, uint32_t floatingCode) {
 	if (edgeCode == 2) {
-		BIT_CLEAR(g_defaultWakeEdge, pinIndex);
-		BIT_SET(g_dynamicWakeEdge, pinIndex);
+		BIT_CLEAR(dig_defaultWakeEdge, pinIndex);
+		BIT_SET(dig_dynamicWakeEdge, pinIndex);
 	} else {
-		BIT_CLEAR(g_dynamicWakeEdge, pinIndex);
-		BIT_SET_TO(g_defaultWakeEdge, pinIndex, edgeCode);
+		BIT_CLEAR(dig_dynamicWakeEdge, pinIndex);
+		BIT_SET_TO(dig_defaultWakeEdge, pinIndex, edgeCode);
 	}
 	if (floatingCode == 2) {
-		BIT_CLEAR(g_defaultFloating, pinIndex);
-		BIT_SET(g_dynamicFloating, pinIndex);
+		BIT_CLEAR(dig_defaultFloating, pinIndex);
+		BIT_SET(dig_dynamicFloating, pinIndex);
 	} else {
-		BIT_CLEAR(g_dynamicFloating, pinIndex);
-		BIT_SET_TO(g_defaultFloating, pinIndex, floatingCode);
+		BIT_CLEAR(dig_dynamicFloating, pinIndex);
+		BIT_SET_TO(dig_defaultFloating, pinIndex, floatingCode);
 	}
 }
 
 void Digital_setAllWakeUpEdges(uint32_t edgeCode, uint32_t floatingCode) {
-	g_dynamicWakeEdge = g_defaultWakeEdge = 0x00000000;
-	g_dynamicFloating = g_defaultFloating = 0x00000000;
+	dig_dynamicWakeEdge = dig_defaultWakeEdge = 0x00000000;
+	dig_dynamicFloating = dig_defaultFloating = 0x00000000;
 	if (edgeCode == 2)
-		g_dynamicWakeEdge = 0xFFFFFFFF;
+		dig_dynamicWakeEdge = 0xFFFFFFFF;
 	else if (edgeCode == 1)
-		g_defaultWakeEdge = 0xFFFFFFFF;
+		dig_defaultWakeEdge = 0xFFFFFFFF;
 	if (floatingCode == 2)
-		g_dynamicFloating = 0xFFFFFFFF;
+		dig_dynamicFloating = 0xFFFFFFFF;
 	else if (floatingCode == 1)
-		g_defaultFloating = 0xFFFFFFFF;
+		dig_defaultFloating = 0xFFFFFFFF;
 }
 
 void Digital_setEdges() {
@@ -74,10 +74,10 @@ void Digital_setEdges() {
 		case IOR_DigitalInput_n:
 		case IOR_DigitalInput_NoPup:
 		case IOR_DigitalInput_NoPup_n:
-			if (BIT_CHECK(g_dynamicWakeEdge, pinIndex))
+			if (BIT_CHECK(dig_dynamicWakeEdge, pinIndex))
 				falling = HAL_PIN_ReadDigitalInput(pinIndex);
 			else
-				falling = BIT_CHECK(g_defaultWakeEdge, pinIndex);
+				falling = BIT_CHECK(dig_defaultWakeEdge, pinIndex);
 			break;
 		}
 // #if PLATFORM_XRADIO
@@ -120,7 +120,7 @@ commandResult_t CMD_Digital_setEdge(const void* context, const char* cmd, const 
 	else if (Tokenizer_GetArgsCount() == 2) // Digital_setEdge [Edge] [Floating]
 		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0), Tokenizer_GetArgInteger(1));
 	else // Digital_setEdge [Edge]
-		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0), g_defaultFloating);
+		Digital_setAllWakeUpEdges(Tokenizer_GetArgInteger(0), dig_defaultFloating);
 
 	return CMD_RES_OK;
 }
@@ -219,7 +219,7 @@ void Digital_quickTick() {
 }
 
 uint32_t Digital_digitalCount() {
-	return g_digitalCount;
+	return dig_digitalCount;
 }
 
 static bool Digital_activatePin(uint32_t pinIndex) {
@@ -234,13 +234,13 @@ static bool Digital_activatePin(uint32_t pinIndex) {
 		falling = true;
 	case IOR_DigitalInput:
 		pullup = true;
-		g_digitalCount++;
+		dig_digitalCount++;
 		break;
 
 	case IOR_DigitalInput_NoPup_n:
 		falling = true;
 	case IOR_DigitalInput_NoPup:
-		g_digitalCount++;
+		dig_digitalCount++;
 		break;
 
 	default:
@@ -266,15 +266,15 @@ static void Digital_releasePin(uint32_t pinIndex) {
 	case IOR_DigitalInput:
 	case IOR_DigitalInput_NoPup_n:
 	case IOR_DigitalInput_NoPup:
-		g_digitalCount--;
+		dig_digitalCount--;
 		break;
 	}
 }
 
 static void Digital_stopDriver() {
-	g_digitalCount = 0;
-	g_dynamicWakeEdge = 0xFFFFFFFF;
-	g_defaultWakeEdge = 0x00000000;
+	dig_digitalCount = 0;
+	dig_dynamicWakeEdge = 0xFFFFFFFF;
+	dig_defaultWakeEdge = 0x00000000;
 	uint32_t pinIndex;
 	PINS_PROCESS_WITH_CODE(g_driverPins, pinIndex,
 		PIN_setGPIActive(pinIndex, 0, 0, 0);
