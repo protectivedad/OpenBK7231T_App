@@ -11,23 +11,23 @@
 #include "drv_local.h"
 #include "../quicktick.h"
 
-uint32_t g_driverIndex;
+static uint32_t g_driverIndex;
 
-uint32_t g_ledPins;
-uint32_t g_ledCount;
-uint32_t g_relayPins;
-uint32_t g_relayCount;
-uint32_t g_wifiPins;
+uint32_t out_ledPins;
+uint32_t out_ledCount;
+uint32_t out_relayPins;
+uint32_t out_relayCount;
+uint32_t out_wifiPins;
 
 #define WIFI_LED_FAST_BLINK_DURATION 250
 #define WIFI_LED_SLOW_BLINK_DURATION 500
 
 void Output_setWifiLED(bool newValue) {
-	if (!g_wifiPins || !g_enable_pins)
+	if (!out_wifiPins || !g_enable_pins)
 		return;
 
 	uint32_t pinIndex;
-	PINS_PROCESS_WITH_CODE(g_wifiPins, pinIndex,
+	PINS_PROCESS_WITH_CODE(out_wifiPins, pinIndex,
 		HAL_PIN_SetOutputValue(pinIndex, (PIN_GetPinRoleForPinIndex(pinIndex) == IOR_LED_WIFI_n) ? !newValue : newValue);
 	)
 }
@@ -37,7 +37,7 @@ void Output_setLED(bool newValue) {
 		return;
 
 	uint32_t pinIndex;
-	PINS_PROCESS_WITH_CODE(g_ledPins, pinIndex,
+	PINS_PROCESS_WITH_CODE(out_ledPins, pinIndex,
 		HAL_PIN_SetOutputValue(pinIndex, (PIN_GetPinRoleForPinIndex(pinIndex) == IOR_LED_n) ? !newValue : newValue);
 	)
 }
@@ -47,7 +47,7 @@ static void LED_quickTick() {
 		return;
 
 	uint32_t pinIndex;
-	PINS_PROCESS_WITH_CODE(g_wifiPins, pinIndex,
+	PINS_PROCESS_WITH_CODE(out_wifiPins, pinIndex,
 		static uint32_t wifiLedToggleTime = 0;
 		static bool wifi_ledState = false;
 
@@ -82,7 +82,7 @@ static void LED_quickTick() {
 
 // basic output quick tick timer function
 void Output_quickTick() {
-	if (g_wifiPins)
+	if (out_wifiPins)
 		LED_quickTick();
 }
 
@@ -111,23 +111,23 @@ static bool Output_activatePin(int pinIndex) {
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_LED_WIFI_n:
 	case IOR_LED_WIFI:
-		BIT_SET(g_wifiPins, pinIndex);
+		BIT_SET(out_wifiPins, pinIndex);
 		return true;
 	
 	case IOR_LED_n:
 		channelValue = !channelValue;
 	case IOR_LED:
 		HAL_PIN_SetOutputValue(pinIndex, channelValue);
-		BIT_SET(g_ledPins, pinIndex);
-		g_ledCount++;
+		BIT_SET(out_ledPins, pinIndex);
+		out_ledCount++;
 		return true;
 
 	case IOR_Relay_n:
 		channelValue = !channelValue;
 	case IOR_Relay:
 		HAL_PIN_SetOutputValue(pinIndex, channelValue);
-		BIT_SET(g_relayPins, pinIndex);
-		g_relayCount++;
+		BIT_SET(out_relayPins, pinIndex);
+		out_relayCount++;
 		return true;
 	case IOR_AlwaysHigh:
 		HAL_PIN_SetOutputValue(pinIndex, true);
@@ -146,33 +146,33 @@ static void Output_ReleasePin(int pinIndex) {
 	switch (PIN_GetPinRoleForPinIndex(pinIndex)) {
 	case IOR_LED_WIFI_n:
 	case IOR_LED_WIFI:
-		BIT_CLEAR(g_wifiPins, pinIndex);
+		BIT_CLEAR(out_wifiPins, pinIndex);
 		break;
 
 	case IOR_LED:
 	case IOR_LED_n:
-		g_ledCount--;
-		BIT_CLEAR(g_ledPins, pinIndex);
+		out_ledCount--;
+		BIT_CLEAR(out_ledPins, pinIndex);
 		break;
 
 	case IOR_Relay:
 	case IOR_Relay_n:
-		g_relayCount--;
-		BIT_CLEAR(g_relayPins, pinIndex);
+		out_relayCount--;
+		BIT_CLEAR(out_relayPins, pinIndex);
 		break;
 	}
 }
 
 static void Output_StopDriver() {
-	g_relayCount = 0;
-	g_relayPins = 0;
-	g_ledCount = 0;
-	g_ledPins = 0;
-	g_wifiPins = 0;
+	out_relayCount = 0;
+	out_relayPins = 0;
+	out_ledCount = 0;
+	out_ledPins = 0;
+	out_wifiPins = 0;
 }
 
 uint32_t Output_relayCount() {
-	return g_relayCount;
+	return out_relayCount;
 }
 
 static void Output_init() {
@@ -222,7 +222,7 @@ void Output_onChanged(uint32_t channel, int32_t iVal) {
 		return;
 
 	uint32_t pinIndex;
-	PINS_PROCESS_WITH_CODE(g_relayPins | g_ledPins, pinIndex,
+	PINS_PROCESS_WITH_CODE(out_relayPins | out_ledPins, pinIndex,
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
 			continue; // channel not for pin
 
@@ -240,7 +240,7 @@ void Output_onChanged(uint32_t channel, int32_t iVal) {
 
 bool Output_isPowerRelay(uint32_t channel) {
 	uint32_t pinIndex;
-	PINS_PROCESS_WITH_CODE(g_relayPins, pinIndex,
+	PINS_PROCESS_WITH_CODE(out_relayPins, pinIndex,
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
 			continue; // channel not for pin
 
@@ -251,7 +251,7 @@ bool Output_isPowerRelay(uint32_t channel) {
 
 bool Output_isRelay(uint32_t channel) {
 	uint32_t pinIndex;
-	PINS_PROCESS_WITH_CODE(g_relayPins, pinIndex,
+	PINS_PROCESS_WITH_CODE(out_relayPins, pinIndex,
 		if (PIN_GetPinChannelForPinIndex(pinIndex) != channel)
 			continue; // channel not for pin
 
