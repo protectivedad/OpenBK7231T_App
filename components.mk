@@ -15,7 +15,7 @@ CFG_USE_MQTT_TLS ?= 0
 
 ifeq ($(CFG_USE_MQTT_TLS),1)
 
-MBEDTLS_DIR = $(TOP_DIR)/../../output/mbedtls-2.28.5
+MBEDTLS_DIR = $(TOP_DIR)/../../libraries/mbedtls-2.28.5
 INCLUDES := -I$(MBEDTLS_DIR)/include -I$(TOP_DIR)/../../src $(INCLUDES)
 MQTT_TLS_DEFS += -DMQTT_USE_TLS=1
 MQTT_TLS_DEFS += -DLWIP_ALTCP=1

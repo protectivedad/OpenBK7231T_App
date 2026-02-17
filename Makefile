@@ -1,11 +1,9 @@
 # HACK - if COMPILE_PREX defined then we are being called running from original build_app.sh script in standard SDK
 # Required to not break old build_app.sh script lines 74-77
-MBEDTLS=output/mbedtls-2.28.5
+MBEDTLS=libraries/mbedtls-2.28.5
 ifdef COMPILE_PREX
 all:
 	@echo Calling original build_app.sh script
-	mkdir -p output
-	if [ ! -d "$(MBEDTLS)" ]; then wget -q "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v2.28.5.tar.gz"; tar -xf v2.28.5.tar.gz -C output; rm -f v2.28.5.tar.gz; mv $(MBEDTLS)/library/base64.c $(MBEDTLS)/library/base64_mbedtls.c; fi
 	cd $(PWD)/../../platforms/$(TARGET_PLATFORM)/toolchain/$(TUYA_APPS_BUILD_PATH) && sh $(TUYA_APPS_BUILD_CMD) $(APP_NAME) $(APP_VERSION) $(TARGET_PLATFORM) "$(USER_CMD)" $(BUILD_MODE)
 else
 
