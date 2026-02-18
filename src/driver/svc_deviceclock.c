@@ -569,30 +569,10 @@ void TIME_appendHTML(http_request_t *request, int bPreState)
 {
 	if (bPreState)
 		return;
-	uint32_t tempt=TIME_GetCurrentTime();
-#if ENABLE_NTP
-	char ntpinfo[50] = {0};
-	if (NTP_IsTimeSynced()){
-		sprintf(ntpinfo," (NTP-Server: %s)", CFG_GetNTPServer());
-	}
-#endif
-	if (TIME_IsTimeSynced()) hprintf255(request, "<h5>Local clock: %s"
-#if ENABLE_TIME_DST
-	"%s"
-#endif 
-#if ENABLE_NTP
-	"%s"
-#endif
-	"</h5>",TS2STR(tempt,TIME_FORMAT_LONG)
-#if ENABLE_TIME_DST
-	, ! dst_config.DSTinitialized ? "" : IsDST()?" (summer-time)":" (winter-time)"
-#endif 
-#if ENABLE_NTP
-	, ntpinfo
-#endif
-	);
+	uint32_t tempt=TIME_GetCurrentTimeWithoutOffset();
+	if (TIME_IsTimeSynced())
+		hprintf255(request, "<h5>Local clock: %s UTC</h5>", TS2STR(tempt, TIME_FORMAT_LONG));
 }
-
 
 // framework request function
 uint32_t TIME_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {

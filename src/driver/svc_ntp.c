@@ -17,59 +17,11 @@
 #include "../logging/logging.h"
 #include "../hal/hal_ota.h"
 #include "../libraries/obktime/obktime.h"	// for time functions
-#include "svc_ntp.h"
 #include "lwipopts.h"
 #include "lwip/ip_addr.h"
+#include "lwip/apps/sntp.h"
 
 #define LOG_FEATURE LOG_FEATURE_NTP
-
-typedef struct
-{
-
-  uint8_t li_vn_mode;      // Eight bits. li, vn, and mode.
-                           // li.   Two bits.   Leap indicator.
-                           // vn.   Three bits. Version number of the protocol.
-                           // mode. Three bits. Client will pick mode 3 for client.
-
-  uint8_t stratum;         // Eight bits. Stratum level of the local clock.
-  uint8_t poll;            // Eight bits. Maximum interval between successive messages.
-  uint8_t precision;       // Eight bits. Precision of the local clock.
-
-  uint32_t rootDelay;      // 32 bits. Total round trip delay time.
-  uint32_t rootDispersion; // 32 bits. Max error aloud from primary clock source.
-  uint32_t refId;          // 32 bits. Reference clock identifier.
-
-  uint32_t refTm_s;        // 32 bits. Reference time-stamp seconds.
-  uint32_t refTm_f;        // 32 bits. Reference time-stamp fraction of a second.
-
-  uint32_t origTm_s;       // 32 bits. Originate time-stamp seconds.
-  uint32_t origTm_f;       // 32 bits. Originate time-stamp fraction of a second.
-
-  uint32_t rxTm_s;         // 32 bits. Received time-stamp seconds.
-  uint32_t rxTm_f;         // 32 bits. Received time-stamp fraction of a second.
-
-  uint32_t txTm_s;         // 32 bits and the most important field the client cares about. Transmit time-stamp seconds.
-  uint32_t txTm_f;         // 32 bits. Transmit time-stamp fraction of a second.
-
-} ntp_packet;              // Total: 384 bits or 48 bytes.
-
-// NTP time since 1900 to unix time (since 1970)
-// Number of seconds to ad
-#define NTP_OFFSET 2208988800L
-
-uint32_t g_ntp_socket;
-static struct sockaddr_in g_address;
-uint32_t adrLen;
-// in seconds, before next retry
-uint32_t g_ntp_delay;
-bool g_synced = false;
-// time offset (time zone?) in seconds
-//#define CFG_DEFAULT_TIMEOFFSETSECONDS (-8 * 60 * 60)
-int32_t g_timeOffsetSeconds;
-// current time - this may be 32 or 64 bit, depending on platform
-// don't use as global variable, use functions to access and manipulate "clock" in "svc_deviceclock.c"
-time_t g_ntpTime;
-uint32_t g_ntp_syncinterval;
 
 //Set custom NTP server
 commandResult_t NTP_SetServer(const void *context, const char *cmd, const char *args, int cmdFlags) {
@@ -83,227 +35,73 @@ commandResult_t NTP_SetServer(const void *context, const char *cmd, const char *
 		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
 	}
     newValue = Tokenizer_GetArg(0);
-    CFG_SetNTPServer(newValue);
+	ip4_addr_t newAddr;
+	if (!inet_aton(newValue, &newAddr)) {
+		ADDLOGF_ERROR("%s - invalid ntp server IP: %s", __func__, newValue);
+		return CMD_RES_BAD_ARGUMENT;
+	}
     ADDLOGF_INFO("NTP server set to %s", newValue);
+	
+	if (newAddr.addr == ip_addr_any.addr)
+		newValue = "";
+
+	sntp_setserver(0, &newAddr);
+    CFG_SetNTPServer(newValue);
     return CMD_RES_OK;
 }
-
-//Display settings used by the NTP driver
-commandResult_t NTP_Info(const void *context, const char *cmd, const char *args, int cmdFlags) {
-    ADDLOGF_INFO("Server=%s, Time offset=%d", CFG_GetNTPServer(), TIME_GetTimesZoneOfsSeconds());
-    return CMD_RES_OK;
-}
-
-#if WINDOWS
-bool b_ntp_simulatedTime = false;
-void NTP_SetSimulatedTime(unsigned int timeNow) {
-/*
-	g_ntpTime = timeNow;
-	g_ntpTime += g_timeOffsetSeconds;
-*/
-	TIME_setDeviceTime(timeNow);
-#if ENABLE_TIME_DST
-//	g_ntpTime += setDST(0)*60;
-	setDST(0);
-#endif
-	g_synced = true;
-	b_ntp_simulatedTime = true;
-}
-#endif
 
 void NTP_Init() {
-#if WINDOWS
-	b_ntp_simulatedTime = false;
-#endif
 	//cmddetail:{"name":"ntp_setServer","args":"[ServerIP]",
 	//cmddetail:"descr":"Sets the NTP server",
 	//cmddetail:"fn":"NTP_SetServer","file":"driver/drv_ntp.c","requires":"",
 	//cmddetail:"examples":""}
     CMD_RegisterCommand("ntp_setServer", NTP_SetServer, NULL);
-	//cmddetail:{"name":"ntp_info","args":"",
-	//cmddetail:"descr":"Display NTP related settings",
-	//cmddetail:"fn":"NTP_Info","file":"driver/drv_ntp.c","requires":"",
-	//cmddetail:"examples":""}
-    CMD_RegisterCommand("ntp_info", NTP_Info, NULL);
     
-    ADDLOGF_INFO("NTP driver initialized with server=%s, offset=%d, syncing every %i seconds", CFG_GetNTPServer(), g_timeOffsetSeconds, g_ntp_syncinterval);
-    g_synced = false;
+    ADDLOGF_INFO("NTP driver initialized with server=%s, syncing every %i seconds", CFG_GetNTPServer(), SNTP_UPDATE_DELAY / 1000);
 }
 
-// if driver is stopped, we need to make sure, we don't keep NTP in state "synched"
-void NTP_Stop() {
-    ADDLOGF_INFO("NTP driver stopped");
-    g_synced = false;
+bool NTP_enabled() {
+	return sntp_enabled();
 }
 
-void NTP_Shutdown() {
-    if(g_ntp_socket) {
-#if WINDOWS
-        closesocket(g_ntp_socket);
-#else
-        lwip_close(g_ntp_socket);
-#endif
-    }
-    g_ntp_socket = 0;
-    // can attempt in next 10 seconds
-    g_ntp_delay = g_ntp_syncinterval;
-}
-
-void NTP_SendRequest(bool bBlocking) {
-    byte *ptr;
-	const char *adrString;
-    //int i, recv_len;
-    //char buf[64];
-    ntp_packet packet = {};
-
-    adrLen = sizeof(g_address);
-    ptr = (byte*)&packet;
-    // Initialize values needed to form NTP request
-    // (see URL above for details on the packets)
-    ptr[0] = 0xE3;   // LI, Version, Mode
-    ptr[1] = 0;     // Stratum, or type of clock
-    ptr[2] = 6;     // Polling Interval
-    ptr[3] = 0xEC;  // Peer Clock Precision
-    // 8 bytes of zero for Root Delay & Root Dispersion
-    ptr[12]  = 49;
-    ptr[13]  = 0x4E;
-    ptr[14]  = 49;
-    ptr[15]  = 52;
-
-
-    //create a UDP socket
-    if ((g_ntp_socket=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP )) == -1)
-    {
-        g_ntp_socket = 0;
-        ADDLOGF_INFO("%s - failed to create socket", __func__);
-        return;
-    }
-
-    memset((char *) &g_address, 0, sizeof(g_address));
-
-	adrString = CFG_GetNTPServer();
-	if (adrString == 0 || adrString[0] == 0) {
-		ADDLOGF_INFO("%s - somehow ntp server in config was empty, setting non-empty", __func__);
-		CFG_SetNTPServer(DEFAULT_NTP_SERVER);
-		adrString = CFG_GetNTPServer();
-	}
-
-    g_address.sin_family = AF_INET;
-    g_address.sin_addr.s_addr = inet_addr(adrString);
-    g_address.sin_port = htons(123);
-
-
-    // Send the message to server:
-    if(sendto(g_ntp_socket, &packet, sizeof(packet), 0,
-         (struct sockaddr*)&g_address, adrLen) < 0) {
-        ADDLOGF_INFO("%s - Unable to send message", __func__);
-        NTP_Shutdown();
-		// quick next frame attempt
-		if (g_secondsElapsed < 60) {
-			g_ntp_delay = 1;
-		}
-        return;
-    }
-
-    // https://github.com/tuya/tuya-iotos-embeded-sdk-wifi-ble-bk7231t/blob/5e28e1f9a1a9d88425f3fd4b658e895a8ee7b83b/platforms/bk7231t/tuya_os_adapter/src/system/tuya_hal_network.c
-    //
-    if(bBlocking == false) {
-#if WINDOWS
-#else
-        if(fcntl(g_ntp_socket, F_SETFL, O_NONBLOCK)) {
-            ADDLOGF_INFO("%s - failed to make socket non-blocking!", __func__);
-        }
-#endif
-    }
-
-    // can attempt in next 10 seconds
-    g_ntp_delay = 10;
-}
-
-void NTP_CheckForReceive() {
-    int32_t recv_len;
-    uint32_t secsSince1900;
-    ntp_packet packet;
-    uint8_t *ptr = (uint8_t*)&packet;
-
-    // Receive the server's response:
-    recv_len = recv(g_ntp_socket, &packet, sizeof(packet), 0);
-
-    if(recv_len < 0 || recv_len != sizeof(packet)) {
-		ADDLOGF_INFO("%s - failed to receive packet, recv_len=%i", __func__, recv_len);
-		return;
-	}
-    secsSince1900 = ptr[43] | ptr[42] << 8 | ptr[41] << 16 | ptr[40] << 24;
-	ADDLOGF_TIMING("%i - %s - Seconds since Jan 1 1900 = %u", xTaskGetTickCount(), __func__, secsSince1900);
-    ADDLOGF_INFO("Seconds since Jan 1 1900 = %u", secsSince1900);
-
-   	TIME_setDeviceTime((uint32_t) (secsSince1900 - NTP_OFFSET) );
-   	ADDLOGF_INFO("Unix time  : %u - local Time %s",(uint32_t) (secsSince1900 - NTP_OFFSET),TS2STR(TIME_GetCurrentTime(),TIME_FORMAT_LONG));
-	if (g_synced == false)
-		EventHandlers_FireEvent(CMD_EVENT_NTP_STATE, 1);
-    g_synced = true;
-    NTP_Shutdown();
-}
-
-void NTP_SendRequest_BlockingMode() {
-    NTP_Shutdown();
-    NTP_SendRequest(true);
-    NTP_CheckForReceive();
-}
-
-void NTP_onEverySecond() {
-    if (OTA_GetProgress() != -1)
-        return;
-
-	if(Main_HasWiFiConnected()==0)
-        return;
-
-	if (!g_synced && !g_ntp_delay)
-		NTP_SendRequest(false);
-
-	if (!g_ntp_syncinterval && !g_ntp_delay)
-		return;
-
-    if(!g_ntp_socket) {
-        // if no socket, this is a reconnect delay
-        if(g_ntp_delay) {
-            g_ntp_delay--;
-            return;
-        }
-        NTP_SendRequest(false);
-    } else {
-		NTP_CheckForReceive();
-        if(g_ntp_delay) {
-            g_ntp_delay--;
-            if(!g_ntp_delay)
-                NTP_Shutdown();
-		}        	
-    }
-}
-
-void NTP_appendHTML(http_request_t* request, int bPreState)
-{
+void NTP_appendHTML(http_request_t* request, int bPreState) {
 	if (bPreState)
 		return;
-    //  if NTP is synced, we'll print time with deviceclocks HTTP information
-    if (g_synced != true)
-        hprintf255(request, "<h5>NTP: Syncing with %s....</h5>",CFG_GetNTPServer());
-}
 
-bool NTP_IsTimeSynced()
-{
-    return g_synced;
+	const ip_addr_t *ntp_ip = sntp_getserver(0);
+	const char *ntp_addr = inet_ntoa(ntp_ip->addr);	
+    if (sntp_enabled())
+        hprintf255(request, "<h5>NTP: Syncing with %s every %i seconds</h5>", ntp_addr, SNTP_UPDATE_DELAY / 1000);
 }
 
 // framework request function
 uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	switch (obkfRequest) {
 	case OBKF_Stop:
-		NTP_Stop();
+		sntp_stop();
 		break;
 		
 	case OBKF_Init:
 		NTP_Init();
+		sntp_setoperatingmode(SNTP_OPMODE_POLL);
+		const char *adrString = CFG_GetNTPServer();
+		if (adrString == 0 || adrString[0] == 0) {
+			sntp_servermode_dhcp(true);
+			adrString = DEFAULT_NTP_SERVER;
+		} else {
+			sntp_servermode_dhcp(false); // should be default, but just in case
+		}
+		ip4_addr_t addr;
+		if (inet_aton(adrString, &addr))
+			sntp_setserver(0, &addr);
+		else
+			ADDLOGF_ERROR("%s - failed to set %s ntp server!", __func__, adrString);
+
+		break;
+
+	case OBKF_OnConnect:
+		// safe to rerun
+		sntp_init();
 		break;
 
 	default:
@@ -313,22 +111,4 @@ uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 	return true;
 }
 
-#if LWIP_DHCP && LWIP_DHCP_GET_NTP_SRV
-/**
- * Initialize the NTP server by IP address, required by DHCP
- *
- * @param num the index of the NTP server to set must be < SNTP_MAX_SERVERS
- * @param server IP address of the NTP server to set
- */
-void dhcp_set_ntp_servers(uint8_t num, const ip4_addr_t *server) {
-	const char *adrString = CFG_GetNTPServer();
-	if (num && (adrString == 0 || adrString[0] == 0)) 
-		CFG_SetNTPServer(inet_ntoa(server[0]));
-}
-#endif /* LWIP_DHCP && LWIP_DHCP_GET_NTP_SRV */
-
-#else
-bool NTP_IsTimeSynced() {
-	return false;
-}
 #endif // #if ENABLE_NTP

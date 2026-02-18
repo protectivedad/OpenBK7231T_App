@@ -94,7 +94,7 @@ static int g_noMQTTTime = 0;
 
 uint8_t g_StartupDelayOver = 0;
 
-bool Main_bRunMQTTFastConnect;
+bool Main_onWifiConnect;
 
 #ifndef ENABLE_QUIET_MODE
 uint32_t idleCount = 0;
@@ -527,11 +527,7 @@ void Main_OnWiFiStatusChange(int code)
 #endif
 
 		if (!bSafeMode) {
-			// tried running MQTT_FastConnect directly here but for some
-			// situations (DHCP) although the IP is assigned the TCPIP can't
-			// be locked, so set flag and run it it the QuicTick
-			if (Main_HasFastConnect())
-				Main_bRunMQTTFastConnect = true;
+			Main_onWifiConnect = true;
 
 #if ENABLE_TASMOTADEVICEGROUPS
 			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
@@ -1117,10 +1113,12 @@ void QuickTick(void* param)
 	}
 	g_last_time = g_timeMs;
 
-	// do FastConnect daisy chaining
-	if (Main_bRunMQTTFastConnect) {
-		Main_bRunMQTTFastConnect = false;
+	if (Main_onWifiConnect) {
+		Main_onWifiConnect = false;
+		if (Main_HasFastConnect())
 		MQTT_FastConnect();
+
+		SVC_onConnect();
 	}
 
 #if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)

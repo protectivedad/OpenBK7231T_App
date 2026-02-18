@@ -14,7 +14,9 @@ typedef enum obkFramework_e {
 	// accepts: pin role, returns number of channels
 	OBKF_NoOfChannels,
 	// accepts: pin role, returns true to publish
-	OBKF_ShouldPublish
+	OBKF_ShouldPublish,
+	// no arg, no return
+	OBKF_OnConnect
 } obkFramework_t;
 
 #include "../httpserver/new_http.h"
@@ -42,7 +44,6 @@ void TIME_onEverySecond();
 
 uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void NTP_appendHTML(http_request_t* request, int bPreState);
-void NTP_onEverySecond();
 
 uint32_t TuyaMCU_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 void TuyaMCU_quickTick();

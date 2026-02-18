@@ -223,7 +223,7 @@ float getMDay(const char *s) {
 #endif
 #ifdef ENABLE_NTP
 float getNTPOn(const char *s) {
-	return NTP_IsTimeSynced();
+	return TIME_IsTimeSynced() && NTP_enabled();
 }
 #endif
 #if ENABLE_TIME_DST

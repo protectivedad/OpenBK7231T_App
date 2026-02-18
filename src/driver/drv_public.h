@@ -56,6 +56,7 @@ void SVC_Autostart();
 void SVC_appendHTML(http_request_t* request, int bPreState);
 void SVC_onEverySecond();
 void SVC_runQuickTick();
+void SVC_onConnect();
 
 void DRV_Generic_Init();
 void DRV_Autostart();
@@ -118,7 +119,7 @@ uint32_t TIME_GetCurrentTimeWithoutOffset();
 bool TIME_IsTimeSynced();
 int TIME_GetTimesZoneOfsSeconds();
 
-bool NTP_IsTimeSynced();
+bool NTP_enabled();
 
 #endif /* __DRV_PUBLIC_H__ */
 

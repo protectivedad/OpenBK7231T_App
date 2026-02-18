@@ -60,7 +60,7 @@ static service_t g_services[] = {
 	//drvdetail:"descr":"NTP driver is required to get current time and date from web. Without it, there is no correct datetime. Put 'startDriver NTP' in short startup line or autoexec.bat to run it on start.",
 	//drvdetail:"requires":""}
 	{ "NTP",                                 // Driver Name
-	NTP_onEverySecond,                       // onEverySecond
+	NULL,                                    // onEverySecond
 	NTP_appendHTML,                          // appendHTML
 	NULL,                                    // runQuickTick
 	NTP_frameworkRequest,                    // frameworkRequest
@@ -1721,6 +1721,17 @@ void SVC_Generic_Init() {
 	//cmddetail:"fn":"DRV_Stop","file":"driver/drv_main.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("stopService", SVC_Stop, NULL);
+}
+
+void SVC_onConnect() {
+	if (!DRV_Mutex_Take(100)) 
+		return;
+	for (uint32_t serviceIndex = 1; serviceIndex < g_numServices; serviceIndex++) {
+		if (g_services[serviceIndex].bLoaded && g_services[serviceIndex].frameworkRequest) {
+			g_services[serviceIndex].frameworkRequest(OBKF_OnConnect, serviceIndex);
+		}
+	}
+	DRV_Mutex_Free();
 }
 
 void SVC_Autostart() {
