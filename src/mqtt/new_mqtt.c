@@ -227,7 +227,7 @@ int g_MqttPublishItemsQueued = 0;   //Items in the queue waiting to be published
 
 static int g_my_reconnect_mqtt_after_time = -1;
 ip_addr_t mqtt_ip LWIP_MQTT_EXAMPLE_IPADDR_INIT;
-mqtt_client_t* mqtt_client;
+mqtt_client_t mqtt_client;
 static int g_timeSinceLastMQTTPublish = 0;
 static int mqtt_initialised = 0;
 static int mqtt_connect_events = 0;
@@ -311,8 +311,6 @@ static struct mqtt_connect_client_info_t mqtt_client_info =
 // channel set callback
 int channelSet(obk_mqtt_request_t* request);
 int channelGet(obk_mqtt_request_t* request);
-static int MQTT_do_connect(mqtt_client_t* client);
-static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection_status_t status);
 
 int MQTT_GetConnectEvents(void)
 {
@@ -498,11 +496,9 @@ int MQTT_RegisterCallback(const char* basetopic, const char* subscriptiontopic, 
 		numCallbacks++;
 	}
 
-	if (subscribechange) {
-		if (mqtt_client) {
-			mqtt_reconnect = 8;
-		}
-	}
+	if (subscribechange && MQTT_IsReady())
+		mqtt_reconnect = 8;
+
 	// success
 	return 0;
 }
@@ -523,9 +519,9 @@ int MQTT_RemoveCallback(int ID) {
 				}
 				os_free(callbacks[index]);
 				callbacks[index] = NULL;
-				if (mqtt_client) {
+				if (MQTT_IsReady())
 					mqtt_reconnect = 8;
-				}
+
 				return 1;
 			}
 		}
@@ -813,11 +809,12 @@ int tasCmnd(obk_mqtt_request_t* request) {
 
 // copied here because for some reason renames in sdk?
 void MQTT_disconnectClient() {
-	if (!mqtt_client)
+	if (!MQTT_IsReady())
 		return;
+
 	// this is what it was renamed to.  why?
 	LOCK_TCPIP_CORE();
-	mqtt_disconnect(mqtt_client);
+	mqtt_disconnect(&mqtt_client);
 	UNLOCK_TCPIP_CORE();
 
 }
@@ -833,7 +830,7 @@ static void mqtt_pub_request_cb(void* arg, err_t result)
 }
 
 // This publishes value to the specified topic/channel.
-static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const char* sTopic, const char* sChannel, const char* sVal, int flags, bool appendGet)
+static OBK_Publish_Result MQTT_PublishTopicToClient(const char* sTopic, const char* sChannel, const char* sVal, int flags, bool appendGet)
 {
 	err_t err;
 	u8_t qos = 1; /* 0 1 or 2, see MQTT specification */
@@ -844,9 +841,6 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 	u8_t retain = 0; /* No don't retain such crappy payload... */
 	size_t sVal_len;
 	char* pub_topic;
-
-	if (client == 0)
-		return OBK_PUBLISH_WAS_DISCONNECTED;
 
 	if (flags & OBK_PUBLISH_FLAG_MUTEX_SILENT)
 	{
@@ -881,10 +875,7 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 	}
 
 
-	LOCK_TCPIP_CORE();
-	int res = mqtt_client_is_connected(client);
-	UNLOCK_TCPIP_CORE();
-
+	int res = MQTT_IsReady();
 	if (res == 0)
 	{
 		g_my_reconnect_mqtt_after_time = 5;
@@ -924,7 +915,7 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 
 
 		LOCK_TCPIP_CORE();
-		err = mqtt_publish(client, pub_topic, sVal, strlen(sVal), qos, retain, mqtt_pub_request_cb, 0);
+		err = mqtt_publish(&mqtt_client, pub_topic, sVal, strlen(sVal), qos, retain, mqtt_pub_request_cb, 0);
 		UNLOCK_TCPIP_CORE();
 		os_free(pub_topic);
 
@@ -958,21 +949,21 @@ static OBK_Publish_Result MQTT_PublishTopicToClient(mqtt_client_t* client, const
 // This is used to publish channel values in "obk0696FB33/1/get" format with numerical value,
 // This is also used to publish custom information with string name,
 // for example, "obk0696FB33/voltage/get" is used to publish voltage from the sensor
-static OBK_Publish_Result MQTT_PublishMain(mqtt_client_t* client, const char* sChannel, const char* sVal, int flags, bool appendGet)
+static OBK_Publish_Result MQTT_PublishMain(const char* sChannel, const char* sVal, int flags, bool appendGet)
 {
-	return MQTT_PublishTopicToClient(mqtt_client, CFG_GetMQTTClientId(), sChannel, sVal, flags, appendGet);
+	return MQTT_PublishTopicToClient(CFG_GetMQTTClientId(), sChannel, sVal, flags, appendGet);
 }
 OBK_Publish_Result MQTT_PublishTele(const char* teleName, const char* teleValue)
 {
 	char topic[64];
 	snprintf(topic, sizeof(topic), "tele/%s", CFG_GetMQTTClientId());
-	return MQTT_PublishTopicToClient(mqtt_client, topic, teleName, teleValue, 0, false);
+	return MQTT_PublishTopicToClient(topic, teleName, teleValue, 0, false);
 }
 OBK_Publish_Result MQTT_PublishStat(const char* statName, const char* statValue)
 {
 	char topic[64];
 	snprintf(topic,sizeof(topic),"stat/%s", CFG_GetMQTTClientId());
-	return MQTT_PublishTopicToClient(mqtt_client, topic, statName, statValue, 0, false);
+	return MQTT_PublishTopicToClient(topic, statName, statValue, 0, false);
 }
 /// @brief Publish a MQTT message immediately.
 /// @param sTopic 
@@ -982,7 +973,7 @@ OBK_Publish_Result MQTT_PublishStat(const char* statName, const char* statValue)
 /// @return 
 OBK_Publish_Result MQTT_Publish(const char* sTopic, const char* sChannel, const char* sVal, int flags)
 {
-	return MQTT_PublishTopicToClient(mqtt_client, sTopic, sChannel, sVal, flags, false);
+	return MQTT_PublishTopicToClient(sTopic, sChannel, sVal, flags, false);
 }
 
 void MQTT_OBK_Printf(char* s) {
@@ -1129,7 +1120,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 #endif
 
 		//LOCK_TCPIP_CORE();
-		mqtt_set_inpub_callback(mqtt_client,
+		mqtt_set_inpub_callback(client,
 			mqtt_incoming_publish_cb,
 			mqtt_incoming_data_cb,
 			LWIP_CONST_CAST(void*, &mqtt_client_info));
@@ -1216,7 +1207,7 @@ void MQTT_setKeepAlive(uint32_t keep_alive) {
 	mqtt_client_info.keep_alive = keep_alive;
 }
 
-static int MQTT_do_connect(mqtt_client_t* client)
+static int MQTT_do_connect()
 {
 	const char* mqtt_userName, * mqtt_host, * mqtt_pass, * mqtt_clientID;
 	int mqtt_port;
@@ -1299,34 +1290,28 @@ static int MQTT_do_connect(mqtt_client_t* client)
 			return 0;
 		}
 #else
-	if (dns_in_progress_time <= 0 && !dns_resolved)
-	{
+	if (dns_in_progress_time <= 0 && !dns_resolved) {
 #ifdef PLATFORM_XR809
 		res = dns_gethostbyname(mqtt_host, &mqtt_ip_resolved, dnsFound, NULL);
 #else
 	    res = dns_gethostbyname_addrtype(mqtt_host, &mqtt_ip_resolved, dnsFound, NULL, LWIP_DNS_ADDRTYPE_IPV4);
 #endif
-		if (ERR_OK == res)
-		{
+		if (ERR_OK != res) {
+			if (ERR_INPROGRESS == res)
+				dns_in_progress_time = 10;
+			else
+				dns_in_progress_time = 0;
+			dns_resolved = false;
+			return res;
+		} else {
 			dns_in_progress_time = 0;
 			dns_resolved = true;
-		}
-		else if (ERR_INPROGRESS == res)
-		{
-			dns_in_progress_time = 10;
-			dns_resolved = false;
-		}
-		else
-		{
-			dns_in_progress_time = 0;
-			dns_resolved = false;
 		}
 	}
 
 		// host name/ip
 		//ipaddr_aton(mqtt_host,&mqtt_ip);
-	if (dns_in_progress_time <= 0 && dns_resolved)
-	{
+	if (dns_in_progress_time <= 0 && dns_resolved) {
 		dns_resolved = false;
 		memcpy(&mqtt_ip, &mqtt_ip_resolved, sizeof(mqtt_ip_resolved));
 
@@ -1396,7 +1381,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		// wait for up to 120 ms for a route to the broker
 		int notGivingUp = Main_HasFastConnect() ? MQTT_ROUTE_DELAYS + 1 : 1;
 		do {
-			res = mqtt_client_connect(mqtt_client,
+			res = mqtt_client_connect(&mqtt_client,
 				&mqtt_ip, mqtt_port,
 				mqtt_connection_cb, LWIP_CONST_CAST(void*, &mqtt_client_info),
 				&mqtt_client_info);
@@ -1416,7 +1401,7 @@ static int MQTT_do_connect(mqtt_client_t* client)
 			snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_client_connect connect failed");
 			if (res == ERR_ISCONN)
 			{
-				mqtt_disconnect(mqtt_client);
+				mqtt_disconnect(&mqtt_client);
 			}
 		}
 		else {
@@ -1426,19 +1411,17 @@ static int MQTT_do_connect(mqtt_client_t* client)
 		return res;
 	}
 	else {
-		if (dns_in_progress_time > 0)
-		{
+		if (dns_in_progress_time > 0) {
 			ADDLOGF_INFO("mqtt_host %s is being resolved by gethostbyname\r\n", mqtt_host);
 			dns_in_progress_time--;
 			/* Discount connection event if host is being resolved */
 			mqtt_connect_events--;
-		}
-		else
-		{
-			if (!dns_resolved)
-			{
+			return ERR_INPROGRESS;
+		} else {
+			if (!dns_resolved) {
 				ADDLOGF_INFO("mqtt_host %s not found by gethostbyname\r\n", mqtt_host);
 				snprintf(mqtt_status_message, sizeof(mqtt_status_message), "mqtt_host %s not found by gethostbyname", mqtt_host);
+				return ERR_RTE;
 			}
 		}
 	}
@@ -1451,7 +1434,7 @@ OBK_Publish_Result MQTT_PublishMain_StringInt(const char* sChannel, int iv, int 
 
 	sprintf(valueStr, "%i", iv);
 
-	return MQTT_PublishMain(mqtt_client, sChannel, valueStr, flags, true);
+	return MQTT_PublishMain(sChannel, valueStr, flags, true);
 
 }
 OBK_Publish_Result MQTT_PublishMain_StringFloat(const char* sChannel, float f, int maxDecimalPlaces, int flags)
@@ -1467,13 +1450,13 @@ OBK_Publish_Result MQTT_PublishMain_StringFloat(const char* sChannel, float f, i
 		stripDecimalPlaces(valueStr, maxDecimalPlaces);
 	}
 
-	return MQTT_PublishMain(mqtt_client, sChannel, valueStr, flags, true);
+	return MQTT_PublishMain(sChannel, valueStr, flags, true);
 
 }
 OBK_Publish_Result MQTT_PublishMain_StringString(const char* sChannel, const char* valueStr, int flags)
 {
 
-	return MQTT_PublishMain(mqtt_client, sChannel, valueStr, flags, true);
+	return MQTT_PublishMain(sChannel, valueStr, flags, true);
 
 }
 
@@ -1514,7 +1497,7 @@ OBK_Publish_Result MQTT_ChannelPublish(int channel, int flags)
 	if (MQTT_IsReady()) {
 		// direct publish use just channel number
 		sprintf(channelNameStr, "%i", channel);
-		return MQTT_PublishMain(mqtt_client, channelNameStr, valueStr, flags, true);
+		return MQTT_PublishMain(channelNameStr, valueStr, flags, true);
 	} else {
 		// publish to queue requires /get addition
 		sprintf(channelNameStr, "%i/get", channel);
@@ -1698,10 +1681,7 @@ void MQTT_Test_Tick(void* param)
 	{
 		while (1)
 		{
-
-			LOCK_TCPIP_CORE();
-			int res = mqtt_client_is_connected(mqtt_client);
-			UNLOCK_TCPIP_CORE();
+			int res = MQTT_IsReady();
 
 			if (res == 0)
 				break;
@@ -1710,7 +1690,7 @@ void MQTT_Test_Tick(void* param)
 				sprintf(info->value, "TestMSG: %li/%li Time: %i s, Rate: %i msg/s", info->msg_cnt, info->msg_num,
 					(int)info->bench_time, (int)info->bench_rate);
 				LOCK_TCPIP_CORE();
-				err = mqtt_publish(mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
+				err = mqtt_publish(&mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
 				UNLOCK_TCPIP_CORE();
 				if (err == ERR_OK)
 				{
@@ -1740,7 +1720,7 @@ void MQTT_Test_Tick(void* param)
 					sprintf(info->value, "Benchmark completed. %li msg published. Total Time: %i s MsgRate: %i msg/s",
 						info->msg_cnt, (int)info->bench_time, (int)info->bench_rate);
 					LOCK_TCPIP_CORE();
-					err = mqtt_publish(mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
+					err = mqtt_publish(&mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
 					UNLOCK_TCPIP_CORE();
 					if (err == ERR_OK)
 					{
@@ -2029,7 +2009,7 @@ static float getInternalTemperature() {
 
 OBK_Publish_Result MQTT_DoItemPublishString(const char* sChannel, const char* valueStr)
 {
-	return MQTT_PublishMain(mqtt_client, sChannel, valueStr, OBK_PUBLISH_FLAG_MUTEX_SILENT, false);
+	return MQTT_PublishMain(sChannel, valueStr, OBK_PUBLISH_FLAG_MUTEX_SILENT, false);
 }
 
 OBK_Publish_Result MQTT_DoItemPublish(int idx)
@@ -2166,19 +2146,15 @@ void MQTT_BroadcastTasmotaTeleSTATE() {
 // fast first connect to MQTT, no previous mqtt_client, no OTA
 // run after wifi connected
 void MQTT_FastConnect() {
-	if (!mqtt_initialised || mqtt_client || (OTA_GetProgress() != -1))
+	if (!mqtt_initialised || (OTA_GetProgress() != -1))
 		return;
 
 	if (MQTT_Mutex_Take(100) == 0)
 		return;
 
-	LOCK_TCPIP_CORE();
-	mqtt_client = mqtt_client_new();
-	UNLOCK_TCPIP_CORE();
-
 	mqtt_connect_events++;
 
-	int ret = MQTT_do_connect(mqtt_client);
+	int ret = MQTT_do_connect();
 	MQTT_Mutex_Free();
 	if (ret == ERR_OK) {
 		MQTT_waitingCallback = true;
@@ -2224,8 +2200,7 @@ int MQTT_RunQuickTick(){
 
 // called from user timer.
 // return true/false on connected/disconnected
-bool MQTT_RunEverySecondUpdate()
-{
+bool MQTT_RunEverySecondUpdate() {
 	if (!mqtt_initialised || MQTT_waitingCallback || Main_IsOpenAccessPointMode())
 		return false;
 
@@ -2249,9 +2224,7 @@ bool MQTT_RunEverySecondUpdate()
 
 	// take mutex for connect and disconnect operations
 	if (MQTT_Mutex_Take(100) == 0)
-	{
 		return false;
-	}
 
 	bool isReady = MQTT_IsReady();
 	if (g_mqtt_bBaseTopicDirty) {
@@ -2261,8 +2234,7 @@ bool MQTT_RunEverySecondUpdate()
 	}
 
 	// reconnect if went into MQTT library ERR_MEM forever loop
-	if (g_memoryErrorsThisSession >= 5)
-	{
+	if (g_memoryErrorsThisSession >= 5) {
 		ADDLOGF_INFO("MQTT will reconnect soon to fix ERR_MEM errors\n");
 		g_memoryErrorsThisSession = 0;
 		mqtt_reconnect = 5;
@@ -2273,14 +2245,12 @@ bool MQTT_RunEverySecondUpdate()
 	{
 		mqtt_reconnect--;
 		ADDLOGF_INFO("MQTT has pending reconnect in %i\n", mqtt_reconnect);
-		if (mqtt_reconnect == 0)
-		{
+		if (mqtt_reconnect == 0) {
 			// then if connected, disconnect, and then it will reconnect automatically in 2s
-			if (isReady)
-			{
+			if (isReady) {
 				ADDLOGF_INFO("MQTT will now do a forced reconnect\n");
 				LOCK_TCPIP_CORE();
-				mqtt_disconnect(mqtt_client);
+				mqtt_disconnect(&mqtt_client);
 				UNLOCK_TCPIP_CORE();
 				mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 1;
 				MQTT_Mutex_Free();
@@ -2294,34 +2264,29 @@ bool MQTT_RunEverySecondUpdate()
 		mqtt_loopsWithDisconnected++;
 		if (mqtt_loopsWithDisconnected > LOOPS_WITH_DISCONNECTED) {
 			LOCK_TCPIP_CORE();
-			if (mqtt_client == 0) {
-				mqtt_client = mqtt_client_new();
-			} else {
-				mqtt_disconnect(mqtt_client);
+			mqtt_disconnect(&mqtt_client);
 #if defined(MQTT_CLIENT_CLEANUP)
-				mqtt_client_cleanup(mqtt_client);
+			mqtt_client_cleanup(&mqtt_client);
 #endif
-			}
 			UNLOCK_TCPIP_CORE();
 
 			mqtt_connect_events++;
 
-			int ret = MQTT_do_connect(mqtt_client);
-			MQTT_Mutex_Free();
+			int ret = MQTT_do_connect();
 			if (ret == ERR_OK) {
 				MQTT_waitingCallback = true;
 				mqtt_loopsWithDisconnected = 0;
 			} else
 				ADDLOGF_WARN("%s - Unable to connect returned %i", __func__, ret);
 		}
+		MQTT_Mutex_Free();
 		return false;
 	}
 
 	MQTT_Mutex_Free();
 
-	if (g_just_connected) {
+	if (g_just_connected)
 		MQTT_JustConnected();
-	}
 
 	// it is connected publish TELE
 	if (g_wantTasmotaTeleSend) {
@@ -2525,7 +2490,7 @@ OBK_Publish_Result PublishQueuedItems() {
 	while ((head != NULL) && (count < MQTT_QUEUED_ITEMS_PUBLISHED_AT_ONCE) && (MQTT_hasQueued())) {
 		if (!MQTT_QUEUE_ITEM_IS_REUSABLE(head)) {  //Skip reusable entries
 			count++;
-			result = MQTT_PublishTopicToClient(mqtt_client, head->topic, head->channel, head->value, head->flags, false);
+			result = MQTT_PublishTopicToClient(head->topic, head->channel, head->value, head->flags, false);
 			MQTT_QUEUE_ITEM_SET_REUSABLE(head); //Flag item as reusable
 			g_MqttPublishItemsQueued--;   //decrement queued count
 
@@ -2555,14 +2520,11 @@ OBK_Publish_Result PublishQueuedItems() {
 /// @brief Is MQTT sub system ready and connected?
 /// @return 
 bool MQTT_IsReady() {
-	int res = 0;
 	// OTA can unintialise without disconnect
-	if (mqtt_initialised && mqtt_client){
-		LOCK_TCPIP_CORE();
-		res = mqtt_client_is_connected(mqtt_client);
-		UNLOCK_TCPIP_CORE();
-	}
-	return mqtt_initialised && mqtt_client && res;
+	if (mqtt_initialised && mqtt_client_is_connected(&mqtt_client))
+		return true;
+
+	return false;
 }
 
 #if MQTT_USE_TLS
@@ -2610,7 +2572,7 @@ struct tm* cvt_date(char const* date, char const* time, struct tm* t)
 struct tm* mbedtls_platform_gmtime_r(const mbedtls_time_t* tt, struct tm* tm_buf) {
 	// If NTP time not synced return compile time
 	struct tm* ltm;
-	if (!NTP_IsTimeSynced()) {	
+	if (!TIME_IsTimeSynced()) {	
 		ltm = cvt_date(__DATE__, __TIME__, tm_buf);
 		if (log_gmtime_alt) {
 			ADDLOG_INFO(LOG_FEATURE_NTP, "MBEDTLS: NTP not synchronized. Using compile time: %04d/%02d/%02d %02d:%02d:%02d",
