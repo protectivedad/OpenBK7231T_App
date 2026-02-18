@@ -18,6 +18,8 @@
 #include "../hal/hal_ota.h"
 #include "../libraries/obktime/obktime.h"	// for time functions
 #include "svc_ntp.h"
+#include "lwipopts.h"
+#include "lwip/ip_addr.h"
 
 #define LOG_FEATURE LOG_FEATURE_NTP
 
@@ -310,6 +312,20 @@ uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 
 	return true;
 }
+
+#if LWIP_DHCP && LWIP_DHCP_GET_NTP_SRV
+/**
+ * Initialize the NTP server by IP address, required by DHCP
+ *
+ * @param num the index of the NTP server to set must be < SNTP_MAX_SERVERS
+ * @param server IP address of the NTP server to set
+ */
+void dhcp_set_ntp_servers(uint8_t num, const ip4_addr_t *server) {
+	const char *adrString = CFG_GetNTPServer();
+	if (num && (adrString == 0 || adrString[0] == 0)) 
+		CFG_SetNTPServer(inet_ntoa(server[0]));
+}
+#endif /* LWIP_DHCP && LWIP_DHCP_GET_NTP_SRV */
 
 #else
 bool NTP_IsTimeSynced() {
