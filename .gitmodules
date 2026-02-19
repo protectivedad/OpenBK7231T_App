@@ -5,7 +5,7 @@
 [submodule "sdk/OpenBK7231T"]
 	path = sdk/OpenBK7231T
 	url = https://github.com/openshwprojects/OpenBK7231T.git
-	branch = master
+	branch = WIP
 [submodule "sdk/OpenBK7231N"]
 	path = sdk/OpenBK7231N
 	url = https://github.com/protectivedad/OpenBK7231N
@@ -81,3 +81,7 @@
 	path = sdk/OpenRDA5981
 	url = https://github.com/NonPIayerCharacter/OpenRDA5981
 	branch = master
+[submodule "libraries/mbedtls"]
+	path = libraries/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls.git
+	branch = v2.28.5

@@ -1,6 +1,5 @@
 # HACK - if COMPILE_PREX defined then we are being called running from original build_app.sh script in standard SDK
 # Required to not break old build_app.sh script lines 74-77
-MBEDTLS=libraries/mbedtls-2.28.5
 ifdef COMPILE_PREX
 all:
 	@echo Calling original build_app.sh script
@@ -68,6 +67,10 @@ ifdef GITHUB_ACTIONS
 	git config user.name github-actions
 	git config user.email github-actions@github.com
 endif
+
+.PHONY: mbedtls_init mbedtls
+mbedtls_init:
+	git submodule update --init --recursive --depth 1 libraries/mbedtls
 
 .PHONY: berry_init berry
 berry_init:
@@ -375,9 +378,7 @@ endif
 	fi
 
 # Build main binaries
-OpenBK7231T: prebuild_OpenBK7231T
-	mkdir -p output
-	if [ ! -d "$(MBEDTLS)" ]; then wget -q "https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v2.28.5.tar.gz"; tar -xf v2.28.5.tar.gz -C output; rm -f v2.28.5.tar.gz; mv $(MBEDTLS)/library/base64.c $(MBEDTLS)/library/base64_mbedtls.c; fi 
+OpenBK7231T: prebuild_OpenBK7231T prebuild_mbedtls
 	$(MAKE) APP_NAME=OpenBK7231T TARGET_PLATFORM=bk7231t SDK_PATH=sdk/OpenBK7231T APPS_BUILD_PATH=../bk7231t_os OBK_VARIANT=$(OBK_VARIANT) build-BK7231
 
 .PHONY: OpenXR872
