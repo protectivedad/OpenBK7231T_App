@@ -17,7 +17,7 @@
 #if PLATFORM_XR809
 #include "my_lwip2_mqtt_replacement.h"
 #else
-#include "lwip/apps/mqtt.h"
+#include "lwip/apps/mqtt_priv.h"
 #endif
 
 extern ip_addr_t mqtt_ip;

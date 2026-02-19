@@ -27,7 +27,6 @@
 
 #if MQTT_USE_TLS
 #include "lwip/altcp_tls.h"
-#include "lwip/apps/mqtt_priv.h"
 #include "apps/altcp_tls/altcp_tls_mbedtls_structs.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/error.h"
@@ -1213,7 +1212,6 @@ static int MQTT_do_connect()
 	int mqtt_port;
 	int res;
 	char will_topic[CGF_MQTT_CLIENT_ID_SIZE + 16];
-	bool mqtt_use_tls, mqtt_verify_tls_cert;
 
 	mqtt_host = CFG_GetMQTTHost();
 
@@ -1229,8 +1227,8 @@ static int MQTT_do_connect()
 	mqtt_clientID = CFG_GetMQTTClientId();
 	mqtt_port = CFG_GetMQTTPort();
 #if MQTT_USE_TLS
-	mqtt_use_tls = CFG_GetMQTTUseTls();
-	mqtt_verify_tls_cert = CFG_GetMQTTVerifyTlsCert();
+	bool mqtt_use_tls = CFG_GetMQTTUseTls();
+	bool mqtt_verify_tls_cert = CFG_GetMQTTVerifyTlsCert();
 #endif
 
 #ifndef ENABLE_QUIET_MODE
@@ -1651,7 +1649,7 @@ static void mqtt_timer_thread(void* param)
 #elif PLATFORM_XRADIO || PLATFORM_LN882H
 static OS_Timer_t timer;
 #else
-static beken_timer_t g_mqtt_timer;
+// static beken_timer_t g_mqtt_timer;
 #endif
 
 /****************************************************************************************************
