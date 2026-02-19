@@ -1505,6 +1505,238 @@ OBK_Publish_Result MQTT_ChannelPublish(int channel, int flags)
 		return OBK_PUBLISH_OK;
 	}
 }
+/****************************************************************************************************
+ *
+ ****************************************************************************************************/
+#define MQTT_TMR_DURATION      50
+
+#ifndef portTICK_RATE_MS
+#define portTICK_RATE_MS ( ( portTickType ) 1000 / configTICK_RATE_HZ )
+#endif
+
+commandResult_t MQTT_SetTasTeleIntervals(const void* context, const char* cmd, const char* args, int cmdFlags)
+{
+	Tokenizer_TokenizeString(args, 0);
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 2)) {
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+
+	g_teleSensor_interval = Tokenizer_GetArgInteger(0);
+	g_teleState_interval = Tokenizer_GetArgInteger(1);
+
+	return CMD_RES_OK;
+}
+commandResult_t MQTT_SetMaxBroadcastItemsPublishedPerSecond(const void* context, const char* cmd, const char* args, int cmdFlags)
+{
+	Tokenizer_TokenizeString(args, 0);
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1)) {
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+	g_maxBroadcastItemsPublishedPerSecond = Tokenizer_GetArgInteger(0);
+
+	return CMD_RES_OK;
+}
+commandResult_t MQTT_SetBroadcastInterval(const void* context, const char* cmd, const char* args, int cmdFlags)
+{
+	Tokenizer_TokenizeString(args, 0);
+	// following check must be done after 'Tokenizer_TokenizeString',
+	// so we know arguments count in Tokenizer. 'cmd' argument is
+	// only for warning display
+	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1)) {
+		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
+	}
+	g_intervalBetweenMQTTBroadcasts = Tokenizer_GetArgInteger(0);
+
+	return CMD_RES_OK;
+}
+
+#if WINDOWS
+
+#elif PLATFORM_BL602 || PLATFORM_W600 || PLATFORM_W800 || PLATFORM_ESPIDF || PLATFORM_TR6260 \
+	|| PLATFORM_REALTEK || PLATFORM_ECR6600 || PLATFORM_ESP8266 || PLATFORM_TXW81X || PLATFORM_RDA5981
+typedef struct BENCHMARK_TEST_INFO
+{
+	portTickType TestStartTick;
+	portTickType TestStopTick;
+	long msg_cnt;
+	long msg_num;
+	char topic[256];
+	char value[256];
+	float bench_time;
+	float bench_rate;
+	bool report_published;
+} BENCHMARK_TEST_INFO;
+
+void MQTT_Test_Tick(void* param)
+{
+	BENCHMARK_TEST_INFO* info = (BENCHMARK_TEST_INFO*)param;
+	int block = 1;
+	err_t err;
+	int qos = 1;
+	int retain = 0;
+
+	if (info != NULL)
+	{
+		while (1)
+		{
+			int res = MQTT_IsReady();
+
+			if (res == 0)
+				break;
+			if (info->msg_cnt < info->msg_num)
+			{
+				sprintf(info->value, "TestMSG: %li/%li Time: %i s, Rate: %i msg/s", info->msg_cnt, info->msg_num,
+					(int)info->bench_time, (int)info->bench_rate);
+				LOCK_TCPIP_CORE();
+				err = mqtt_publish(&mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
+				UNLOCK_TCPIP_CORE();
+				if (err == ERR_OK)
+				{
+					/* MSG published */
+					info->msg_cnt++;
+					info->TestStopTick = xTaskGetTickCount();
+					/* calculate stats */
+					info->bench_time = (float)(info->TestStopTick - info->TestStartTick);
+					info->bench_time /= (float)(1000 / portTICK_RATE_MS);
+					info->bench_rate = (float)info->msg_cnt;
+					if (info->bench_time != 0.0)
+						info->bench_rate /= info->bench_time;
+					block--;
+					if (block <= 0)
+						break;
+				}
+				else {
+					/* MSG not published, error occured */
+					break;
+				}
+			}
+			else {
+				/* All messages publiched */
+				if (info->report_published == false)
+				{
+					/* Publish report */
+					sprintf(info->value, "Benchmark completed. %li msg published. Total Time: %i s MsgRate: %i msg/s",
+						info->msg_cnt, (int)info->bench_time, (int)info->bench_rate);
+					LOCK_TCPIP_CORE();
+					err = mqtt_publish(&mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
+					UNLOCK_TCPIP_CORE();
+					if (err == ERR_OK)
+					{
+						/* Report published */
+						ADDLOGF_INFO(info->value);
+						info->report_published = true;
+						/* Stop timer */
+					}
+				}
+				break;
+			}
+		}
+	}
+}
+
+static void mqtt_timer_thread(void* param)
+{
+	while (1)
+	{
+		rtos_delay_milliseconds(MQTT_TMR_DURATION);
+		MQTT_Test_Tick(param);
+	}
+}
+#elif PLATFORM_XRADIO || PLATFORM_LN882H
+static OS_Timer_t timer;
+#else
+static beken_timer_t g_mqtt_timer;
+#endif
+
+/****************************************************************************************************
+ *
+ ****************************************************************************************************/
+
+void MQTT_InitCallbacks() {
+	char cbtopicbase[CGF_MQTT_CLIENT_ID_SIZE + 16];
+	char cbtopicsub[CGF_MQTT_CLIENT_ID_SIZE + 16];
+	const char* clientId;
+
+	MQTT_ClearCallbacks();
+	g_mqtt_bBaseTopicDirty = 0;
+
+	clientId = CFG_GetMQTTClientId();
+	// register the main set channel callback
+	snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", clientId);
+	snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/set", clientId);
+	// note: this may REPLACE an existing entry with the same ID.  ID 1 !!!
+	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 1, channelSet);
+
+	// register the getter callback (send empty message here to get reply)
+	snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", clientId);
+	snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/get", clientId);
+	// note: this may REPLACE an existing entry with the same ID.  ID 5 !!!
+	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 5, channelGet);
+
+#if 0
+	// base topic
+	// register the TAS cmnd callback
+	snprintf(cbtopicbase, sizeof(cbtopicbase), "cmnd/%s/", clientId);
+	snprintf(cbtopicsub, sizeof(cbtopicsub), "cmnd/%s/+", clientId);
+	// note: this may REPLACE an existing entry with the same ID.  ID 3 !!!
+	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 3, tasCmnd);
+#endif
+
+	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
+		// test hack iobroker
+		snprintf(cbtopicbase, sizeof(cbtopicbase), "tele/%s/", clientId);
+		snprintf(cbtopicsub, sizeof(cbtopicsub), "tele/%s/+", clientId);
+		// note: this may REPLACE an existing entry with the same ID.  ID 6 !!!
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 6, tasCmnd);
+
+		// test hack iobroker
+		snprintf(cbtopicbase, sizeof(cbtopicbase), "stat/%s/", clientId);
+		snprintf(cbtopicsub, sizeof(cbtopicsub), "stat/%s/+", clientId);
+		// note: this may REPLACE an existing entry with the same ID.  ID 7 !!!
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 7, tasCmnd);
+	}
+
+#if 0
+	const char* groupId;
+	groupId = CFG_GetMQTTGroupTopic();
+
+	// so-called "Group topic", a secondary topic that can be set on multiple devices 
+	// to control them together
+	// register the TAS cmnd callback
+	if (*groupId) {
+		// register the main set channel callback
+		snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", groupId);
+		snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/set", groupId);
+		// note: this may REPLACE an existing entry with the same ID.  ID 2 !!!
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 2, channelSet);
+	}
+
+	// so-called "Group topic", a secondary topic that can be set on multiple devices 
+	// to control them together
+	// register the TAS cmnd callback
+	if (*groupId) {
+		snprintf(cbtopicbase, sizeof(cbtopicbase), "cmnd/%s/", groupId);
+		snprintf(cbtopicsub, sizeof(cbtopicsub), "cmnd/%s/+", groupId);
+		// note: this may REPLACE an existing entry with the same ID.  ID 4 !!!
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 4, tasCmnd);
+	}
+#endif
+
+#if ENABLE_HA_DISCOVERY
+	// test hack iobroker
+	snprintf(cbtopicbase, sizeof(cbtopicbase), "homeassistant/");
+	snprintf(cbtopicsub, sizeof(cbtopicsub), "homeassistant/+");
+	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 8, onHassStatus);
+#endif // ENABLE_HA_DISCOVERY
+}
+
+#if ENABLE_OBK_SCRIPTING
 // This console command will trigger a publish of all used variables (channels and extra stuff)
 commandResult_t MQTT_PublishAll(const void* context, const char* cmd, const char* args, int cmdFlags) {
 	MQTT_PublishWholeDeviceState_Internal(true);
@@ -1647,281 +1879,8 @@ commandResult_t MQTT_PublishCommandDriver(const void* context, const char* cmd, 
 
 	return CMD_RES_OK;
 }
-/****************************************************************************************************
- *
- ****************************************************************************************************/
-#define MQTT_TMR_DURATION      50
+#endif // ENABLE_OBK_SCRIPTING
 
-typedef struct BENCHMARK_TEST_INFO
-{
-	portTickType TestStartTick;
-	portTickType TestStopTick;
-	long msg_cnt;
-	long msg_num;
-	char topic[256];
-	char value[256];
-	float bench_time;
-	float bench_rate;
-	bool report_published;
-} BENCHMARK_TEST_INFO;
-
-#ifndef portTICK_RATE_MS
-#define portTICK_RATE_MS ( ( portTickType ) 1000 / configTICK_RATE_HZ )
-#endif
-
-void MQTT_Test_Tick(void* param)
-{
-	BENCHMARK_TEST_INFO* info = (BENCHMARK_TEST_INFO*)param;
-	int block = 1;
-	err_t err;
-	int qos = 1;
-	int retain = 0;
-
-	if (info != NULL)
-	{
-		while (1)
-		{
-			int res = MQTT_IsReady();
-
-			if (res == 0)
-				break;
-			if (info->msg_cnt < info->msg_num)
-			{
-				sprintf(info->value, "TestMSG: %li/%li Time: %i s, Rate: %i msg/s", info->msg_cnt, info->msg_num,
-					(int)info->bench_time, (int)info->bench_rate);
-				LOCK_TCPIP_CORE();
-				err = mqtt_publish(&mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
-				UNLOCK_TCPIP_CORE();
-				if (err == ERR_OK)
-				{
-					/* MSG published */
-					info->msg_cnt++;
-					info->TestStopTick = xTaskGetTickCount();
-					/* calculate stats */
-					info->bench_time = (float)(info->TestStopTick - info->TestStartTick);
-					info->bench_time /= (float)(1000 / portTICK_RATE_MS);
-					info->bench_rate = (float)info->msg_cnt;
-					if (info->bench_time != 0.0)
-						info->bench_rate /= info->bench_time;
-					block--;
-					if (block <= 0)
-						break;
-				}
-				else {
-					/* MSG not published, error occured */
-					break;
-				}
-			}
-			else {
-				/* All messages publiched */
-				if (info->report_published == false)
-				{
-					/* Publish report */
-					sprintf(info->value, "Benchmark completed. %li msg published. Total Time: %i s MsgRate: %i msg/s",
-						info->msg_cnt, (int)info->bench_time, (int)info->bench_rate);
-					LOCK_TCPIP_CORE();
-					err = mqtt_publish(&mqtt_client, info->topic, info->value, strlen(info->value), qos, retain, mqtt_pub_request_cb, 0);
-					UNLOCK_TCPIP_CORE();
-					if (err == ERR_OK)
-					{
-						/* Report published */
-						ADDLOGF_INFO(info->value);
-						info->report_published = true;
-						/* Stop timer */
-					}
-				}
-				break;
-			}
-		}
-	}
-}
-
-commandResult_t MQTT_SetTasTeleIntervals(const void* context, const char* cmd, const char* args, int cmdFlags)
-{
-	Tokenizer_TokenizeString(args, 0);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 2)) {
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-
-	g_teleSensor_interval = Tokenizer_GetArgInteger(0);
-	g_teleState_interval = Tokenizer_GetArgInteger(1);
-
-	return CMD_RES_OK;
-}
-commandResult_t MQTT_SetMaxBroadcastItemsPublishedPerSecond(const void* context, const char* cmd, const char* args, int cmdFlags)
-{
-	Tokenizer_TokenizeString(args, 0);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1)) {
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-	g_maxBroadcastItemsPublishedPerSecond = Tokenizer_GetArgInteger(0);
-
-	return CMD_RES_OK;
-}
-commandResult_t MQTT_SetBroadcastInterval(const void* context, const char* cmd, const char* args, int cmdFlags)
-{
-	Tokenizer_TokenizeString(args, 0);
-	// following check must be done after 'Tokenizer_TokenizeString',
-	// so we know arguments count in Tokenizer. 'cmd' argument is
-	// only for warning display
-	if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1)) {
-		return CMD_RES_NOT_ENOUGH_ARGUMENTS;
-	}
-	g_intervalBetweenMQTTBroadcasts = Tokenizer_GetArgInteger(0);
-
-	return CMD_RES_OK;
-}
-static BENCHMARK_TEST_INFO* info = NULL;
-
-#if WINDOWS
-
-#elif PLATFORM_BL602 || PLATFORM_W600 || PLATFORM_W800 || PLATFORM_ESPIDF || PLATFORM_TR6260 \
-	|| PLATFORM_REALTEK || PLATFORM_ECR6600 || PLATFORM_ESP8266 || PLATFORM_TXW81X || PLATFORM_RDA5981
-static void mqtt_timer_thread(void* param)
-{
-	while (1)
-	{
-		rtos_delay_milliseconds(MQTT_TMR_DURATION);
-		MQTT_Test_Tick(param);
-	}
-}
-#elif PLATFORM_XRADIO || PLATFORM_LN882H
-static OS_Timer_t timer;
-#else
-static beken_timer_t g_mqtt_timer;
-#endif
-
-commandResult_t MQTT_StartMQTTTestThread(const void* context, const char* cmd, const char* args, int cmdFlags)
-{
-	if (info != NULL)
-	{
-		/* Benchmark test already started */
-		/* try to restart */
-		info->TestStartTick = xTaskGetTickCount();
-		info->msg_cnt = 0;
-		info->report_published = false;
-		return CMD_RES_OK;
-	}
-
-	info = (BENCHMARK_TEST_INFO*)os_malloc(sizeof(BENCHMARK_TEST_INFO));
-	if (info == NULL)
-	{
-		return CMD_RES_ERROR;
-	}
-
-	memset(info, 0, sizeof(BENCHMARK_TEST_INFO));
-	info->TestStartTick = xTaskGetTickCount();
-	info->msg_num = 1000;
-	sprintf(info->topic, "%s/benchmark", CFG_GetMQTTClientId());
-
-#if WINDOWS
-
-#elif PLATFORM_BL602 || PLATFORM_W600 || PLATFORM_W800 || PLATFORM_ESPIDF || PLATFORM_TR6260 \
-	|| PLATFORM_REALTEK || PLATFORM_ECR6600 || PLATFORM_ESP8266
-	xTaskCreate(mqtt_timer_thread, "mqtt", 1024, (void*)info, 15, NULL);
-#elif PLATFORM_TXW81X
-	os_task_create("mqtt", mqtt_timer_thread, (void*)info, 15, 0, NULL, 1024);
-#elif PLATFORM_RDA5981
-	rda_thread_new("mqtt", mqtt_timer_thread, NULL, 1024, osPriorityNormal);
-#elif PLATFORM_XRADIO || PLATFORM_LN882H
-	OS_TimerSetInvalid(&timer);
-	if (OS_TimerCreate(&timer, OS_TIMER_PERIODIC, MQTT_Test_Tick, (void*)info, MQTT_TMR_DURATION) != OS_OK)
-	{
-		printf("PIN_AddCommands timer create failed\n");
-		return CMD_RES_ERROR;
-	}
-	OS_TimerStart(&timer); /* start OS timer to feed watchdog */
-#else
-	OSStatus result;
-
-	result = rtos_init_timer(&g_mqtt_timer, MQTT_TMR_DURATION, MQTT_Test_Tick, (void*)info);
-	ASSERT(kNoErr == result);
-	result = rtos_start_timer(&g_mqtt_timer);
-	ASSERT(kNoErr == result);
-#endif
-	return CMD_RES_OK;
-}
-
-/****************************************************************************************************
- *
- ****************************************************************************************************/
-
-void MQTT_InitCallbacks() {
-	char cbtopicbase[CGF_MQTT_CLIENT_ID_SIZE + 16];
-	char cbtopicsub[CGF_MQTT_CLIENT_ID_SIZE + 16];
-	const char* clientId;
-	const char* groupId;
-
-	MQTT_ClearCallbacks();
-	g_mqtt_bBaseTopicDirty = 0;
-
-	clientId = CFG_GetMQTTClientId();
-	groupId = CFG_GetMQTTGroupTopic();
-
-	// register the main set channel callback
-	snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", clientId);
-	snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/set", clientId);
-	// note: this may REPLACE an existing entry with the same ID.  ID 1 !!!
-	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 1, channelSet);
-
-	// so-called "Group topic", a secondary topic that can be set on multiple devices 
-	// to control them together
-	// register the TAS cmnd callback
-	if (*groupId) {
-		// register the main set channel callback
-		snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", groupId);
-		snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/set", groupId);
-		// note: this may REPLACE an existing entry with the same ID.  ID 2 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 2, channelSet);
-	}
-
-	// base topic
-	// register the TAS cmnd callback
-	snprintf(cbtopicbase, sizeof(cbtopicbase), "cmnd/%s/", clientId);
-	snprintf(cbtopicsub, sizeof(cbtopicsub), "cmnd/%s/+", clientId);
-	// note: this may REPLACE an existing entry with the same ID.  ID 3 !!!
-	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 3, tasCmnd);
-
-	// so-called "Group topic", a secondary topic that can be set on multiple devices 
-	// to control them together
-	// register the TAS cmnd callback
-	if (*groupId) {
-		snprintf(cbtopicbase, sizeof(cbtopicbase), "cmnd/%s/", groupId);
-		snprintf(cbtopicsub, sizeof(cbtopicsub), "cmnd/%s/+", groupId);
-		// note: this may REPLACE an existing entry with the same ID.  ID 4 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 4, tasCmnd);
-	}
-
-	// register the getter callback (send empty message here to get reply)
-	snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", clientId);
-	snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/get", clientId);
-	// note: this may REPLACE an existing entry with the same ID.  ID 5 !!!
-	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 5, channelGet);
-
-	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
-		// test hack iobroker
-		snprintf(cbtopicbase, sizeof(cbtopicbase), "tele/%s/", clientId);
-		snprintf(cbtopicsub, sizeof(cbtopicsub), "tele/%s/+", clientId);
-		// note: this may REPLACE an existing entry with the same ID.  ID 6 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 6, tasCmnd);
-
-		// test hack iobroker
-		snprintf(cbtopicbase, sizeof(cbtopicbase), "stat/%s/", clientId);
-		snprintf(cbtopicsub, sizeof(cbtopicsub), "stat/%s/+", clientId);
-		// note: this may REPLACE an existing entry with the same ID.  ID 7 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 7, tasCmnd);
-	}
-	// test hack iobroker
-	snprintf(cbtopicbase, sizeof(cbtopicbase), "homeassistant/");
-	snprintf(cbtopicsub, sizeof(cbtopicsub), "homeassistant/+");
-	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 8, onHassStatus);
-}
  // initialise things MQTT
  // called from user_main
 void MQTT_init()
@@ -1935,6 +1894,7 @@ void MQTT_init()
 
 	mqtt_initialised = 1;
 
+#if ENABLE_OBK_SCRIPTING
 	//cmddetail:{"name":"publish","args":"[Topic][Value][bOptionalSkipPrefixAndSuffix]",
 	//cmddetail:"descr":"Publishes data by MQTT. The final topic will be obk0696FB33/[Topic]/get, but you can also publish under raw topic, by adding third argument - '1'. You can use argument expansion here, so $CH11 will change to value of the channel 11",
 	//cmddetail:"fn":"MQTT_PublishCommand","file":"mqtt/new_mqtt.c","requires":"",
@@ -1965,11 +1925,19 @@ void MQTT_init()
 	//cmddetail:"fn":"MQTT_PublishChannels","file":"mqtt/new_mqtt.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("publishChannels", MQTT_PublishChannels, NULL);
-	//cmddetail:{"name":"publishBenchmark","args":"",
+	//cmddetail:{"name":"publishDriver","args":"TODO",
 	//cmddetail:"descr":"",
-	//cmddetail:"fn":"MQTT_StartMQTTTestThread","file":"mqtt/new_mqtt.c","requires":"",
+	//cmddetail:"fn":"MQTT_PublishCommandDriver","file":"mqtt/new_mqtt.c","requires":"",
 	//cmddetail:"examples":""}
-	CMD_RegisterCommand("publishBenchmark", MQTT_StartMQTTTestThread, NULL);
+	CMD_RegisterCommand("publishDriver", MQTT_PublishCommandDriver, NULL);
+#if ENABLE_LITTLEFS
+	//cmddetail:{"name":"publishFile","args":"[Topic][Value][bOptionalSkipPrefixAndSuffix]",
+	//cmddetail:"descr":"Publishes data read from LFS file by MQTT. The final topic will be obk0696FB33/[Topic]/get, but you can also publish under raw topic, by adding third argument - '1'.",
+	//cmddetail:"fn":"MQTT_PublishFile","file":"mqtt/new_mqtt.c","requires":"",
+	//cmddetail:"examples":""}
+	CMD_RegisterCommand("publishFile", MQTT_PublishFile, NULL);
+#endif
+#endif // ENABLE_OBK_SCRIPTING
 	//cmddetail:{"name":"mqtt_broadcastInterval","args":"[ValueSeconds]",
 	//cmddetail:"descr":"If broadcast self state every 60 seconds/minute is enabled in flags, this value allows you to change the delay, change this 60 seconds to any other value in seconds. This value is not saved, you must use autoexec.bat or short startup command to execute it on every reboot.",
 	//cmddetail:"fn":"MQTT_SetBroadcastInterval","file":"mqtt/new_mqtt.c","requires":"",
@@ -1985,21 +1953,6 @@ void MQTT_init()
 	//cmddetail:"fn":"MQTT_SetTasTeleIntervals","file":"mqtt/new_mqtt.c","requires":"",
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("TasTeleInterval", MQTT_SetTasTeleIntervals, NULL);
-
-#if ENABLE_LITTLEFS
-	//cmddetail:{"name":"publishFile","args":"[Topic][Value][bOptionalSkipPrefixAndSuffix]",
-	//cmddetail:"descr":"Publishes data read from LFS file by MQTT. The final topic will be obk0696FB33/[Topic]/get, but you can also publish under raw topic, by adding third argument - '1'.",
-	//cmddetail:"fn":"MQTT_PublishFile","file":"mqtt/new_mqtt.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("publishFile", MQTT_PublishFile, NULL);
-#endif
-
-
-	//cmddetail:{"name":"publishDriver","args":"TODO",
-	//cmddetail:"descr":"",
-	//cmddetail:"fn":"MQTT_PublishCommandDriver","file":"mqtt/new_mqtt.c","requires":"",
-	//cmddetail:"examples":""}
-	CMD_RegisterCommand("publishDriver", MQTT_PublishCommandDriver, NULL);
 }
 #ifndef NO_CHIP_TEMPERATURE
 static float getInternalTemperature() {
@@ -2210,15 +2163,9 @@ bool MQTT_RunEverySecondUpdate() {
 		return false;
 	}
 
-	if (Main_HasWiFiConnected() == 0)
-	{
+	if (Main_HasWiFiConnected() == 0) {
 		mqtt_reconnect = 0;
-		if (Main_HasFastConnect()) {
-			mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED + 1;
-		}
-		else {
-			mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 2;
-		}
+		mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED + (Main_HasFastConnect() ? 1 : -2);
 		return false;
 	}
 
@@ -2521,8 +2468,12 @@ OBK_Publish_Result PublishQueuedItems() {
 /// @return 
 bool MQTT_IsReady() {
 	// OTA can unintialise without disconnect
-	if (mqtt_initialised && mqtt_client_is_connected(&mqtt_client))
-		return true;
+	if (mqtt_initialised) {
+		LOCK_TCPIP_CORE();
+		int res = mqtt_client_is_connected(&mqtt_client);
+		UNLOCK_TCPIP_CORE();
+		return res;
+	}
 
 	return false;
 }
