@@ -889,7 +889,7 @@ commandResult_t CMD_IndexRefreshInterval(const void* context, const char* cmd, c
 	g_indexAutoRefreshInterval = Tokenizer_GetArgInteger(0);
 	return CMD_RES_OK;
 }
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 static commandResult_t CMD_WebServer(const void* context, const char* cmd, const char* args, int cmdFlags) {	
 	int arg_count;
 	Tokenizer_TokenizeString(args, 0);
@@ -1047,7 +1047,7 @@ void CMD_Init_Early() {
 	//cmddetail:"examples":""}
 	CMD_RegisterCommand("IndexRefreshInterval", CMD_IndexRefreshInterval, NULL);
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	//cmddetail:{"name":"WebServer","args":"[0 - Stop / 1 - Start]",
 	//cmddetail:"descr":"Setting state of WebServer",
 	//cmddetail:"fn":"CMD_WebServer","file":"cmnds/cmd_main.c","requires":"",

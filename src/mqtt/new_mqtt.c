@@ -25,7 +25,7 @@
 #define LOG_FEATURE LOG_FEATURE_MQTT
 #define BUILD_AND_VERSION_FOR_MQTT "Open" PLATFORM_MCU_NAME " " USER_SW_VER " " __DATE__ " " __TIME__ 
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 #include "lwip/altcp_tls.h"
 #include "apps/altcp_tls/altcp_tls_mbedtls_structs.h"
 #include "mbedtls/ssl.h"
@@ -302,7 +302,7 @@ static struct mqtt_connect_client_info_t mqtt_client_info =
   NULL, /* will_msg */
   1,    /* will_qos */
   0     /* will_retain */
-#if LWIP_ALTCP && LWIP_ALTCP_TLS
+#if ENABLE_MQTT_TLS
   , NULL
 #endif
 };
@@ -1109,7 +1109,7 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 	{
 		ADDLOGF_INFO("mqtt_connection_cb: Successfully connected\n");
 
-#if LWIP_ALTCP_TLS_MBEDTLS
+#if ENABLE_MQTT_TLS
 		if (CFG_GetMQTTUseTls() && client && client->conn && client->conn->state) {
 			altcp_mbedtls_state_t* state = client->conn->state;
 			mbedtls_ssl_context* ssl = &state->ssl_context;
@@ -1226,7 +1226,7 @@ static int MQTT_do_connect()
 	mqtt_pass = CFG_GetMQTTPass();
 	mqtt_clientID = CFG_GetMQTTClientId();
 	mqtt_port = CFG_GetMQTTPort();
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	bool mqtt_use_tls = CFG_GetMQTTUseTls();
 	bool mqtt_verify_tls_cert = CFG_GetMQTTVerifyTlsCert();
 #endif
@@ -1314,7 +1314,7 @@ static int MQTT_do_connect()
 		memcpy(&mqtt_ip, &mqtt_ip_resolved, sizeof(mqtt_ip_resolved));
 
 		/* Includes for MQTT over TLS */
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 		/* Free old configuration */
 		if (mqtt_client_info.tls_config) {
 			altcp_tls_free_config(mqtt_client_info.tls_config);
@@ -1365,7 +1365,7 @@ static int MQTT_do_connect()
 				ADDLOGF_INFO("Secure TLS config fail. Try connect anyway.");
 			}
 		}
-#endif /* MQTT_USE_TLS */
+#endif /* ENABLE_MQTT_TLS */
 
 
 #endif /* ELSE WINDOWS*/
@@ -2476,7 +2476,7 @@ bool MQTT_IsReady() {
 	return false;
 }
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 #ifdef MBEDTLS_ENTROPY_HARDWARE_ALT
 #include "fake_clock_pub.h"
 int mbedtls_hardware_poll(void* data, unsigned char* output, size_t len, size_t* olen) {
@@ -2679,7 +2679,7 @@ void mbedtls_dump_conf(mbedtls_ssl_config* conf, mbedtls_ssl_context* ssl) {
 	}
 }
 #endif  //ALTCP_MBEDTLS_DEBUG
-#endif  //MQTT_USE_TLS
+#endif  //ENABLE_MQTT_TLS
 
 #else
 

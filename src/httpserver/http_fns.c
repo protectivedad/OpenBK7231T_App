@@ -1061,7 +1061,7 @@ int http_fn_cfg_mqtt_set(http_request_t* request) {
 		CFG_SetMQTTPort(atoi(tmpA));
 	}
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	CFG_SetMQTTUseTls(http_getArg(request->url, "mqtt_use_tls", tmpA, sizeof(tmpA)));
 	CFG_SetMQTTVerifyTlsCert(http_getArg(request->url, "mqtt_verify_tls_cert", tmpA, sizeof(tmpA)));
 	http_getArg(request->url, "mqtt_cert_file", tmpA, sizeof(tmpA));
@@ -1104,7 +1104,7 @@ int http_fn_cfg_mqtt(http_request_t* request) {
 
 	add_label_text_field(request, "Host", "host", CFG_GetMQTTHost(), "<form action=\"/cfg_mqtt_set\">");
 	add_label_numeric_field(request, "Port", "port", CFG_GetMQTTPort(), "<br>");
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	hprintf255(request, "<input type=\"checkbox\" id=\"mqtt_use_tls\" name=\"mqtt_use_tls\" value=\"1\"");
 	if (CFG_GetMQTTUseTls()) {
 		hprintf255(request, " checked>");
@@ -1189,7 +1189,7 @@ int http_fn_cfg_webapp(http_request_t* request) {
 	http_html_start(request, "Set Webapp");
 	add_label_text_field(request, "URL of the Webapp", "url", CFG_GetWebappRoot(), "<form action=\"/cfg_webapp_set\">");
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	hprintf255(request, "<input type=\"checkbox\" id=\"enable_web_server\" name=\"enable_web_server\" value=\"1\"");
 	if (!CFG_GetDisableWebServer()) {
 		hprintf255(request, " checked>");
@@ -1218,7 +1218,7 @@ int http_fn_cfg_webapp_set(http_request_t* request) {
 		poststr(request, "Webapp url not set because you didn't specify the argument.");
 	}
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	CFG_SetDisableWebServer(!http_getArg(request->url, "enable_web_server", tmpA, sizeof(tmpA)));
 	if (CFG_GetDisableWebServer()) {
 		poststr(request, "<br>");

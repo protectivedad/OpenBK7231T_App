@@ -101,7 +101,7 @@ void CFG_SetLFS_Size(uint32_t value);
 uint32_t CFG_GetLFS_Size();
 #endif 
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 void CFG_SetMQTTUseTls(byte value);
 void CFG_SetMQTTVerifyTlsCert(byte value);
 void CFG_SetMQTTCertFile(const char* s);

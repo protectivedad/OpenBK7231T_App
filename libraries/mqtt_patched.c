@@ -1384,7 +1384,7 @@ mqtt_client_connect(mqtt_client_t *client, const ip_addr_t *ip_addr, u16_t port,
     return ERR_MEM;
   }
 
-#if LWIP_ALTCP && LWIP_ALTCP_TLS
+#if ENABLE_MQTT_TLS
   if (client_info->tls_config) {
     client->conn = altcp_tls_new(client_info->tls_config, IP_GET_TYPE(ip_addr));
   } else

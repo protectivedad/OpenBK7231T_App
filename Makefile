@@ -71,6 +71,7 @@ endif
 .PHONY: mbedtls_init mbedtls
 mbedtls_init:
 	git submodule update --init --recursive --depth 1 libraries/mbedtls
+	@mv ./libraries/mbedtls/library/base64.c ./libraries/mbedtls/library/base64_mbedtls.c
 
 .PHONY: berry_init berry
 berry_init:
@@ -378,7 +379,7 @@ endif
 	fi
 
 # Build main binaries
-OpenBK7231T: prebuild_OpenBK7231T prebuild_mbedtls
+OpenBK7231T: prebuild_OpenBK7231T mbedtls_init
 	$(MAKE) APP_NAME=OpenBK7231T TARGET_PLATFORM=bk7231t SDK_PATH=sdk/OpenBK7231T APPS_BUILD_PATH=../bk7231t_os OBK_VARIANT=$(OBK_VARIANT) build-BK7231
 
 .PHONY: OpenXR872

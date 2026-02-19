@@ -63,6 +63,7 @@
 #define MBEDTLS_SSL_MAX_CONTENT_LEN     4096
 
 // Modes
+#define MBEDTLS_SSL_TLS_C
 #define MBEDTLS_SSL_CLI_C  // Only client enabled
 #undef  MBEDTLS_SSL_SRV_C 
 

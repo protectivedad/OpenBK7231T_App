@@ -192,7 +192,7 @@ void CFG_SetDefaultConfig() {
 	
 	CFG_SetDefaultLEDCorrectionTable();
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 	CFG_SetMQTTUseTls(0);
 	CFG_SetMQTTVerifyTlsCert(0);
 	CFG_SetMQTTCertFile("");
@@ -794,7 +794,7 @@ uint32_t CFG_GetLFS_Size() {
 }
 #endif
 
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 byte CFG_GetMQTTUseTls() {
 	return g_cfg.mqtt_use_tls;
 }

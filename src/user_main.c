@@ -831,7 +831,7 @@ void Main_OnEverySecond()
 	// outside world or AP mode, unless it has been disabled.
 	if (!HTTPService_Started() && 
 		(Main_bHasWiFiConnected || g_bOpenAccessPointMode || bSafeMode)
-#if MQTT_USE_TLS
+#if ENABLE_MQTT_TLS
 		&& !(CFG_GetDisableWebServer() && !bSafeMode)
 #endif
 		) {
