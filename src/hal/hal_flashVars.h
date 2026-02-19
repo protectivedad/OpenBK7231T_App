@@ -93,6 +93,7 @@ typedef struct flash_vars_structure {
 void HAL_FlashVars_IncreaseBootCount();
 // call once started (>30s?)
 void HAL_FlashVars_SaveBootComplete();
+void HAL_FlashVars_SafeToWrite(bool safeToWrite);
 // call to return the number of boots since a HAL_FlashVars_SaveBootComplete
 int HAL_FlashVars_GetBootFailures();
 int HAL_FlashVars_GetBootCount();

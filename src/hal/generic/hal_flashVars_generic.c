@@ -39,6 +39,11 @@ void __attribute__((weak)) HAL_FlashVars_SaveBootComplete()
 
 }
 
+void __attribute__((weak)) HAL_FlashVars_SafeToWrite(bool safeToWrite)
+{
+
+}
+
 // call to return the number of boots since a HAL_FlashVars_SaveBootComplete
 int __attribute__((weak)) HAL_FlashVars_GetBootFailures()
 {

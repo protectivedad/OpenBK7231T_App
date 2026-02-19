@@ -699,11 +699,13 @@ void Main_periodicTasks() {
 		safeToUpdate = true;
 		ADDLOGF_INFO("Enabling flash writes");
 		HAL_saveEnhancedFastConnect();
+		HAL_FlashVars_SafeToWrite(true);
 		HAL_FlashVars_SaveBootComplete();
 		CFG_SafeToWrite(true);
 	} else if (safeToUpdate && !Battery_safeToUpdate()) {
 		safeToUpdate = false;
 		ADDLOGF_INFO("Disabling flash writes");
+		HAL_FlashVars_SafeToWrite(false);
 		CFG_SafeToWrite(false);
 	}
 }
@@ -1350,6 +1352,7 @@ void Main_ForceUnsafeInit() {
 	}
 	Main_Init_BeforeDelay_Unsafe(false);
 	Main_Init_AfterDelay_Unsafe(false);
+	HAL_FlashVars_SafeToWrite(true);
 	HAL_FlashVars_SaveBootComplete();
 	CFG_SafeToWrite(true);
 	bSafeMode = false;

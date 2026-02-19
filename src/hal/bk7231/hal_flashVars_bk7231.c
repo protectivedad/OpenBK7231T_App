@@ -27,6 +27,7 @@
 
 extern FLASH_VARS_STRUCTURE flash_vars;
 
+static bool flash_vars_itemsToWrite;
 uint32_t flash_vars_start;
 uint32_t flash_vars_end;
 const uint32_t flash_vars_part_len = 0x2000; // two blocks in BK7231
@@ -390,6 +391,7 @@ static bool _flash_vars_write() {
 
 	ADDLOGF_DEBUG("new addr 0x%X, boot_count %d, success count %d",
 		flash_vars_next, flash_vars.boot_count, flash_vars.boot_success_count);
+	flash_vars_itemsToWrite = false;
 	return true;
 }
 
@@ -397,6 +399,7 @@ static bool _flash_vars_write() {
 static bool flash_vars_write(bool forcedWrite) {
 	if (g_flashVars_safeToWrite || forcedWrite)
 		return _flash_vars_write();
+	flash_vars_itemsToWrite = true;
 	ADDLOGF_WARN("%s - failed to write to flash, not safe");
 	return false;
 }
@@ -492,16 +495,29 @@ void HAL_FlashVars_SaveTotalUsage(short usage) {
 // call once started (>30s?)
 void HAL_FlashVars_SaveBootComplete() {
 #ifndef DISABLE_FLASH_VARS_VARS
-	// mark that we have completed a boot.
-	ADDLOGF_INFO("####### Set Boot Complete #######");
-
-	flash_vars.boot_success_count = flash_vars.boot_count;
-	g_flashVars_safeToWrite = true;
-	if (!flash_vars_write(false))
+	if (!g_flashVars_safeToWrite) {
+		ADDLOGF_WARN("%s - not safe to write", __func__);
 		return;
+	}
+
+	if (flash_vars.boot_success_count != flash_vars.boot_count) {
+		// mark that we have completed a boot.
+		ADDLOGF_INFO("####### Set Boot Complete #######");
+
+		flash_vars.boot_success_count = flash_vars.boot_count;
+		flash_vars_write(false);
+	}
+	// TODO: add update count to trigger if needed
 #endif
 }
 
+void HAL_FlashVars_SafeToWrite(bool safeToWrite) {
+#ifndef DISABLE_FLASH_VARS_VARS
+	g_flashVars_safeToWrite = safeToWrite;
+	if (g_flashVars_safeToWrite && flash_vars_itemsToWrite)
+		flash_vars_write(false);
+#endif
+}
 // call to return the number of boots since a HAL_FlashVars_SaveBootComplete
 int HAL_FlashVars_GetBootFailures() {
 #ifndef DISABLE_FLASH_VARS_VARS
