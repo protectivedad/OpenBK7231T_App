@@ -95,6 +95,7 @@ static int g_noMQTTTime = 0;
 uint8_t g_StartupDelayOver = 0;
 
 bool Main_onWifiConnect;
+bool Main_onWifiRetry;
 
 #ifndef ENABLE_QUIET_MODE
 uint32_t idleCount = 0;
@@ -483,23 +484,23 @@ void Main_OnWiFiStatusChange(int code)
 		ADDLOGF_INFO("%s - WIFI_STA_CONNECTING - %i\r\n", __func__, code);
 		break;
 	case WIFI_STA_DISCONNECTED:
-		{
-			static uint32_t fastConnectCounter = 3;
-			if (Main_hasEnhancedFastConnect() && fastConnectCounter--)
-				if (!fastConnectCounter)
-					HAL_DisableEnhancedFastConnect();
+		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED - %i\r\n", __func__, code);
+		if (!Main_bHasWiFiConnected && Main_hasEnhancedFastConnect()) {
+			HAL_DisableEnhancedFastConnect();
+			Main_onWifiRetry = true;
+			break;
 		}
 		Main_bHasWiFiConnected = false;
 #if ENABLE_PING_WATCHDOG
 		g_timeSinceLastPingReply = -1;
 #endif
-		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED - %i\r\n", __func__, code);
 		break;
 	case WIFI_STA_AUTH_FAILED:
 		// during enhanced fast connect maybe connecting to new AP?
 		// clear previous and hopefully next time is will find the new AP
 		if (Main_hasEnhancedFastConnect()) {
 			HAL_DisableEnhancedFastConnect();
+			Main_onWifiRetry = true;
 			break;
 		}
 		// try to connect again in few seconds
@@ -526,23 +527,21 @@ void Main_OnWiFiStatusChange(int code)
 		g_SSIDSwitchCnt = 0;
 #endif
 
-		if (!bSafeMode) {
-			Main_onWifiConnect = true;
+		Main_onWifiConnect = true;
 
 #if ENABLE_TASMOTADEVICEGROUPS
-			if (strlen(CFG_DeviceGroups_GetName()) > 0) {
-				ScheduleDriverStart("DGR", 5);
-			}
+		if (strlen(CFG_DeviceGroups_GetName()) > 0) {
+			ScheduleDriverStart("DGR", 5);
+		}
 #endif
 #if ENABLE_DRIVER_SSDP
-			// if SSDP should be active, 
-			// restart it now.
-			if (DRV_SSDP_Active) {
-				ScheduleDriverStart("SSDP", 5);
-				//DRV_SSDP_Restart(); // this kills things
-			}
-#endif
+		// if SSDP should be active, 
+		// restart it now.
+		if (DRV_SSDP_Active) {
+			ScheduleDriverStart("SSDP", 5);
+			//DRV_SSDP_Restart(); // this kills things
 		}
+#endif
 #if defined(PLATFORM_LN882H)
 		// LN882H hack, maybe place somewhere else?
 		// this will be applied only if WiFi is connected
@@ -659,19 +658,13 @@ void Main_ScheduleHomeAssistantDiscovery(int seconds) {
 
 
 void Main_ConnectToWiFiNow() {
-	const char* wifi_ssid, * wifi_pass;
-
 	g_bOpenAccessPointMode = 0;
 	CheckForSSID12_Switch();
-	wifi_ssid = CFG_GetWiFiSSIDX();
-	wifi_pass = CFG_GetWiFiPassX();
 	// register function to get callbacks about wifi changes .. 
 	// ... but do it, before calling HAL_ConnectToWiFi(), 
 	// otherwise callbacks are not possible (e.g. WIFI_STA_CONNECTING can never be called )!!
 	HAL_WiFi_SetupStatusCallback(Main_OnWiFiStatusChange);
-	ADDLOGF_INFO("Registered for wifi changes\r\n");
-	ADDLOGF_INFO("Connecting to SSID [%s]\r\n", wifi_ssid);
-	HAL_ConnectToWiFi(wifi_ssid, wifi_pass, &g_cfg.staticIP);
+	HAL_ConnectToWiFi(CFG_GetWiFiSSIDX(), CFG_GetWiFiPassX(), &g_cfg.staticIP);
 	// don't set g_connectToWiFi = 0; here!
 	// this would overwrite any changes, e.g. from Main_OnWiFiStatusChange !
 	// so don't do this here, but e.g. set in Main_OnWiFiStatusChange if connected!!!
@@ -1055,10 +1048,13 @@ void Main_OnEverySecond()
 #endif
 	}
 
-	if (g_connectToWiFi) {
+	if (g_connectToWiFi && !Main_bHasWiFiConnected) {
 		g_connectToWiFi--;
-		if (!g_connectToWiFi && !Main_bHasWiFiConnected && !g_bOpenAccessPointMode)
+		if (!g_connectToWiFi && !g_bOpenAccessPointMode) {
+			if (Main_hasEnhancedFastConnect())
+				HAL_DisableEnhancedFastConnect();
 			Main_ConnectToWiFiNow();
+		}
 	}
 
 	// config save moved here because of stack size problems
@@ -1147,10 +1143,19 @@ void QuickTick(void* param)
 	}
 	g_last_time = g_timeMs;
 
+	// for enhanced fast connect if the BSSID is not available it will
+	// disconnect and continue trying in the background with the bad BSSID
+	// Need to run a disconnect to stop the currently running connection
+	if (Main_onWifiRetry) {
+		Main_onWifiRetry = false;
+		HAL_DisconnectFromWifi();
+		Main_ConnectToWiFiNow();
+	}
+
 	if (Main_onWifiConnect) {
 		Main_onWifiConnect = false;
 		if (Main_HasFastConnect())
-		MQTT_FastConnect();
+			MQTT_FastConnect();
 
 		SVC_onConnect();
 	}
