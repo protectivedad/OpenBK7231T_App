@@ -20,6 +20,13 @@
 #include "lwipopts.h"
 #include "lwip/ip_addr.h"
 #include "lwip/apps/sntp.h"
+#if PLATFORM_BEKEN
+#include <tcpip.h>
+#else
+// these won't exist except on Beken?
+#define LOCK_TCPIP_CORE()
+#define UNLOCK_TCPIP_CORE()
+#endif
 
 #define LOG_FEATURE LOG_FEATURE_NTP
 
@@ -83,6 +90,7 @@ uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 		
 	case OBKF_Init:
 		NTP_Init();
+		LOCK_TCPIP_CORE();
 		sntp_setoperatingmode(SNTP_OPMODE_POLL);
 		const char *adrString = CFG_GetNTPServer();
 		if (adrString == 0 || adrString[0] == 0) {
@@ -97,11 +105,14 @@ uint32_t NTP_frameworkRequest(uint32_t obkfRequest, uint32_t arg) {
 		else
 			ADDLOGF_ERROR("%s - failed to set %s ntp server!", __func__, adrString);
 
+		UNLOCK_TCPIP_CORE();
 		break;
 
 	case OBKF_OnConnect:
 		// safe to rerun
+		LOCK_TCPIP_CORE();
 		sntp_init();
+		UNLOCK_TCPIP_CORE();
 		break;
 
 	default:
