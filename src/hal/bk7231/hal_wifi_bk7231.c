@@ -385,6 +385,37 @@ void HAL_WiFi_SetupStatusCallback(void (*cb)(int code))
 #endif
 }
 
+void HAL_ConnectToBSSID(uint8_t *bssid, const char* connect_key, obkStaticIP_t *ip) {
+	network_InitTypeDef_st network_cfg;
+
+	g_bOpenAccessPointMode = 0;
+	g_needFastConnectSave = true;
+
+	memset(&network_cfg, 0x0, sizeof(network_InitTypeDef_st));
+
+	memcpy(network_cfg.wifi_bssid, bssid, sizeof(network_cfg.wifi_bssid));
+	strcpy((char*)network_cfg.wifi_key, connect_key);
+
+	network_cfg.wifi_mode = STATION;
+	if (ip->localIPAddr[0] == 0) {
+		network_cfg.dhcp_mode = DHCP_CLIENT;
+		g_bStaticIP = false;
+	}
+	else {
+		network_cfg.dhcp_mode = DHCP_DISABLE;
+		convert_IP_to_string(network_cfg.local_ip_addr, ip->localIPAddr);
+		convert_IP_to_string(network_cfg.net_mask, ip->netMask);
+		convert_IP_to_string(network_cfg.gateway_ip_addr, ip->gatewayIPAddr);
+		convert_IP_to_string(network_cfg.dns_server_ip_addr, ip->dnsServerIpAddr);
+		g_bStaticIP = true;
+	}
+	network_cfg.wifi_retry_interval = 50;
+
+	// ADDLOGF_INFO("bssid:" MACSTR " key: %s", MAC2STR(bssid), network_cfg.wifi_key);
+
+	bk_wlan_start_sta(&network_cfg);
+}
+
 void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t *ip)
 {
 	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT)) {
@@ -442,8 +473,8 @@ void HAL_FastConnectToWiFi(const char* oob_ssid, const char* connect_key, obkSta
 	network_InitTypeDef_adv_st network_cfg;
 	memset(&network_cfg, 0, sizeof(network_InitTypeDef_adv_st));
 	strcpy(network_cfg.ap_info.ssid, oob_ssid);
-	memcpy(network_cfg.key, g_cfg.fcdata.psk, 64);
 	network_cfg.key_len = 64;
+	memcpy(network_cfg.key, g_cfg.fcdata.psk, network_cfg.key_len);
 	memcpy(network_cfg.ap_info.bssid, g_cfg.fcdata.bssid, sizeof(g_cfg.fcdata.bssid));
 
 	if(ip->localIPAddr[0] == 0)

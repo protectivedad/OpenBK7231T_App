@@ -1024,6 +1024,37 @@ void Main_OnEverySecond()
 		}
 	}
 #endif
+	// house keeping items to be done after connected and initial
+	// mqtt items are published
+	if (!bSafeMode && Main_bHasWiFiConnected) {
+#if defined(PLATFORM_BEKEN_NEW)
+		// scan for APs, compare to ssid if the first one is not
+		// the one we are connected to the switch connection to the
+		// stronger AP
+		static ScanResult_adv apList = {0};
+		uint8_t *bestBSSID = 0;
+		if (apList.ApNum) {
+			if (apList.ApNum != -1) {
+				for (uint32_t i = 0; i < apList.ApNum; i++) {
+					ADDLOGF_DEBUG("[%i/%i] AP: %s (" MACSTR "), Channel: %i, Signal: %i, Cipher: %s", (i+1), apList.ApNum,
+							(apList.ApList[i].ssid[0] == 0 ? "hidden" : apList.ApList[i].ssid),
+							MAC2STR(apList.ApList[i].bssid),
+							apList.ApList[i].channel,
+							apList.ApList[i].ApPower,
+							CRYPTO_STR[apList.ApList[i].security]);
+					if (!bestBSSID && !strcmp(CFG_GetWiFiSSID(), apList.ApList[i].ssid))
+						bestBSSID = apList.ApList[i].bssid;
+				}
+				if (memcmp(g_cfg.fcdata.bssid, bestBSSID, sizeof(g_cfg.fcdata.bssid)) != 0)
+					HAL_ConnectToBSSID(bestBSSID, CFG_GetWiFiPassX(), &g_cfg.staticIP);
+				apList.ApNum = -1;
+				os_free(apList.ApList);
+			}
+		} else 
+			HAL_WIFI_ScanResults(&apList);
+#endif
+	}
+
 	if (g_connectToWiFi) {
 		g_connectToWiFi--;
 		if (!g_connectToWiFi && !Main_bHasWiFiConnected && !g_bOpenAccessPointMode)

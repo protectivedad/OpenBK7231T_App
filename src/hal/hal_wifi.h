@@ -57,8 +57,11 @@ const char *CRYPTO_STR[] = {
     "AUTO",
 };
 
+typedef unsigned char uint8_t;
+
 int HAL_SetupWiFiOpenAccessPoint(const char* ssid);
 void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t *ip);
+void HAL_ConnectToBSSID(uint8_t *bssid, const char* connect_key, obkStaticIP_t *ip);
 void HAL_FastConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t* ip);
 void HAL_DisableEnhancedFastConnect();
 void HAL_saveEnhancedFastConnect();
@@ -78,7 +81,6 @@ const char* HAL_GetMACStr(char* macstr);
 //char* HAL_GetWiFiSSID(char* ssid);
 
 char* HAL_GetWiFiBSSID(char* bssid);
-typedef unsigned char uint8_t ;
 uint8_t HAL_GetWiFiChannel(uint8_t *chan);
 
 void WiFI_GetMacAddress(char* mac);
