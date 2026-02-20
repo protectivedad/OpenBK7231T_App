@@ -68,14 +68,9 @@ struct altcp_tls_config {
 // from hal_main_bk7231.c
 // triggers a one-shot timer to cause read.
 extern void MQTT_TriggerRead();
-#endif
-
+#else
 // these won't exist except on Beken?
-#ifndef LOCK_TCPIP_CORE
 #define LOCK_TCPIP_CORE()
-#endif
-
-#ifndef UNLOCK_TCPIP_CORE
 #define UNLOCK_TCPIP_CORE()
 #endif
 
@@ -1118,12 +1113,10 @@ static void mqtt_connection_cb(mqtt_client_t* client, void* arg, mqtt_connection
 		}
 #endif
 
-		//LOCK_TCPIP_CORE();
 		mqtt_set_inpub_callback(client,
 			mqtt_incoming_publish_cb,
 			mqtt_incoming_data_cb,
 			LWIP_CONST_CAST(void*, &mqtt_client_info));
-		//UNLOCK_TCPIP_CORE();
 
 		// subscribe to all callback subscription topics
 		// this makes a BIG assumption that we can subscribe multiple times to the same one?
@@ -2003,6 +1996,11 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 		// TODO: correct SSID
 		return MQTT_DoItemPublishString("ssid", CFG_GetWiFiSSID());
 
+	case PUBLISHITEM_SELF_BSSID:
+		// TODO: correct SSID
+{		char bssid[18];
+		return MQTT_DoItemPublishString("bssid", HAL_GetWiFiBSSID(bssid));
+}
 
 	case PUBLISHITEM_SELF_DATETIME:
 // TIME_GetCurrentTime() is allways present

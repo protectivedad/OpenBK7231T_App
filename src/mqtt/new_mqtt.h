@@ -30,21 +30,22 @@ void MQTT_BroadcastTasmotaTeleSTATE();
 void MQTT_BroadcastTasmotaTeleSENSOR();
 
 
-#define PUBLISHITEM_ALL_INDEX_FIRST   -17
+#define PUBLISHITEM_ALL_INDEX_FIRST   -18
 
 //These 3 values are pretty much static
-#define PUBLISHITEM_SELF_STATIC_RESERVED_2      -17
-#define PUBLISHITEM_SELF_STATIC_RESERVED_1      -16
-#define PUBLISHITEM_SELF_HOSTNAME               -15  //Device name
-#define PUBLISHITEM_SELF_BUILD                  -14  //Build
-#define PUBLISHITEM_SELF_MAC                    -13  //Device mac
+#define PUBLISHITEM_SELF_STATIC_RESERVED_2      -18
+#define PUBLISHITEM_SELF_STATIC_RESERVED_1      -17
+#define PUBLISHITEM_SELF_HOSTNAME               -16  //Device name
+#define PUBLISHITEM_SELF_BUILD                  -15  //Build
+#define PUBLISHITEM_SELF_MAC                    -14  //Device mac
 
-#define PUBLISHITEM_DYNAMIC_INDEX_FIRST         -12
+#define PUBLISHITEM_DYNAMIC_INDEX_FIRST         -13
 
-#define PUBLISHITEM_QUEUED_VALUES               -12  //Publish queued items
+#define PUBLISHITEM_QUEUED_VALUES               -13  //Publish queued items
 
 //These values are dynamic
-#define PUBLISHITEM_SELF_TEMP		            -11  // Internal temp
+#define PUBLISHITEM_SELF_TEMP		            -12  // Internal temp
+#define PUBLISHITEM_SELF_BSSID		            -11  // SSID
 #define PUBLISHITEM_SELF_SSID		            -10  // SSID
 #define PUBLISHITEM_SELF_DATETIME               -9  //Current unix datetime
 #define PUBLISHITEM_SELF_SOCKETS                -8  //Active sockets
