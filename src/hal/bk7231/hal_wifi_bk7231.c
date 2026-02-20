@@ -2,15 +2,14 @@
 
 #define LOG_FEATURE LOG_FEATURE_MAIN
 #include "../../new_common.h"
-#include "wlan_ui_pub.h"
 #include "ethernet_intf.h"
-#include "../../new_common.h"
 #include "net.h"
 #include "../../logging/logging.h"
 #include "../../beken378/app/config/param_config.h"
 #include "lwip/netdb.h"
 #include "../../new_pins.h"
 #include "../src/new_cfg.h"
+#include <tcpip.h>
 
 #ifdef PLATFORM_BEKEN_NEW
 
@@ -341,19 +340,49 @@ void wl_status(void* ctxt)
 	default:
 		break;
 	}
-
 }
 
+#ifdef PLATFORM_BEKEN_NEW
+extern int hostapd_scan_started;
+static bool g_scanStarted;
+static ScanResult_adv *g_apList;
+static void scan_status(void *ctxt, uint8_t param) {
+	ADDLOGF_INFO("%s - param: %d", __func__, param);
+    int ret;
+	LOCK_TCPIP_CORE();
+    if (bk_wlan_ap_is_up() > 0 || hostapd_scan_started)
+        ret = wlan_ap_scan_result(g_apList);
+    else
+        ret = wlan_sta_scan_result(g_apList);
+	UNLOCK_TCPIP_CORE();
 
-// from wlan_ui.c, no header
-void bk_wlan_status_register_cb(FUNC_1PARAM_PTR cb);
+    if (!ret)
+		g_scanStarted = false;
+}
 
+void HAL_WIFI_ScanResults(void *apList) {
+	g_apList = (ScanResult_adv *)apList;
+
+	if (g_apList->ApNum)
+		return;
+
+	if (!g_scanStarted) {
+		LOCK_TCPIP_CORE();
+		bk_wlan_start_scan();
+		UNLOCK_TCPIP_CORE();
+		g_scanStarted = true;
+	}
+}
+#endif
 
 void HAL_WiFi_SetupStatusCallback(void (*cb)(int code))
 {
 	g_wifiStatusCallback = cb;
 
 	bk_wlan_status_register_cb(wl_status);
+#ifdef PLATFORM_BEKEN_NEW
+	bk_wlan_scan_ap_reg_cb(scan_status);
+#endif
 }
 
 void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t *ip)

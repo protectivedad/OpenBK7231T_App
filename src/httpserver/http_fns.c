@@ -39,7 +39,7 @@
 #elif PLATFORM_XRADIO
 #include <image/flash.h>
 #include <ota/ota.h>
-#elif defined(PLATFORM_BK7231N)
+#elif defined(PLATFORM_BK7231N) || defined(PLATFORM_BEKEN_NEW)
 // tuya-iotos-embeded-sdk-wifi-ble-bk7231n/sdk/include/tuya_hal_storage.h
 #include "tuya_hal_storage.h"
 #include "BkDriverFlash.h"
@@ -1320,6 +1320,27 @@ int http_fn_cfg_wifi(http_request_t* request) {
 #ifdef WINDOWS
 
 		poststr(request, "Not available on Windows<br>");
+#elif defined(PLATFORM_BEKEN_NEW)
+		static ScanResult_adv apList = {0};
+
+		bk_printf("Scan begin...\r\n");
+		HAL_WIFI_ScanResults(&apList);
+		uint32_t ap_num = apList.ApNum;
+		if (ap_num) {
+			bk_printf("Scan returned %li networks\r\n", ap_num);
+			hprintf255(request, "<small>");
+			for (uint32_t i = 0; i < ap_num; i++)
+				hprintf255(request, "[%i/%i] AP: %s (" MACSTR "), Channel: %i, Signal: %i, Cipher: %s<br>", (i+1), (int)ap_num,
+						(apList.ApList[i].ssid[0] == 0 ? "hidden" : apList.ApList[i].ssid),
+						MAC2STR(apList.ApList[i].bssid),
+						apList.ApList[i].channel,
+						apList.ApList[i].ApPower,
+						CRYPTO_STR[apList.ApList[i].security]);
+			apList.ApNum = 0;
+			os_free(apList.ApList);
+			hprintf255(request, "</small>");
+		} else
+			hprintf255(request, "Press again after a second to display results<br>");
 #elif PLATFORM_BL602
                wifi_mgmr_ap_item_t *ap_info;
                uint32_t i, ap_num;
@@ -1337,6 +1358,7 @@ int http_fn_cfg_wifi(http_request_t* request) {
 
 		AP_IF_S* ar;
 		uint32_t num;
+
 
 		bk_printf("Scan begin...\r\n");
 		tuya_hal_wifi_all_ap_scan(&ar, &num);

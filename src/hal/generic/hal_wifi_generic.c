@@ -55,6 +55,11 @@ int __attribute__((weak)) HAL_GetWifiStrength()
 	return 0;
 }
 
+void __attribute__((weak)) HAL_WIFI_ScanResults(void *apList)
+{
+	
+}
+
 void __attribute__((weak)) HAL_WiFi_SetupStatusCallback(void (*cb)(int code))
 {
 

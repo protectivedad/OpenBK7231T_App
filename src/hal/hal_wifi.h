@@ -41,6 +41,22 @@ typedef struct
 #endif
 } obkFastConnectData_t;
 
+const char *CRYPTO_STR[] = {
+    "None",
+    "WEP",
+    "WPA (TKIP)",
+    "WPA (AES)",
+    "WPA (MIXED)",
+    "WPA2 (TKIP)",
+    "WPA2 (AES)",
+    "WPA2 (MIXED)",		////BK_SECURITY_TYPE_WPA3_SAE
+    "WPA3 (SAE)", 		/**< WPA3 SAE */
+    "WPA3/WPA2 (SAE/AES)",	/** WPA3 SAE or WPA2 AES */
+    "EAP",
+    "OWE",
+    "AUTO",
+};
+
 int HAL_SetupWiFiOpenAccessPoint(const char* ssid);
 void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t *ip);
 void HAL_FastConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticIP_t* ip);
@@ -48,6 +64,7 @@ void HAL_DisableEnhancedFastConnect();
 void HAL_saveEnhancedFastConnect();
 void HAL_DisconnectFromWifi();
 void HAL_WiFi_SetupStatusCallback(void (*cb)(int code));
+void HAL_WIFI_ScanResults(void *apList);
 // This must return correct IP for both SOFT_AP and STATION modes,
 // because, for example, javascript control panel requires it
 const char* HAL_GetMyIPString();
