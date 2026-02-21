@@ -65,8 +65,8 @@ void bg_register_irda_check_func(FUNCPTR func);
 int g_secondsElapsed = 0;
 // open access point after this number of seconds
 int g_openAP = 0;
-// connect to wifi after this number of seconds
-static int g_connectToWiFi = 0;
+// connect/retry wifi after this number of seconds
+static int g_connectToWiFi = 4;
 // reset after this number of seconds
 static int g_reset = 0;
 // is connected to WiFi?
@@ -94,8 +94,8 @@ static int g_noMQTTTime = 0;
 
 uint8_t g_StartupDelayOver = 0;
 
-bool Main_onWifiConnect;
-bool Main_onWifiRetry;
+bool Main_bWifiConnect;
+bool Main_bWifiRetry;
 
 #ifndef ENABLE_QUIET_MODE
 uint32_t idleCount = 0;
@@ -483,11 +483,7 @@ void Main_OnWiFiStatusChange(int code)
 		ADDLOGF_INFO("%s - WIFI_STA_CONNECTING", __func__);
 		break;
 	case WIFI_STA_DISCONNECTED:
-		if (!Main_bHasWiFiConnected && Main_hasEnhancedFastConnect()) {
-			HAL_DisableEnhancedFastConnect();
-			Main_onWifiRetry = true;
-			break;
-		}
+		Main_bWifiRetry = true;
 		Main_bHasWiFiConnected = false;
 		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED", __func__);
 #if ENABLE_PING_WATCHDOG
@@ -495,22 +491,7 @@ void Main_OnWiFiStatusChange(int code)
 #endif
 		break;
 	case WIFI_STA_AUTH_FAILED:
-		// during enhanced fast connect maybe connecting to new AP?
-		// clear previous and hopefully next time is will find the new AP
-		if (Main_hasEnhancedFastConnect()) {
-			HAL_DisableEnhancedFastConnect();
-			Main_onWifiRetry = true;
-			break;
-		}
-		// try to connect again in few seconds
-		// for me first auth will often fail, so retry more aggressively during startup
-		// the maximum of 6 tries during first 30 seconds should be acceptable
-		if (g_secondsElapsed < 30) {
-			g_connectToWiFi = 5;
-		}
-		else {
-			g_connectToWiFi = 60;
-		}
+		Main_bWifiRetry = true;
 		Main_bHasWiFiConnected = false;
 		ADDLOGF_INFO("%s - WIFI_STA_AUTH_FAILED", __func__);
 		break;
@@ -526,30 +507,8 @@ void Main_OnWiFiStatusChange(int code)
 		g_SSIDSwitchCnt = 0;
 #endif
 
-		Main_onWifiConnect = true;
+		Main_bWifiConnect = true;
 
-#if ENABLE_TASMOTADEVICEGROUPS
-		if (strlen(CFG_DeviceGroups_GetName()) > 0) {
-			ScheduleDriverStart("DGR", 5);
-		}
-#endif
-#if ENABLE_DRIVER_SSDP
-		// if SSDP should be active, 
-		// restart it now.
-		if (DRV_SSDP_Active) {
-			ScheduleDriverStart("SSDP", 5);
-			//DRV_SSDP_Restart(); // this kills things
-		}
-#endif
-#if defined(PLATFORM_LN882H)
-		// LN882H hack, maybe place somewhere else?
-		// this will be applied only if WiFi is connected
-		if (g_ln882h_pendingPowerSaveCommand != -1) {
-			ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: applying delayed setting. PowerSave will set to %i", g_ln882h_pendingPowerSaveCommand);
-			LN882H_ApplyPowerSave(g_ln882h_pendingPowerSaveCommand);
-			g_ln882h_pendingPowerSaveCommand = -1;
-		}
-#endif
 		break;
 		/* for softap mode */
 	case WIFI_AP_CONNECTED:
@@ -1010,7 +969,7 @@ void Main_OnEverySecond()
 #endif
 	// house keeping items to be done after connected and initial
 	// mqtt items are published
-	if (!bSafeMode && Main_bHasWiFiConnected) {
+	if (!bSafeMode && Main_bHasWiFiConnected && Main_HasMQTTConnected()) {
 #if defined(PLATFORM_BEKEN_NEW)
 		// scan for APs, compare to ssid if the first one is not
 		// the one we are connected to the switch connection to the
@@ -1039,14 +998,13 @@ void Main_OnEverySecond()
 #endif
 	}
 
-	if (g_connectToWiFi && !Main_bHasWiFiConnected) {
-		g_connectToWiFi--;
-		if (!g_connectToWiFi && !g_bOpenAccessPointMode) {
-			if (Main_hasEnhancedFastConnect())
-				HAL_DisableEnhancedFastConnect();
-			Main_ConnectToWiFiNow();
-		}
-	}
+	if (!g_bOpenAccessPointMode &&
+		!Main_bHasWiFiConnected &&
+		g_connectToWiFi &&
+		g_connectToWiFi-- &&
+		!g_connectToWiFi
+	)
+		Main_bWifiRetry = true;
 
 	// config save moved here because of stack size problems
 	if (g_saveCfgAfter) {
@@ -1114,6 +1072,35 @@ int g_pinDeepSleepWakeUp = 0;
 #endif
 unsigned int g_deltaTimeMS;
 
+void Main_onWifiConnect() {
+	Main_bWifiConnect = false;
+	if (Main_HasFastConnect())
+		MQTT_FastConnect();
+
+#if ENABLE_TASMOTADEVICEGROUPS
+	if (strlen(CFG_DeviceGroups_GetName()) > 0) {
+		ScheduleDriverStart("DGR", 5);
+	}
+#endif
+#if ENABLE_DRIVER_SSDP
+	// if SSDP should be active, 
+	// restart it now.
+	if (DRV_SSDP_Active) {
+		ScheduleDriverStart("SSDP", 5);
+		//DRV_SSDP_Restart(); // this kills things
+	}
+#endif
+#if defined(PLATFORM_LN882H)
+	// LN882H hack, maybe place somewhere else?
+	// this will be applied only if WiFi is connected
+	if (g_ln882h_pendingPowerSaveCommand != -1) {
+		ADDLOG_INFO(LOG_FEATURE_CMD, "CMD_PowerSave: applying delayed setting. PowerSave will set to %i", g_ln882h_pendingPowerSaveCommand);
+		LN882H_ApplyPowerSave(g_ln882h_pendingPowerSaveCommand);
+		g_ln882h_pendingPowerSaveCommand = -1;
+	}
+#endif
+	SVC_onConnect();
+}
 
 /////////////////////////////////////////////////////
 // this is what we do in a qucik tick
@@ -1134,22 +1121,18 @@ void QuickTick(void* param)
 	}
 	g_last_time = g_timeMs;
 
-	// for enhanced fast connect if the BSSID is not available it will
-	// disconnect and continue trying in the background with the bad BSSID
-	// Need to run a disconnect to stop the currently running connection
-	if (Main_onWifiRetry) {
-		Main_onWifiRetry = false;
+	// need to stop background connect with disconnect before connecting again
+	if (Main_bWifiRetry) {
+		ADDLOGF_INFO("Retrying connection to AP");
+		Main_bWifiRetry = false;
+		if (Main_hasEnhancedFastConnect())
+			HAL_DisableEnhancedFastConnect();
+
 		HAL_DisconnectFromWifi();
 		Main_ConnectToWiFiNow();
-	}
-
-	if (Main_onWifiConnect) {
-		Main_onWifiConnect = false;
-		if (Main_HasFastConnect())
-			MQTT_FastConnect();
-
-		SVC_onConnect();
-	}
+		g_connectToWiFi = 4;
+	} else if (Main_bWifiConnect)
+		Main_onWifiConnect();
 
 #if defined(PLATFORM_BEKEN) && defined(BEKEN_PIN_GPI_INTERRUPTS)
 	// if using interrupt driven GPI for pins, don't call PIN_ticks() in QuickTick
