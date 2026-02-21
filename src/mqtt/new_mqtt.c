@@ -2125,7 +2125,9 @@ void MQTT_JustConnected() {
 		MQTT_PublishWholeDeviceState();
 	}
 	else {
-		//MQTT_PublishOnlyDeviceChannelsIfPossible();
+		PublishQueuedItems();
+		MQTT_DoItemPublish(PUBLISHITEM_SELF_BSSID);
+		MQTT_DoItemPublish(PUBLISHITEM_SELF_IP);
 	}
 }
 
@@ -2141,8 +2143,6 @@ int MQTT_RunQuickTick(){
 	if (g_just_connected && Main_HasFastConnect()) {
 		// do just connected logic
 		MQTT_JustConnected();
-		// publish queued items
-		PublishQueuedItems();
 	}
 	return 0;
 }

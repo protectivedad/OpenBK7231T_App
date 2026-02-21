@@ -808,10 +808,6 @@ void Main_OnEverySecond()
 		const char* ip = HAL_GetMyIPString();
 		// this will return non-zero if there were any changes
 		if (strcpy_safe_checkForChanges(g_currentIPString, ip, sizeof(g_currentIPString))) {
-			if (MQTT_IsReady()) {
-				MQTT_DoItemPublish(PUBLISHITEM_SELF_IP);
-				MQTT_DoItemPublish(PUBLISHITEM_SELF_BSSID);
-			}
 			EventHandlers_FireEvent(CMD_EVENT_IPCHANGE, 0);
 #if ENABLE_HA_DISCOVERY
 			//Invoke Hass discovery if ipaddr changed

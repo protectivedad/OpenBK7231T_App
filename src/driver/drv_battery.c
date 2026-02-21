@@ -26,7 +26,7 @@ float g_vref = 4800, g_vdivider = 2.01, g_maxbatt = 3200, g_minbatt = 2500, g_ad
 float g_vref = 2400, g_vdivider = 2.29, g_maxbatt = 3000, g_minbatt = 2000, g_adcbits = 4096;
 #endif
 uint32_t g_driverIndex = 0;
-bool g_measureTrigger;
+bool g_measureTrigger = true;
 
 #ifdef WINDOWS
 void Simulator_Force_Batt_Measure() {
