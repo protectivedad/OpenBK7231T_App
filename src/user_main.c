@@ -65,8 +65,9 @@ void bg_register_irda_check_func(FUNCPTR func);
 int g_secondsElapsed = 0;
 // open access point after this number of seconds
 int g_openAP = 0;
-// connect/retry wifi after this number of seconds
-static int g_connectToWiFi = 4;
+// if not started earlier (fast connect) the system will wait this many seconds
+// before connecting to the wifi
+static int g_connectToWiFi = 2;
 // reset after this number of seconds
 static int g_reset = 0;
 // is connected to WiFi?
@@ -496,18 +497,17 @@ void Main_OnWiFiStatusChange(int code)
 		ADDLOGF_INFO("%s - WIFI_STA_AUTH_FAILED", __func__);
 		break;
 	case WIFI_STA_CONNECTED:
+		ADDLOGF_INFO("%s - WIFI_STA_CONNECTED", __func__);
 #if ALLOW_SSID2
 		if (!Main_bHasWiFiConnected) FV_UpdateStartupSSIDIfChanged_StoredValue(g_SSIDactual);	//update ony on first connect
 #endif		
-
-		Main_bHasWiFiConnected = true;
-		ADDLOGF_INFO("%s - WIFI_STA_CONNECTED", __func__);
-
 #if ALLOW_SSID2
 		g_SSIDSwitchCnt = 0;
 #endif
-
-		Main_bWifiConnect = true;
+		if (!Main_bHasWiFiConnected) {
+			Main_bHasWiFiConnected = true;
+			Main_bWifiConnect = true;
+		}
 
 		break;
 		/* for softap mode */
@@ -647,7 +647,6 @@ void Main_periodicTasks() {
 	if (!safeToUpdate && Battery_safeToUpdate()) {
 		safeToUpdate = true;
 		ADDLOGF_INFO("Enabling flash writes");
-		HAL_saveEnhancedFastConnect();
 		HAL_FlashVars_SafeToWrite(true);
 		HAL_FlashVars_SaveBootComplete();
 		CFG_SafeToWrite(true);
@@ -657,6 +656,56 @@ void Main_periodicTasks() {
 		HAL_FlashVars_SafeToWrite(false);
 		CFG_SafeToWrite(false);
 	}
+}
+
+static bool Main_tradeUpBSSID() {
+#if defined(PLATFORM_BEKEN_NEW)
+		// scan for APs, compare to ssid if the first one is not
+		// the one we are connected to the switch connection to the
+		// stronger AP if signicantly better
+		static ScanResult_adv apList = {0};
+		uint8_t *bestBSSID = 0;
+		int8_t apPower = 0;
+		if (apList.ApNum) {
+			for (uint32_t i = 0; i < apList.ApNum; i++) {
+				ADDLOGF_DEBUG("[%i/%i] AP: %s (" MACSTR "), Channel: %i, Signal: %i, Cipher: %s", (i+1), apList.ApNum,
+						(apList.ApList[i].ssid[0] == 0 ? "hidden" : apList.ApList[i].ssid),
+						MAC2STR(apList.ApList[i].bssid),
+						apList.ApList[i].channel,
+						apList.ApList[i].ApPower,
+						CRYPTO_STR[apList.ApList[i].security]);
+				// save bssid and ApPower of the first matching ssid
+				if (!bestBSSID && !strcmp(CFG_GetWiFiSSID(), apList.ApList[i].ssid)) {
+					bestBSSID = apList.ApList[i].bssid;
+					apPower = apList.ApList[i].ApPower;
+					ADDLOGF_DEBUG("Found AP: %s (" MACSTR "), Signal: %i", apList.ApList[i].ssid, MAC2STR(bestBSSID), apPower);
+				}
+				// check that the new bssid's power is significately better
+				if (memcmp(g_cfg.fcdata.bssid, apList.ApList[i].bssid, sizeof(g_cfg.fcdata.bssid)) == 0) {
+					int8_t curApPower = apList.ApList[i].ApPower;
+					ADDLOGF_DEBUG("Current AP: %s (" MACSTR "), Signal: %i", apList.ApList[i].ssid, MAC2STR(apList.ApList[i].bssid), curApPower);
+					// already excellent or not better enough
+					if (curApPower >= -50 ||
+						(15 >= apPower - curApPower)
+					)
+						bestBSSID = apList.ApList[i].bssid;
+					break;
+				}
+			}
+			ADDLOGF_DEBUG("BSSID: fcdata ("MACSTR") best ("MACSTR")", MAC2STR(g_cfg.fcdata.bssid), MAC2STR(bestBSSID));
+			if (memcmp(g_cfg.fcdata.bssid, bestBSSID, sizeof(g_cfg.fcdata.bssid)) != 0) {
+				MQTT_disconnectClient();
+				Main_bHasWiFiConnected = false;
+				HAL_ConnectToBSSID(bestBSSID, CFG_GetWiFiPassX(), &g_cfg.staticIP);
+			}
+			apList.ApNum = 0;
+			os_free(apList.ApList);
+			return true;
+		} else 
+			HAL_WIFI_ScanResults(&apList);
+
+		return false;
+#endif
 }
 
 static byte g_secondsSpentInLowMemoryWarning = 0;
@@ -969,33 +1018,9 @@ void Main_OnEverySecond()
 #endif
 	// house keeping items to be done after connected and initial
 	// mqtt items are published
-	if (!bSafeMode && Main_bHasWiFiConnected && Main_HasMQTTConnected()) {
-#if defined(PLATFORM_BEKEN_NEW)
-		// scan for APs, compare to ssid if the first one is not
-		// the one we are connected to the switch connection to the
-		// stronger AP
-		static ScanResult_adv apList = {0};
-		uint8_t *bestBSSID = 0;
-		if (apList.ApNum) {
-			if (apList.ApNum != -1) {
-				for (uint32_t i = 0; i < apList.ApNum; i++) {
-					ADDLOGF_DEBUG("[%i/%i] AP: %s (" MACSTR "), Channel: %i, Signal: %i, Cipher: %s", (i+1), apList.ApNum,
-							(apList.ApList[i].ssid[0] == 0 ? "hidden" : apList.ApList[i].ssid),
-							MAC2STR(apList.ApList[i].bssid),
-							apList.ApList[i].channel,
-							apList.ApList[i].ApPower,
-							CRYPTO_STR[apList.ApList[i].security]);
-					if (!bestBSSID && !strcmp(CFG_GetWiFiSSID(), apList.ApList[i].ssid))
-						bestBSSID = apList.ApList[i].bssid;
-				}
-				if (memcmp(g_cfg.fcdata.bssid, bestBSSID, sizeof(g_cfg.fcdata.bssid)) != 0)
-					HAL_ConnectToBSSID(bestBSSID, CFG_GetWiFiPassX(), &g_cfg.staticIP);
-				apList.ApNum = -1;
-				os_free(apList.ApList);
-			}
-		} else 
-			HAL_WIFI_ScanResults(&apList);
-#endif
+	static bool tradedUp;
+	if (!tradedUp && !bSafeMode && Main_bHasWiFiConnected && Main_HasMQTTConnected()) {
+		tradedUp = Main_tradeUpBSSID();
 	}
 
 	if (!g_bOpenAccessPointMode &&
@@ -1074,8 +1099,15 @@ unsigned int g_deltaTimeMS;
 
 void Main_onWifiConnect() {
 	Main_bWifiConnect = false;
+
+	// continue the process of puplishing MQTT
 	if (Main_HasFastConnect())
 		MQTT_FastConnect();
+
+	// save information to memory, used by BSSID reconnect
+	// written to flash after boot complete
+	if (Main_hasEnhancedFastConnect())
+		HAL_saveEnhancedFastConnect();
 
 #if ENABLE_TASMOTADEVICEGROUPS
 	if (strlen(CFG_DeviceGroups_GetName()) > 0) {
@@ -1130,7 +1162,7 @@ void QuickTick(void* param)
 
 		HAL_DisconnectFromWifi();
 		Main_ConnectToWiFiNow();
-		g_connectToWiFi = 4;
+		g_connectToWiFi = 10;
 	} else if (Main_bWifiConnect)
 		Main_onWifiConnect();
 
@@ -1461,8 +1493,11 @@ void Main_Init_After_Delay()
 
 	bool haveSSID = CFG_GetWiFiSSIDX()[0]; 
 	if (haveSSID && !bSafeMode) {
-		if (Main_HasFastConnect())
+		if (Main_HasFastConnect()) {
 			Main_ConnectToWiFiNow();
+			// connect will timeout and retry after this many seconds
+			g_connectToWiFi = Main_hasEnhancedFastConnect() ? 4 : 10;
+		}
 	} else {
 		if (bSafeMode)
 			ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
@@ -1527,6 +1562,7 @@ void Main_Init()
 	Main_Init_Delay();
 	
 	// do things we want after TCP/IP stack is ready
+	// fast connect flag will start wifi
 	Main_Init_After_Delay();
 
 	if (!bSafeMode)

@@ -386,12 +386,12 @@ void HAL_WiFi_SetupStatusCallback(void (*cb)(int code))
 }
 
 void HAL_ConnectToBSSID(uint8_t *bssid, const char* connect_key, obkStaticIP_t *ip) {
-	network_InitTypeDef_st network_cfg;
+	network_InitTypeDef_st network_cfg = {0};
 
+	ADDLOG_WARN(LOG_FEATURE_GENERAL, "Connecting using BSSID: " MACSTR " IP: %d.%d.%d.%d", MAC2STR(bssid),
+			ip->localIPAddr[0], ip->localIPAddr[1], ip->localIPAddr[2], ip->localIPAddr[3] );
 	g_bOpenAccessPointMode = 0;
 	g_needFastConnectSave = true;
-
-	memset(&network_cfg, 0x0, sizeof(network_InitTypeDef_st));
 
 	memcpy(network_cfg.wifi_bssid, bssid, sizeof(network_cfg.wifi_bssid));
 	strcpy((char*)network_cfg.wifi_key, connect_key);
@@ -409,9 +409,7 @@ void HAL_ConnectToBSSID(uint8_t *bssid, const char* connect_key, obkStaticIP_t *
 		convert_IP_to_string(network_cfg.dns_server_ip_addr, ip->dnsServerIpAddr);
 		g_bStaticIP = true;
 	}
-	network_cfg.wifi_retry_interval = 50;
-
-	// ADDLOGF_INFO("bssid:" MACSTR " key: %s", MAC2STR(bssid), network_cfg.wifi_key);
+	network_cfg.wifi_retry_interval = 100;
 
 	bk_wlan_start_sta(&network_cfg);
 }
@@ -431,7 +429,7 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticI
 			// fast connect data is the same until it is not, if it has been disabled
 			// or this is the first connect save the new fast connect information
 			g_needFastConnectSave = true;
-			ADDLOG_INFO(LOG_FEATURE_GENERAL, "Fast connect data is empty, connecting normally");
+			ADDLOG_WARN(LOG_FEATURE_GENERAL, "Fast connect data is empty, connecting normally");
 		}
 	} else {
 		// if we have switched off enhanced fast connect disable stored data
@@ -503,7 +501,7 @@ void HAL_DisableEnhancedFastConnect() {
 	if(g_cfg.fcdata.channel != 0) {
 		g_cfg.fcdata.channel = 0;
 		g_cfg_pendingChanges++;
-		ADDLOG_INFO(LOG_FEATURE_GENERAL, "%s - Fast connect data cleared", __func__);
+		ADDLOG_WARN(LOG_FEATURE_GENERAL, "%s - Fast connect data cleared", __func__);
 	}
 }
 
