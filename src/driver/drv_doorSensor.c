@@ -197,7 +197,12 @@ void DoorSensor_onEverySecond() {
 		return;
 
 #if ENABLE_MQTT
+	// when mqtt comes online add the amount that is currently counted to the start of the ordinary countdown
 	if (Main_HasMQTTConnected()) { // executes every second when connection is established
+		if (g_emergencyTimeWithNoConnection) {
+			g_noChangeTimePassed += g_emergencyTimeWithNoConnection;
+			g_emergencyTimeWithNoConnection = 0;
+		}
 		if (++g_noChangeTimePassed >= setting_timeRequiredUntilDeepSleep) {
 			g_bWantPinDeepSleep = true;
 			g_pinDeepSleepWakeUp = setting_automaticWakeUpAfterSleepTime;
