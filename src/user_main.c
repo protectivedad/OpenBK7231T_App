@@ -480,17 +480,16 @@ void Main_OnWiFiStatusChange(int code)
 	{
 	case WIFI_STA_CONNECTING:
 		Main_bHasWiFiConnected = false;
-		g_connectToWiFi = 120;
-		ADDLOGF_INFO("%s - WIFI_STA_CONNECTING - %i\r\n", __func__, code);
+		ADDLOGF_INFO("%s - WIFI_STA_CONNECTING", __func__);
 		break;
 	case WIFI_STA_DISCONNECTED:
-		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED - %i\r\n", __func__, code);
 		if (!Main_bHasWiFiConnected && Main_hasEnhancedFastConnect()) {
 			HAL_DisableEnhancedFastConnect();
 			Main_onWifiRetry = true;
 			break;
 		}
 		Main_bHasWiFiConnected = false;
+		ADDLOGF_INFO("%s - WIFI_STA_DISCONNECTED", __func__);
 #if ENABLE_PING_WATCHDOG
 		g_timeSinceLastPingReply = -1;
 #endif
@@ -513,7 +512,7 @@ void Main_OnWiFiStatusChange(int code)
 			g_connectToWiFi = 60;
 		}
 		Main_bHasWiFiConnected = false;
-		ADDLOGF_INFO("%s - WIFI_STA_AUTH_FAILED - %i\r\n", __func__, code);
+		ADDLOGF_INFO("%s - WIFI_STA_AUTH_FAILED", __func__);
 		break;
 	case WIFI_STA_CONNECTED:
 #if ALLOW_SSID2
@@ -521,7 +520,7 @@ void Main_OnWiFiStatusChange(int code)
 #endif		
 
 		Main_bHasWiFiConnected = true;
-		ADDLOGF_INFO("%s - WIFI_STA_CONNECTED - %i\r\n", __func__, code);
+		ADDLOGF_INFO("%s - WIFI_STA_CONNECTED", __func__);
 
 #if ALLOW_SSID2
 		g_SSIDSwitchCnt = 0;
@@ -555,11 +554,11 @@ void Main_OnWiFiStatusChange(int code)
 		/* for softap mode */
 	case WIFI_AP_CONNECTED:
 		Main_bHasWiFiConnected = true;
-		ADDLOGF_INFO("%s - WIFI_AP_CONNECTED - %i\r\n", __func__, code);
+		ADDLOGF_INFO("%s - WIFI_AP_CONNECTED", __func__);
 		break;
 	case WIFI_AP_FAILED:
 		Main_bHasWiFiConnected = false;
-		ADDLOGF_INFO("%s - WIFI_AP_FAILED - %i\r\n", __func__, code);
+		ADDLOGF_INFO("%s - WIFI_AP_FAILED", __func__);
 		break;
 	default:
 		break;
@@ -665,10 +664,8 @@ void Main_ConnectToWiFiNow() {
 	// otherwise callbacks are not possible (e.g. WIFI_STA_CONNECTING can never be called )!!
 	HAL_WiFi_SetupStatusCallback(Main_OnWiFiStatusChange);
 	HAL_ConnectToWiFi(CFG_GetWiFiSSIDX(), CFG_GetWiFiPassX(), &g_cfg.staticIP);
-	// don't set g_connectToWiFi = 0; here!
-	// this would overwrite any changes, e.g. from Main_OnWiFiStatusChange !
-	// so don't do this here, but e.g. set in Main_OnWiFiStatusChange if connected!!!
 }
+
 bool Main_HasFastConnect() {
 	return CFG_HasFlag(OBK_FLAG_WIFI_FAST_CONNECT);
 }
@@ -787,9 +784,7 @@ void Main_OnEverySecond()
 #endif
 
 	if (OTA_GetProgress() == -1)
-	{
 		CFG_Save_IfThereArePendingChanges();
-	}
 
 	// On Beken, do reboot if we ran into heap size problem
 #if PLATFORM_BEKEN || PLATFORM_W800
@@ -1460,21 +1455,14 @@ void Main_Init_Delay()
 // i.e. things that use TCP/IP like NTP, SSDP, DGR
 void Main_Init_After_Delay()
 {
-	const char* wifi_ssid, * wifi_pass;
 #if OBK_TIMING_LOGGING_ENABLED
 	ADDLOGF_TIMING("%i - %s", xTaskGetTickCount(), __func__);
 #else
 	ADDLOGF_INFO("%s", __func__);
 #endif
-	// we can log this after delay.
-	if (bSafeMode) {
-		ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
-	}
 #if ALLOW_SSID2
 	Init_WiFiSSIDactual_FromChannelIfSet();//Channel must be set in early.bat using CMD_setStartupSSIDChannel
 #endif
-	wifi_ssid = CFG_GetWiFiSSIDX();
-	wifi_pass = CFG_GetWiFiPassX();
 
 #if 0
 	// you can use this if you bricked your module by setting wrong access point data
@@ -1488,37 +1476,30 @@ void Main_Init_After_Delay()
 
 	HAL_Configure_WDT();
 
-	if ((*wifi_ssid == 0))
-	{
-		// start AP mode in 5 seconds
-		g_openAP = 5;
-		//HAL_SetupWiFiOpenAccessPoint();
-	}
-	else {
-		if (bSafeMode)
-			g_openAP = 5;
-		else if (Main_HasFastConnect())
+	bool haveSSID = CFG_GetWiFiSSIDX()[0]; 
+	if (haveSSID && !bSafeMode) {
+		if (Main_HasFastConnect())
 			Main_ConnectToWiFiNow();
+	} else {
+		if (bSafeMode)
+			ADDLOGF_INFO("###### safe mode activated - boot failures %d", g_bootFailures);
 		else
-			g_connectToWiFi = 5;
+			ADDLOGF_INFO("###### AP mode activated - no SSID");
+		g_openAP = 5;
 	}
-
-	ADDLOGF_INFO("Using SSID [%s]\r\n", wifi_ssid);
-	ADDLOGF_INFO("Using Pass [%s]\r\n", wifi_pass);
-
 	// NOT WORKING, I done it other way, see ethernetif.c
 	//net_dhcp_hostname_set(g_shortDeviceName);
 
+#if ENABLE_HA_DISCOVERY
 	// only initialise certain things if we are not in AP mode
 	if (!bSafeMode)
 	{
-#if ENABLE_HA_DISCOVERY
 		//Always invoke discovery on startup. This accounts for change in ipaddr before startup and firmware update.
 		if (CFG_HasFlag(OBK_FLAG_AUTOMAIC_HASS_DISCOVERY)) {
 			Main_ScheduleHomeAssistantDiscovery(1);
 		}
-#endif
 	}
+#endif
 
 	ADDLOGF_INFO("%s done", __func__);
 }
