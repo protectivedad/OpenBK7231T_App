@@ -500,10 +500,8 @@ void Main_OnWiFiStatusChange(int code)
 		ADDLOGF_INFO("%s - WIFI_STA_CONNECTED", __func__);
 #if ALLOW_SSID2
 		if (!Main_bHasWiFiConnected) FV_UpdateStartupSSIDIfChanged_StoredValue(g_SSIDactual);	//update ony on first connect
-#endif		
-#if ALLOW_SSID2
 		g_SSIDSwitchCnt = 0;
-#endif
+#endif		
 		if (!Main_bHasWiFiConnected) {
 			Main_bHasWiFiConnected = true;
 			Main_bWifiConnect = true;
@@ -656,56 +654,6 @@ void Main_periodicTasks() {
 		HAL_FlashVars_SafeToWrite(false);
 		CFG_SafeToWrite(false);
 	}
-}
-
-static bool Main_tradeUpBSSID() {
-#if defined(PLATFORM_BEKEN_NEW)
-		// scan for APs, compare to ssid if the first one is not
-		// the one we are connected to the switch connection to the
-		// stronger AP if signicantly better
-		static ScanResult_adv apList = {0};
-		uint8_t *bestBSSID = 0;
-		int8_t apPower = 0;
-		if (apList.ApNum) {
-			for (uint32_t i = 0; i < apList.ApNum; i++) {
-				ADDLOGF_DEBUG("[%i/%i] AP: %s (" MACSTR "), Channel: %i, Signal: %i, Cipher: %s", (i+1), apList.ApNum,
-						(apList.ApList[i].ssid[0] == 0 ? "hidden" : apList.ApList[i].ssid),
-						MAC2STR(apList.ApList[i].bssid),
-						apList.ApList[i].channel,
-						apList.ApList[i].ApPower,
-						CRYPTO_STR[apList.ApList[i].security]);
-				// save bssid and ApPower of the first matching ssid
-				if (!bestBSSID && !strcmp(CFG_GetWiFiSSID(), apList.ApList[i].ssid)) {
-					bestBSSID = apList.ApList[i].bssid;
-					apPower = apList.ApList[i].ApPower;
-					ADDLOGF_DEBUG("Found AP: %s (" MACSTR "), Signal: %i", apList.ApList[i].ssid, MAC2STR(bestBSSID), apPower);
-				}
-				// check that the new bssid's power is significately better
-				if (memcmp(g_cfg.fcdata.bssid, apList.ApList[i].bssid, sizeof(g_cfg.fcdata.bssid)) == 0) {
-					int8_t curApPower = apList.ApList[i].ApPower;
-					ADDLOGF_DEBUG("Current AP: %s (" MACSTR "), Signal: %i", apList.ApList[i].ssid, MAC2STR(apList.ApList[i].bssid), curApPower);
-					// already excellent or not better enough
-					if (curApPower >= -50 ||
-						(15 >= apPower - curApPower)
-					)
-						bestBSSID = apList.ApList[i].bssid;
-					break;
-				}
-			}
-			ADDLOGF_DEBUG("BSSID: fcdata ("MACSTR") best ("MACSTR")", MAC2STR(g_cfg.fcdata.bssid), MAC2STR(bestBSSID));
-			if (memcmp(g_cfg.fcdata.bssid, bestBSSID, sizeof(g_cfg.fcdata.bssid)) != 0) {
-				MQTT_disconnectClient();
-				Main_bHasWiFiConnected = false;
-				HAL_ConnectToBSSID(bestBSSID, CFG_GetWiFiPassX(), &g_cfg.staticIP);
-			}
-			apList.ApNum = 0;
-			os_free(apList.ApList);
-			return true;
-		} else 
-			HAL_WIFI_ScanResults(&apList);
-
-		return false;
-#endif
 }
 
 static byte g_secondsSpentInLowMemoryWarning = 0;
@@ -1016,12 +964,6 @@ void Main_OnEverySecond()
 		}
 	}
 #endif
-	// house keeping items to be done after connected and initial
-	// mqtt items are published
-	static bool tradedUp;
-	if (!tradedUp && !bSafeMode && Main_bHasWiFiConnected && Main_HasMQTTConnected()) {
-		tradedUp = Main_tradeUpBSSID();
-	}
 
 	if (!g_bOpenAccessPointMode &&
 		!Main_bHasWiFiConnected &&
