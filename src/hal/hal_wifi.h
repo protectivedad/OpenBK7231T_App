@@ -27,7 +27,7 @@ typedef struct obkStaticIP_s {
 
 typedef struct
 {
-	char bssid[6];
+	unsigned char bssid[6];
 	unsigned int channel;
 	unsigned int security_type;
 #if PLATFORM_REALTEK
