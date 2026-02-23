@@ -195,7 +195,7 @@ int MQTT_Post_Received(const char *topic, int topiclen, const unsigned char *dat
 int MQTT_Post_Received_Str(const char *topic, const char *data) {
 	return MQTT_Post_Received(topic, strlen(topic), (const unsigned char*)data, strlen(data));
 }
-int get_received(char **topic, int *topiclen, unsigned char **data, int *datalen){
+int get_received(char **topic, int *topiclen, unsigned char **data, int *datalen) {
 	int res = 0;
 	MQTT_Mutex_Take(100);
 	if (mqtt_rx_buffer_tail != mqtt_rx_buffer_head){
@@ -413,7 +413,7 @@ int MQTT_RegisterCallback(const char* basetopic, const char* subscriptiontopic, 
 	if (!basetopic || !subscriptiontopic || !callback) {
 		return -1;
 	}
-	ADDLOGF_INFO("MQTT_RegisterCallback called for bT %s subT %s", basetopic, subscriptiontopic);
+	ADDLOGF_INFO("%s - called for bT %s subT %s", __func__, basetopic, subscriptiontopic);
 
 	// find existing to replace
 	for (index = 0; index < numCallbacks; index++) {
@@ -567,11 +567,11 @@ bool stribegins(const char *str, const char *needle) {
 	int l = strlen(needle);
 	return !wal_strnicmp(str, needle, l);
 }
-// this accepts obkXXXXXX/<chan>/get to request channel publish
+// this accepts <chan>/get to request channel publish
 int channelGet(obk_mqtt_request_t* request) {
 	//int len = request->receivedLen;
 	int channel = 0;
-	const char* p;
+	const char* p = request->topic;
 
 	// we only support here publishes with emtpy value, otherwise we would get into
 	// a loop where we receive a get, and then send get reply with val, and receive our own get
@@ -580,14 +580,6 @@ int channelGet(obk_mqtt_request_t* request) {
 	}
 
 	ADDLOGF_DEBUG("channelGet topic %i with arg %s", request->topic, request->received);
-
-	p = MQTT_RemoveClientFromTopic(request->topic,0);
-
-	if (p == NULL) {
-		return 0;
-	}
-
-	ADDLOGF_INFO("channelGet part topic %s", p);
 
 	// atoi won't parse any non-decimal chars, so it should skip over the rest of the topic.
 	channel = atoi(p);
@@ -605,40 +597,33 @@ int channelGet(obk_mqtt_request_t* request) {
 	// return 0 to allow later callbacks to process this topic.
 	return 1;
 }
-// this accepts obkXXXXXX/<chan>/set to receive data to set channels
+// this accepts <chan>/set to receive data to set channels
 int channelSet(obk_mqtt_request_t* request) {
 	//int len = request->receivedLen;
 	int channel = 0;
 	int iValue = 0;
-	const char* p;
+	const char* p = request->topic;
 	const char *argument;
 
-	ADDLOGF_DEBUG("channelSet topic %s with arg %s", request->topic, request->received);
+	ADDLOGF_DEBUG("%s - topic %s with arg %s", __func__, request->topic, request->received);
 
-	p = MQTT_RemoveClientFromTopic(request->topic,0);
-
-	if (p == NULL) {
-		return 0;
-	}
-
-	//ADDLOGF_INFO("channelSet part topic %s", p);
+	//ADDLOGF_INFO("%s - part topic %s", __func__, p);
 
 	// atoi won't parse any non-decimal chars, so it should skip over the rest of the topic.
 	channel = atoi(p);
 
-	//ADDLOGF_INFO("channelSet channel %i", channel);
+	//ADDLOGF_INFO("%s - channel %i", __func__, channel);
 
 	// if channel out of range, stop here.
-	if ((channel < 0) || (channel > CHANNEL_MAX)) {
+	if ((channel < 0) || (channel > CHANNEL_MAX))
 		return 0;
-	}
 
 	// make sure the topic ends with '/set'.
 	p = strchr(p, '/');
 
 	// if not /set, then stop here
 	if (strcmp(p, "/set")) {
-		//ADDLOGF_INFO("channelSet NOT 'set'");
+		//ADDLOGF_INFO("%s - NOT 'set'", __func__);
 		return 0;
 	}
 
@@ -730,7 +715,7 @@ void MQTT_ProcessCommandReplyJSON(const char *cmd, const char *args, int flags) 
 #endif
 
 int onHassStatus(obk_mqtt_request_t* request) {
-	if (!strcmp(request->topic, "homeassistant/status")) {
+	if (!strcmp(request->topic, "status")) {
 		const char *args = (const char *)request->received;
 		ADDLOGF_INFO("HA status - %s\n", args);
 		if (!strcmp(args, "online")) {
@@ -740,24 +725,10 @@ int onHassStatus(obk_mqtt_request_t* request) {
 	return 1;
 }
 int tasCmnd(obk_mqtt_request_t* request) {
-	const char *p, *args;
-    //const char *p2;
-
-	p = MQTT_RemoveClientFromTopic(request->topic, "cmnd");
-	if (p == 0) {
-		p = MQTT_RemoveClientFromTopic(request->topic, "tele");
-		if (p == 0) {
-			p = MQTT_RemoveClientFromTopic(request->topic, "stat");
-			if (p == 0) {
-
-			}
-		}
-	}
-	if (p == 0)
-		return 1;
+	const char *p = request->topic;
+	const char *args = (const char *)request->received;
 
 #if 1
-	args = (const char *)request->received;
 	// I think that our function get_received always ensured that
 	// there is a NULL terminating character after payload of MQTT
 	// So we can feed it directly as command
@@ -982,7 +953,7 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 	if (g_mqtt_request.topic[0]) {
 		ADDLOGF_INFO("MQTT in topic %s", g_mqtt_request.topic);
 		mqtt_received_events++;
-				MQTT_Post_Received(g_mqtt_request.topic, strlen(g_mqtt_request.topic), data, len);
+		MQTT_Post_Received(g_mqtt_request.topic, strlen(g_mqtt_request.topic), data, len);
 	}
 }
 
@@ -996,23 +967,20 @@ int MQTT_process_received(){
 	int count = 0;
 	do{
 		found = get_received(&topic, &topiclen, &data, &datalen);
-		if (found){
+		if (found) {
 			count++;
-			strncpy(g_mqtt_request_cb.topic, topic, sizeof(g_mqtt_request_cb.topic));
+			g_mqtt_request_cb.topic[0] = 0;
 			g_mqtt_request_cb.received = data;
 			g_mqtt_request_cb.receivedLen = datalen;
-			for (int i = 0; i < numCallbacks; i++)
-			{
+			for (int i = 0; i < numCallbacks; i++) {
 				char* cbtopic = callbacks[i]->topic;
-				if (!strncmp(topic, cbtopic, strlen(cbtopic)))
-				{
+				if (!strncmp(topic, cbtopic, strlen(cbtopic))) {
+					if (!g_mqtt_request_cb.topic[0])
+						strncpy(g_mqtt_request_cb.topic, topic + strlen(cbtopic), sizeof(g_mqtt_request_cb.topic));
 					// note - callback must return 1 to say it ate the mqtt, else further processing can be performed.
 					// i.e. multiple people can get each topic if required.
 					if (callbacks[i]->callback(&g_mqtt_request_cb))
-					{
-						// if no further processing, then break this loop.
 						break;
-					}
 				}
 			}
 		}
@@ -2079,10 +2047,6 @@ void MQTT_JustConnected() {
 
 // from 5ms quicktick
 int MQTT_RunQuickTick(){
-#ifndef PLATFORM_BEKEN
-	// on Beken, we use a one-shot timer for this.
-	MQTT_process_received();
-#endif
 	// only run from here if fast connect is enabled even if
 	// fast connect is enabled the OnEverySecond function may
 	// run this first
@@ -2173,6 +2137,11 @@ bool MQTT_RunEverySecondUpdate() {
 	}
 
 	MQTT_Mutex_Free();
+
+#ifndef PLATFORM_BEKEN
+	// on Beken, we use a one-shot timer for this.
+	MQTT_process_received();
+#endif
 
 	if (g_just_connected)
 		MQTT_JustConnected();
