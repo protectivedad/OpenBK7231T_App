@@ -978,40 +978,13 @@ void MQTT_OBK_Printf(char* s) {
 // called from tcp_thread context.
 // we should do callbacks from one of our threads?
 static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t flags) {
-	int i;
-	// unused - left here as example
-	//const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
-
 	// if we stored a topic in g_mqtt_request, then we found a matching callback, so use it.
-	if (g_mqtt_request.topic[0])
-	{
-		// note: data is NOT terminated (it may be binary...).
-		g_mqtt_request.received = data;
-		g_mqtt_request.receivedLen = len;
-
+	if (g_mqtt_request.topic[0]) {
 		ADDLOGF_INFO("MQTT in topic %s", g_mqtt_request.topic);
 		mqtt_received_events++;
-
-		for (i = 0; i < numCallbacks; i++) {
-			if (!callbacks[i])
-				continue;
-			char* cbtopic = callbacks[i]->topic;
-			if (!strncmp(g_mqtt_request.topic, cbtopic, strlen(cbtopic))) {
 				MQTT_Post_Received(g_mqtt_request.topic, strlen(g_mqtt_request.topic), data, len);
-				// if ANYONE is interested, store it.
-				return;
-				// note - callback must return 1 to say it ate the mqtt, else further processing can be performed.
-				// i.e. multiple people can get each topic if required.
-				//if (callbacks[i]->callback(&g_mqtt_request))
-				//{
-				//	return;
-				//}
-			}
-		}
-		ADDLOGF_INFO("MQTT topic not handled: %s", g_mqtt_request.topic);
 	}
 }
-
 
 // run from userland (quicktick or wakeable thread)
 int MQTT_process_received(){
@@ -1053,12 +1026,11 @@ int MQTT_process_received(){
 // called from tcp_thread context
 static void mqtt_incoming_publish_cb(void* arg, const char* topic, u32_t tot_len)
 {
-	// unused - left here as example
-	//const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
-
-	// look for a callback with this URL and method, or HTTP_ANY
+	// look for a callback save if we have one
 	g_mqtt_request.topic[0] = '\0';
 	for (uint32_t i = 0; i < numCallbacks; i++) {
+		if (!callbacks[i])
+			continue;
 		char* cbtopic = callbacks[i]->topic;
 		ADDLOGF_DEBUG("%s - Processing callbacks %i - %s", __func__, i, cbtopic);
 		if (!strncmp(topic, cbtopic, strlen(cbtopic))) {
