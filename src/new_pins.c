@@ -577,20 +577,19 @@ int PIN_IOR_NofChan(int role) {
 	if (driverIndex) {
 		return DRV_SendRequest(driverIndex, OBKF_NoOfChannels, role);
 	}
-	// For button, is relay index to toggle on double click
-	if (IS_PIN_DHT_ROLE(role) || IS_PIN_TEMP_HUM_SENSOR_ROLE(role) || IS_PIN_AIR_SENSOR_ROLE(role)){
-			return 2;
-	}
-	// Some roles don't need any channels
-	if (role == IOR_SGP_CLK || role == IOR_SHT3X_CLK || role == IOR_CHT83XX_CLK
-			|| role == IOR_BL0937_CF || role == IOR_BL0937_CF1 || role == IOR_BL0937_SEL
-			|| role == IOR_BL0937_SEL_n || role == IOR_RCRecv || role == IOR_RCRecv_nPup
-			|| (role >= IOR_IRRecv && role <= IOR_DHT11)
-			|| (role >= IOR_SM2135_DAT && role <= IOR_BP1658CJ_CLK)
-			|| (role == IOR_HLW8112_SCSN)
-			|| (role == IOR_TuyaMCU_TX) || (role == IOR_TuyaMCU_RX)) {
-			return 0;
-	}
+	// // For button, is relay index to toggle on double click
+	// if (IS_PIN_DHT_ROLE(role) || IS_PIN_TEMP_HUM_SENSOR_ROLE(role) || IS_PIN_AIR_SENSOR_ROLE(role)){
+	// 		return 2;
+	// }
+	// // Some roles don't need any channels
+	// if (role == IOR_SGP_CLK || role == IOR_SHT3X_CLK || role == IOR_CHT83XX_CLK
+	// 		|| role == IOR_BL0937_CF || role == IOR_BL0937_CF1 || role == IOR_BL0937_SEL
+	// 		|| role == IOR_BL0937_SEL_n || role == IOR_RCRecv || role == IOR_RCRecv_nPup
+	// 		|| (role >= IOR_IRRecv && role <= IOR_DHT11)
+	// 		|| (role >= IOR_SM2135_DAT && role <= IOR_BP1658CJ_CLK)
+	// 		|| (role == IOR_HLW8112_SCSN)) {
+	// 		return 0;
+	// }
 	// all others have 1 channel
 	return 1;
 }
@@ -1241,41 +1240,39 @@ bool CHANNEL_IsInUse(int ch) {
 	return false;
 }
 
-// TODO: Again think about channels
 bool CHANNEL_ShouldBePublished(int ch) {
+	if (CFG_HasFlag(OBK_FLAG_MQTT_PUBLISH_ALL_CHANNELS) || g_cfg.pins.channelTypes[ch] != ChType_Default) {
+		return true;
+	}
+	// Publish if any pin attached to channel says publish
 	for (uint32_t usedIndex = 0; usedIndex < g_registeredPinCount; usedIndex++) {
 		uint32_t pinIndex = registeredPinDetails[usedIndex];
 		uint32_t role = PIN_GetPinRoleForPinIndex(pinIndex);
 		uint32_t driverIndex = g_pinIORoleDriver[role];
 		if (g_cfg.pins.channels[pinIndex] == ch) {
 			if (driverIndex) {
-				return DRV_SendRequest(driverIndex, OBKF_ShouldPublish, role);
+				if (DRV_SendRequest(driverIndex, OBKF_ShouldPublish, role))
+					return true;
 			} else if (role == IOR_ADC
 				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
 				|| IS_PIN_AIR_SENSOR_ROLE(role)
 				|| IS_PIN_DHT_ROLE(role)) {
 				return true;
 			}
-		} else if (g_cfg.pins.channels2[pinIndex] == ch) {
-			if (IS_PIN_DHT_ROLE(role))
-				return true;
-			// SGP, CHT8305 and SHT3X uses secondary channel for humidity
-			if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || IS_PIN_AIR_SENSOR_ROLE(role))
-				return true;
-		}
-	}
-	if (g_cfg.pins.channelTypes[ch] != ChType_Default) {
-		return true;
+		} 
+		// else if (g_cfg.pins.channels2[pinIndex] == ch) {
+		// 	if (IS_PIN_DHT_ROLE(role))
+		// 		return true;
+		// 	// SGP, CHT8305 and SHT3X uses secondary channel for humidity
+		// 	if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT || IS_PIN_AIR_SENSOR_ROLE(role))
+		// 		return true;
+		// }
 	}
 #ifdef ENABLE_DRIVER_GIRIERMCU
 	if (CFG_HasFlag(OBK_FLAG_TUYAMCU_ALWAYSPUBLISHCHANNELS) && GirierMCU_IsChannelUsedByGirierMCU(ch)) {
 		return true;
 	}
 #endif
-
-	if (CFG_HasFlag(OBK_FLAG_MQTT_PUBLISH_ALL_CHANNELS)) {
-		return true;
-	}
 	return false;
 }
 

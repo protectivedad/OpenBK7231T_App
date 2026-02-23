@@ -1728,7 +1728,7 @@ void SVC_onConnect() {
 		return;
 	for (uint32_t serviceIndex = 1; serviceIndex < g_numServices; serviceIndex++) {
 		if (g_services[serviceIndex].bLoaded && g_services[serviceIndex].frameworkRequest) {
-			g_services[serviceIndex].frameworkRequest(OBKF_OnConnect, serviceIndex);
+			g_services[serviceIndex].frameworkRequest(OBKF_OnConnect, 0);
 		}
 	}
 	DRV_Mutex_Free();
@@ -1741,7 +1741,7 @@ void SVC_Autostart() {
 		if (!g_services[serviceIndex].bLoaded) {
 			g_services[serviceIndex].bLoaded = true;
 			if (g_services[serviceIndex].frameworkRequest)
-				g_services[serviceIndex].frameworkRequest(OBKF_Init, serviceIndex);
+				g_services[serviceIndex].frameworkRequest(OBKF_Init, 0);
 		}
 	}
 	DRV_Mutex_Free();
