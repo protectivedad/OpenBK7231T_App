@@ -613,7 +613,7 @@ int channelSet(obk_mqtt_request_t* request) {
 	const char* p;
 	const char *argument;
 
-	ADDLOGF_DEBUG("channelSet topic %i with arg %s", request->topic, request->received);
+	ADDLOGF_DEBUG("channelSet topic %s with arg %s", request->topic, request->received);
 
 	p = MQTT_RemoveClientFromTopic(request->topic,0);
 
@@ -977,8 +977,7 @@ void MQTT_OBK_Printf(char* s) {
 ////////////////////////////////////////
 // called from tcp_thread context.
 // we should do callbacks from one of our threads?
-static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t flags)
-{
+static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t flags) {
 	int i;
 	// unused - left here as example
 	//const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
@@ -990,19 +989,17 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 		g_mqtt_request.received = data;
 		g_mqtt_request.receivedLen = len;
 
-		//ADDLOGF_INFO("MQTT in topic %s", g_mqtt_request.topic);
+		ADDLOGF_INFO("MQTT in topic %s", g_mqtt_request.topic);
 		mqtt_received_events++;
 
-		for (i = 0; i < numCallbacks; i++)
-		{
-			if (callbacks[i] == 0)
+		for (i = 0; i < numCallbacks; i++) {
+			if (!callbacks[i])
 				continue;
 			char* cbtopic = callbacks[i]->topic;
-			if (!strncmp(g_mqtt_request.topic, cbtopic, strlen(cbtopic)))
-			{
+			if (!strncmp(g_mqtt_request.topic, cbtopic, strlen(cbtopic))) {
 				MQTT_Post_Received(g_mqtt_request.topic, strlen(g_mqtt_request.topic), data, len);
 				// if ANYONE is interested, store it.
-				break;
+				return;
 				// note - callback must return 1 to say it ate the mqtt, else further processing can be performed.
 				// i.e. multiple people can get each topic if required.
 				//if (callbacks[i]->callback(&g_mqtt_request))
@@ -1011,7 +1008,7 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 				//}
 			}
 		}
-		//ADDLOGF_INFO("MQTT topic not handled: %s", g_mqtt_request.topic);
+		ADDLOGF_INFO("MQTT topic not handled: %s", g_mqtt_request.topic);
 	}
 }
 
@@ -1056,24 +1053,22 @@ int MQTT_process_received(){
 // called from tcp_thread context
 static void mqtt_incoming_publish_cb(void* arg, const char* topic, u32_t tot_len)
 {
-	//const char *p;
-	int i;
 	// unused - left here as example
 	//const struct mqtt_connect_client_info_t* client_info = (const struct mqtt_connect_client_info_t*)arg;
 
 	// look for a callback with this URL and method, or HTTP_ANY
 	g_mqtt_request.topic[0] = '\0';
-	for (i = 0; i < numCallbacks; i++)
-	{
+	for (uint32_t i = 0; i < numCallbacks; i++) {
 		char* cbtopic = callbacks[i]->topic;
-		if (strncmp(topic, cbtopic, strlen(cbtopic)))
-		{
+		ADDLOGF_DEBUG("%s - Processing callbacks %i - %s", __func__, i, cbtopic);
+		if (!strncmp(topic, cbtopic, strlen(cbtopic))) {
+			ADDLOGF_DEBUG("%s - found match", __func__, cbtopic);
 			strncpy(g_mqtt_request.topic, topic, sizeof(g_mqtt_request.topic) - 1);
 			g_mqtt_request.topic[sizeof(g_mqtt_request.topic) - 1] = 0;
 			break;
 		}
 	}
-	ADDLOGF_INFO("MQTT client in mqtt_incoming_publish_cb topic %s\n", topic);
+	ADDLOGF_INFO("%s - MQTT client in topic %s", __func__, topic);
 }
 
 static void mqtt_request_cb(void* arg, err_t err)
@@ -1664,11 +1659,27 @@ void MQTT_InitCallbacks() {
 	// note: this may REPLACE an existing entry with the same ID.  ID 1 !!!
 	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 1, channelSet);
 
+#if 0
 	// register the getter callback (send empty message here to get reply)
 	snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", clientId);
 	snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/get", clientId);
-	// note: this may REPLACE an existing entry with the same ID.  ID 5 !!!
-	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 5, channelGet);
+	// note: this may REPLACE an existing entry with the same ID.  ID 2 !!!
+	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 2, channelGet);
+#endif
+
+	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
+		// test hack iobroker
+		snprintf(cbtopicbase, sizeof(cbtopicbase), "tele/%s/", clientId);
+		snprintf(cbtopicsub, sizeof(cbtopicsub), "tele/%s/+", clientId);
+		// note: this may REPLACE an existing entry with the same ID.  ID 3 !!!
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 3, tasCmnd);
+
+		// test hack iobroker
+		snprintf(cbtopicbase, sizeof(cbtopicbase), "stat/%s/", clientId);
+		snprintf(cbtopicsub, sizeof(cbtopicsub), "stat/%s/+", clientId);
+		// note: this may REPLACE an existing entry with the same ID.  ID 4 !!!
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 4, tasCmnd);
+	}
 
 #if 0
 	// base topic
@@ -1676,22 +1687,8 @@ void MQTT_InitCallbacks() {
 	snprintf(cbtopicbase, sizeof(cbtopicbase), "cmnd/%s/", clientId);
 	snprintf(cbtopicsub, sizeof(cbtopicsub), "cmnd/%s/+", clientId);
 	// note: this may REPLACE an existing entry with the same ID.  ID 3 !!!
-	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 3, tasCmnd);
+	MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 5, tasCmnd);
 #endif
-
-	if (CFG_HasFlag(OBK_FLAG_DO_TASMOTA_TELE_PUBLISHES)) {
-		// test hack iobroker
-		snprintf(cbtopicbase, sizeof(cbtopicbase), "tele/%s/", clientId);
-		snprintf(cbtopicsub, sizeof(cbtopicsub), "tele/%s/+", clientId);
-		// note: this may REPLACE an existing entry with the same ID.  ID 6 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 6, tasCmnd);
-
-		// test hack iobroker
-		snprintf(cbtopicbase, sizeof(cbtopicbase), "stat/%s/", clientId);
-		snprintf(cbtopicsub, sizeof(cbtopicsub), "stat/%s/+", clientId);
-		// note: this may REPLACE an existing entry with the same ID.  ID 7 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 7, tasCmnd);
-	}
 
 #if 0
 	const char* groupId;
@@ -1705,7 +1702,7 @@ void MQTT_InitCallbacks() {
 		snprintf(cbtopicbase, sizeof(cbtopicbase), "%s/", groupId);
 		snprintf(cbtopicsub, sizeof(cbtopicsub), "%s/+/set", groupId);
 		// note: this may REPLACE an existing entry with the same ID.  ID 2 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 2, channelSet);
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 6, channelSet);
 	}
 
 	// so-called "Group topic", a secondary topic that can be set on multiple devices 
@@ -1715,7 +1712,7 @@ void MQTT_InitCallbacks() {
 		snprintf(cbtopicbase, sizeof(cbtopicbase), "cmnd/%s/", groupId);
 		snprintf(cbtopicsub, sizeof(cbtopicsub), "cmnd/%s/+", groupId);
 		// note: this may REPLACE an existing entry with the same ID.  ID 4 !!!
-		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 4, tasCmnd);
+		MQTT_RegisterCallback(cbtopicbase, cbtopicsub, 7, tasCmnd);
 	}
 #endif
 
@@ -1958,30 +1955,18 @@ OBK_Publish_Result MQTT_DoItemPublishString(const char* sChannel, const char* va
 
 OBK_Publish_Result MQTT_DoItemPublish(int idx)
 {
-	//int type;
 	char dataStr[3 * 6 + 1];  //This is sufficient to hold mac value
-	bool bWantsToPublish;
 
 	switch (idx) {
-	case PUBLISHITEM_SELF_STATIC_RESERVED_2:
-	case PUBLISHITEM_SELF_STATIC_RESERVED_1:
-		return OBK_PUBLISH_WAS_NOT_REQUIRED;
-
 	case PUBLISHITEM_QUEUED_VALUES:
 		return PublishQueuedItems();
 
+	case PUBLISHITEM_SELF_STATIC_RESERVED_2:
+	case PUBLISHITEM_SELF_STATIC_RESERVED_1:
 	case PUBLISHITEM_SELF_DYNAMIC_LIGHTSTATE:
-	{
-		return OBK_PUBLISH_WAS_NOT_REQUIRED;
-	}
 	case PUBLISHITEM_SELF_DYNAMIC_LIGHTMODE:
-	{
-		return OBK_PUBLISH_WAS_NOT_REQUIRED;
-	}
 	case PUBLISHITEM_SELF_DYNAMIC_DIMMER:
-	{
 		return OBK_PUBLISH_WAS_NOT_REQUIRED;
-	}
 
 	case PUBLISHITEM_SELF_HOSTNAME:
 		return MQTT_DoItemPublishString("host", CFG_GetShortDeviceName());
@@ -1997,10 +1982,7 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 		return MQTT_DoItemPublishString("ssid", CFG_GetWiFiSSID());
 
 	case PUBLISHITEM_SELF_BSSID:
-		// TODO: correct SSID
-{		char bssid[18];
-		return MQTT_DoItemPublishString("bssid", HAL_GetWiFiBSSID(bssid));
-}
+		return MQTT_DoItemPublishString("bssid", HAL_GetWiFiBSSID(dataStr));
 
 	case PUBLISHITEM_SELF_DATETIME:
 // TIME_GetCurrentTime() is allways present
@@ -2055,24 +2037,16 @@ OBK_Publish_Result MQTT_DoItemPublish(int idx)
 		return MQTT_DoItemPublishString("ip", HAL_GetMyIPString());
 
 	default:
-		break;
-	}
+		// Do not publish raw channel value for channels like PWM values, RGBCW has 5 raw channels.
+		// We do not need raw values for RGBCW lights (or RGB, etc)
+		// because we are using led_basecolor_rgb, led_dimmer, led_enableAll, etc
+		// NOTE: negative indexes are not channels - they are special values
+		if (CHANNEL_ShouldBePublished(idx)) {
+			return MQTT_ChannelPublish(g_publishItemIndex, OBK_PUBLISH_FLAG_MUTEX_SILENT);
+		}
 
-	// Do not publish raw channel value for channels like PWM values, RGBCW has 5 raw channels.
-	// We do not need raw values for RGBCW lights (or RGB, etc)
-	// because we are using led_basecolor_rgb, led_dimmer, led_enableAll, etc
-	// NOTE: negative indexes are not channels - they are special values
-	bWantsToPublish = false;
-	if (CHANNEL_ShouldBePublished(idx)) {
-		bWantsToPublish = true;
+		return OBK_PUBLISH_WAS_NOT_REQUIRED; // didnt publish
 	}
-	// TODO
-	//type = CHANNEL_GetType(idx);
-	if (bWantsToPublish) {
-		return MQTT_ChannelPublish(g_publishItemIndex, OBK_PUBLISH_FLAG_MUTEX_SILENT);
-	}
-
-	return OBK_PUBLISH_WAS_NOT_REQUIRED; // didnt publish
 }
 
 int g_wantTasmotaTeleSend = 0;
