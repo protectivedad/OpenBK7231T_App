@@ -139,9 +139,11 @@ void HAL_saveEnhancedFastConnect() {
 	if (!g_needFastConnectSave || !sta_ip_is_start())
 		return;
 
+	LinkStatusTypeDef linkStatus;
+	IPStatusTypedef __maybe_unused ipStatus;
+	ip4_addr_t  __maybe_unused ip;
 	g_needFastConnectSave = false;
 
-	LinkStatusTypeDef linkStatus;
 	memset(&linkStatus, 0x0, sizeof(LinkStatusTypeDef));
 	bk_wlan_get_link_status(&linkStatus);
 
@@ -169,6 +171,16 @@ void HAL_saveEnhancedFastConnect() {
 		g_cfg.fcdata.security_type = linkStatus.security;
 		saveChanges = true;
 	}
+
+#if CFG_WLAN_SUPPORT_FAST_DHCP
+	memset(&ipStatus, 0x0, sizeof(IPStatusTypedef));
+	bk_wlan_get_ip_status(&ipStatus, STATION);
+	ip4addr_aton(ipStatus.ip, &ip);
+	if (ip.addr != IP4_U32(g_cfg.staticIP.localIPAddr)) {
+		str_to_ip(ipStatus.ip, g_cfg.staticIP.localIPAddr);
+		saveChanges = true;
+	}
+#endif
 
 	if (saveChanges) {
 		ADDLOG_INFO(LOG_FEATURE_GENERAL, "Saved fast connect data differ to current one, saving...");
@@ -401,24 +413,25 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticI
 {
 	if(CFG_HasFlag(OBK_FLAG_WIFI_ENHANCED_FAST_CONNECT)) {
 		ADDLOGF_DEBUG("Copying OBK fast connect data");
+		g_needFastConnectSave = true;
 		strcpy((char*)fcdata.ssid, oob_ssid);
 		memcpy(fcdata.bssid, g_cfg.fcdata.bssid, sizeof(fcdata.bssid));
 		fcdata.security = g_cfg.fcdata.security_type;
 		fcdata.channel = g_cfg.fcdata.channel;
 		memcpy(fcdata.psk, g_cfg.fcdata.psk, 64);
 		strcpy((char*)fcdata.pwd, connect_key);
-		// CFG_WLAN_FAST_CONNECT_STATIC_IP set in network_cfg to save some processing
-		// fcdata.net_info.dhcp = DHCP_DISABLE;
-		// memcpy(fcdata.net_info.mac, (char *)IP_STATUS_VALID, sizeof(IP_STATUS_VALID));
-		// convert_IP_to_string(fcdata.net_info.ip, ip->localIPAddr);
-		// convert_IP_to_string(fcdata.net_info.mask, ip->netMask);
-		// convert_IP_to_string(fcdata.net_info.gate, ip->gatewayIPAddr);
-		// convert_IP_to_string(fcdata.net_info.dns, ip->dnsServerIpAddr);
 #if CFG_WLAN_SUPPORT_FAST_DHCP
-		fcdata.net_info.dhcp = DHCP_CLIENT;
+		if (IP4_ZEROS(ip->netMask) && IP4_ZEROS(ip->dnsServerIpAddr) && IP4_ZEROS(ip->gatewayIPAddr)) {
+			fcdata.net_info.dhcp = DHCP_CLIENT;
+			if (!IP4_ZEROS(ip->localIPAddr)) {
+				memcpy(fcdata.net_info.mac, (char *)IP_STATUS_VALID, sizeof(IP_STATUS_VALID));
+				convert_IP_to_string(fcdata.net_info.ip, &ip->localIPAddr);
+			}
+			g_bStaticIP = false;
+		} else
+			fcdata.net_info.dhcp = DHCP_DISABLE;
 #endif
 	}
-	g_needFastConnectSave = true;
 
 	g_bOpenAccessPointMode = 0;
 
@@ -430,11 +443,14 @@ void HAL_ConnectToWiFi(const char* oob_ssid, const char* connect_key, obkStaticI
 	strcpy((char*)network_cfg.wifi_key, connect_key);
 
 	network_cfg.wifi_mode = STATION;
-	if (ip->localIPAddr[0] == 0) {
+	if (!ip->localIPAddr[0]
+#if CFG_WLAN_SUPPORT_FAST_DHCP
+	 || fcdata.net_info.dhcp == DHCP_CLIENT
+#endif
+	) {
 		network_cfg.dhcp_mode = DHCP_CLIENT;
 		g_bStaticIP = false;
-	}
-	else {
+	} else {
 		network_cfg.dhcp_mode = DHCP_DISABLE;
 		convert_IP_to_string(network_cfg.local_ip_addr, ip->localIPAddr);
 		convert_IP_to_string(network_cfg.net_mask, ip->netMask);
