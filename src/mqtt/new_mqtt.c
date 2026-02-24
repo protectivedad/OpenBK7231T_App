@@ -159,24 +159,15 @@ static void getLenData(uint32_t *len, unsigned char *data, uint32_t maxlen){
 	}
 }
 
-static SemaphoreHandle_t g_mutex = 0;
+static SemaphoreHandle_t g_mutex;
 
 static bool MQTT_Mutex_Take(uint32_t del) {
-	uint32_t taken;
-
-	if (g_mutex == 0)
-	{
+	if (!g_mutex)
 		g_mutex = xSemaphoreCreateMutex();
-	}
-	taken = xSemaphoreTake(g_mutex, del);
-	if (taken == pdTRUE) {
-		return true;
-	}
-	return false;
+	return (xSemaphoreTake(g_mutex, del) == pdTRUE);
 }
 
-static void MQTT_Mutex_Free()
-{
+static void MQTT_Mutex_Free() {
 	xSemaphoreGive(g_mutex);
 }
 
@@ -2096,21 +2087,16 @@ bool MQTT_RunEverySecondUpdate() {
 	}
 
 	// if asked to reconnect (e.g. change of topic(s))
-	if (mqtt_reconnect > 0)
-	{
-		mqtt_reconnect--;
-		ADDLOGF_INFO("MQTT has pending reconnect in %i\n", mqtt_reconnect);
-		if (mqtt_reconnect == 0) {
-			// then if connected, disconnect, and then it will reconnect automatically in 2s
-			if (isReady) {
-				ADDLOGF_INFO("MQTT will now do a forced reconnect\n");
-				LOCK_TCPIP_CORE();
-				mqtt_disconnect(&mqtt_client);
-				UNLOCK_TCPIP_CORE();
-				mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 1;
-				MQTT_Mutex_Free();
-				return false;
-			}
+	if (mqtt_reconnect && mqtt_reconnect-- && !mqtt_reconnect) {
+		// then if connected, disconnect, and then it will reconnect automatically in 2s
+		if (isReady) {
+			ADDLOGF_INFO("MQTT will now do a forced reconnect\n");
+			LOCK_TCPIP_CORE();
+			mqtt_disconnect(&mqtt_client);
+			UNLOCK_TCPIP_CORE();
+			mqtt_loopsWithDisconnected = LOOPS_WITH_DISCONNECTED - 1;
+			MQTT_Mutex_Free();
+			return false;
 		}
 	}
 
