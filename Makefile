@@ -579,6 +579,7 @@ OpenRTL8720E: prebuild_OpenRTL8720E
 	cp sdk/ameba-rtos/amebalite_gcc_project/ota_all.bin output/$(APP_VERSION)/OpenRTL8720E_$(APP_VERSION)_ota.img
 
 .PHONY: OpenBK7238
+OpenBK7238: APP_NAME = OpenBK7238
 OpenBK7238: prebuild_OpenBK7238
 	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7238 $(APP_VERSION)
 	mkdir -p output/$(APP_VERSION)
@@ -619,6 +620,7 @@ OpenBK7252N: prebuild_OpenBK7252N
 	#cp sdk/beken_freertos_sdk/out/bk7252n_Tuya_UA.bin output/$(APP_VERSION)/OpenBK7252N_Tuya_UA_${APP_VERSION}.bin
 
 .PHONY: OpenBK7231N
+OpenBK7231N: APP_NAME = OpenBK721N
 OpenBK7231N: prebuild_OpenBK7231N
 	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7231n $(APP_VERSION)
 	mkdir -p output/$(APP_VERSION)
@@ -629,6 +631,7 @@ OpenBK7231N: prebuild_OpenBK7231N
 	cp sdk/beken_freertos_sdk/out/BK7231M_QIO.bin output/$(APP_VERSION)/OpenBK7231M_QIO_${APP_VERSION}.bin
 
 .PHONY: OpenBK7231T
+OpenBK7231T: APP_NAME = OpenBK721T
 OpenBK7231T: prebuild_OpenBK7231T
 	cd sdk/beken_freertos_sdk && OBK_VARIANT=$(OBK_VARIANT) sh build.sh bk7231 $(APP_VERSION)_ALT
 	mkdir -p output/$(APP_VERSION)
