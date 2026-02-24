@@ -455,15 +455,6 @@ static void PIN_ProcessNewPinRole(int index, int role) {
 		}
 		break;
 #endif // ENABLE_DRIVER_BRIDGE
-		case IOR_ADC_Button:
-		case IOR_ADC:
-			// init ADC for given pin
-#if PLATFORM_XRADIO
-			OBK_HAL_ADC_Init(index);
-#else
-			HAL_ADC_Init(index);
-#endif
-			break; 
 
 		default:
 			break;
@@ -682,16 +673,6 @@ static void PIN_ProcessOldPinRole(int index) {
 		}
 		// remove from active inputs
 		PIN_setGPIActive(index, 0, 0, 0);
-		switch (role)
-		{
-		case IOR_ADC_Button:
-		case IOR_ADC:
-			HAL_ADC_Deinit(index);
-			break;
-
-		default:
-			break;
-		}
 	}
 }
 
@@ -1253,8 +1234,7 @@ bool CHANNEL_ShouldBePublished(int ch) {
 			if (driverIndex) {
 				if (DRV_SendRequest(driverIndex, OBKF_ShouldPublish, role))
 					return true;
-			} else if (role == IOR_ADC
-				|| role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
+			} else if (role == IOR_CHT83XX_DAT || role == IOR_SHT3X_DAT
 				|| IS_PIN_AIR_SENSOR_ROLE(role)
 				|| IS_PIN_DHT_ROLE(role)) {
 				return true;

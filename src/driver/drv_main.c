@@ -158,6 +158,21 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif
+#if ENABLE_DRIVER_ADC
+	//drvdetail:{"name":"ADC",
+	//drvdetail:"title":"TODO",
+	//drvdetail:"descr":"This allows you to connect multiple buttons on single ADC pin. Each button must have a different resistor value, this works by probing the voltage on ADC from a resistor divider. You need to select AB_Map first. See forum post for [details](https://www.elektroda.com/rtvforum/viewtopic.php?p=20541973#20541973).",
+	//drvdetail:"requires":""}
+	{ "ADC",                                 // Driver Name
+	ADC_onEverySecond,                       // onEverySecond
+	NULL,                                    // appendHTML
+	ADC_quickTick,                           // runQuickTick
+	NULL,                                    // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	ADC_frameworkRequest,                    // frameworkRequest
+	false,                                   // loaded
+	},
+#endif
 // not ported yet
 #if 0
 #if ENABLE_DRIVER_PWM
@@ -989,22 +1004,6 @@ static driver_t g_drivers[] = {
 	false,                                   // loaded
 	},
 #endif
-#endif
-#if ENABLE_DRIVER_ADCBUTTON
-	//drvdetail:{"name":"ADCButton",
-	//drvdetail:"title":"TODO",
-	//drvdetail:"descr":"This allows you to connect multiple buttons on single ADC pin. Each button must have a different resistor value, this works by probing the voltage on ADC from a resistor divider. You need to select AB_Map first. See forum post for [details](https://www.elektroda.com/rtvforum/viewtopic.php?p=20541973#20541973).",
-	//drvdetail:"requires":""}
-	{ "ADCButton",                           // Driver Name
-	DRV_ADCButton_Init,                      // Init
-	NULL,                                    // onEverySecond
-	NULL,                                    // appendHTML
-	DRV_ADCButton_RunFrame,                  // runQuickTick
-	NULL,                                    // stopFunction
-	NULL,                                    // onChannelChanged
-	NULL,                                    // onHassDiscovery
-	false,                                   // loaded
-	},
 #endif
 #if ENABLE_DRIVER_MAX72XX
 	//drvdetail:{"name":"MAX72XX_Clock",

@@ -32,6 +32,12 @@ uint32_t Input_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t Digital_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 #endif // ENABLE_DRIVER_DIGITAL
 
+#if ENABLE_DRIVER_ADC
+uint32_t ADC_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
+void ADC_quickTick();
+void ADC_onEverySecond();
+#endif // ENABLE_DRIVER_ADC
+
 #if ENABLE_DRIVER_PWM
 uint32_t PWM_frameworkRequest(uint32_t obkfRequest, uint32_t arg);
 uint32_t PWM_countChannels();

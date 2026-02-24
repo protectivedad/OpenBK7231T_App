@@ -56,7 +56,7 @@ set(OBKM_SRC
 
 	${OBK_SRCS}driver/drv_main.c
 
-	${OBK_SRCS}driver/drv_adcButton.c
+	${OBK_SRCS}driver/drv_adc.c
 	${OBK_SRCS}driver/drv_adcSmoother.c
 	${OBK_SRCS}driver/drv_aht2x.c
 	${OBK_SRCS}driver/drv_battery.c

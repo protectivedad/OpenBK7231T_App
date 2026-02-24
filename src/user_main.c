@@ -808,23 +808,6 @@ void Main_OnEverySecond()
 	}
 #endif
 
-	if (!bSafeMode)
-	{
-
-		for (i = 0; i < PLATFORM_GPIO_MAX; i++)
-		{
-			if (g_cfg.pins.roles[i] == IOR_ADC)
-			{
-				int value;
-
-				value = HAL_ADC_Read(i);
-
-				//	ADDLOGF_INFO("ADC %i=%i\r\n", i,value);
-				CHANNEL_Set(g_cfg.pins.channels[i], value, CHANNEL_SET_FLAG_SILENT);
-			}
-		}
-	}
-
 	// allow for up to 4 scheduled driver starts.
 	for (i = 0; i < 4; i++) {
 		if (scheduledDelay[i] > 0) {
