@@ -78,16 +78,16 @@ extern void MQTT_TriggerRead();
 // Variables for periodical self state broadcast
 //
 // current time left (counting down)
-static int g_secondsBeforeNextFullBroadcast = 30;
+static uint32_t g_secondsBeforeNextFullBroadcast = 30;
 // constant value, how much interval between self state broadcast (enabled by flag)
 // You can change it with command: mqtt_broadcastInterval 60
-static int g_intervalBetweenMQTTBroadcasts = 60;
+static uint32_t g_intervalBetweenMQTTBroadcasts = 60;
 // While doing self state broadcast, it limits the number of publishes 
 // per second in order not to overload LWIP
-static int g_maxBroadcastItemsPublishedPerSecond = 1;
+static uint32_t g_maxBroadcastItemsPublishedPerSecond = 1;
 // interval for automatic publish of tasmota tele/sensor and tele/state
-static short g_teleState_interval = 120;
-static short g_teleSensor_interval = 3;
+static uint32_t g_teleState_interval = 120;
+static uint32_t g_teleSensor_interval = 3;
 // set when do_connect is called unset after callback
 bool MQTT_waitingCallback;
 
@@ -97,62 +97,72 @@ bool MQTT_waitingCallback;
 //
 #define MQTT_RX_BUFFER_MAX 4096
 unsigned char mqtt_rx_buffer[MQTT_RX_BUFFER_MAX];
-int mqtt_rx_buffer_head;
-int mqtt_rx_buffer_tail;
-int mqtt_rx_buffer_count;
+uint32_t mqtt_rx_buffer_head;
+uint32_t mqtt_rx_buffer_tail;
+int32_t mqtt_rx_buffer_count;
 unsigned char temp_topic[128];
 unsigned char temp_data[2048];
 
-int addLenData(int len, const unsigned char *data){
-	mqtt_rx_buffer[mqtt_rx_buffer_head] = (len >> 8) & 0xff;
+static inline void addToRx(uint32_t item) {
+	mqtt_rx_buffer[mqtt_rx_buffer_head] = item;
 	mqtt_rx_buffer_head = (mqtt_rx_buffer_head + 1) % MQTT_RX_BUFFER_MAX;
 	mqtt_rx_buffer_count++;
-	mqtt_rx_buffer[mqtt_rx_buffer_head] = (len) & 0xff;
-	mqtt_rx_buffer_head = (mqtt_rx_buffer_head + 1) % MQTT_RX_BUFFER_MAX;
-	mqtt_rx_buffer_count++;
-	for (int i = 0; i < len; i++){
-		mqtt_rx_buffer[mqtt_rx_buffer_head] = data[i];
-		mqtt_rx_buffer_head = (mqtt_rx_buffer_head + 1) % MQTT_RX_BUFFER_MAX;
-		mqtt_rx_buffer_count++;
-	}
-	return len + 2;
 }
 
-int getLenData(int *len, unsigned char *data, int maxlen){
-	int l;
-	l = mqtt_rx_buffer[mqtt_rx_buffer_tail];
-	mqtt_rx_buffer_tail = (mqtt_rx_buffer_tail + 1) % MQTT_RX_BUFFER_MAX;
-	mqtt_rx_buffer_count--;
-	l = l<<8;
-	l |= mqtt_rx_buffer[mqtt_rx_buffer_tail];
-	mqtt_rx_buffer_tail = (mqtt_rx_buffer_tail + 1) % MQTT_RX_BUFFER_MAX;
-	mqtt_rx_buffer_count--;
+static void addToken(uint32_t token) {
+	addToRx(token);
+}
 
-	for (int i = 0; i < l; i++){
-		if (i < maxlen){
-			data[i] = mqtt_rx_buffer[mqtt_rx_buffer_tail];
-		}
-		mqtt_rx_buffer_tail = (mqtt_rx_buffer_tail + 1) % MQTT_RX_BUFFER_MAX;
-		mqtt_rx_buffer_count--;
+static void addLenData(uint32_t len, const unsigned char *data){
+	addToRx((len >> 8) & 0xff);
+	addToRx((len) & 0xff);
+	for (uint32_t i = 0; i < len; i++){
+		addToRx(data[i]);
+	}
+}
+
+static inline uint32_t getFromRx() {
+	uint32_t res = mqtt_rx_buffer[mqtt_rx_buffer_tail];
+	mqtt_rx_buffer_tail = (mqtt_rx_buffer_tail + 1) % MQTT_RX_BUFFER_MAX;
+	mqtt_rx_buffer_count--;
+	return res;
+}
+
+static void getToken(uint32_t *token) {
+	*token = getFromRx();
+	if (mqtt_rx_buffer_count < 0) {
+		ADDLOGF_ERROR("MQTT_rx buffer underflow!!!");
+		mqtt_rx_buffer_count = 0;
+		mqtt_rx_buffer_tail = mqtt_rx_buffer_head = 0;
+	}
+}
+
+static void getLenData(uint32_t *len, unsigned char *data, uint32_t maxlen){
+	uint32_t l;
+	l = getFromRx();
+	l = l<<8;
+	l |= getFromRx();
+	if (l > maxlen)
+		*len = maxlen;
+	else
+		*len = l;
+
+	for (uint32_t i = 0; i < l; i++){
+		uint32_t res = getFromRx();
+		if (i < maxlen)
+			data[i] = res;
 	}
 	if (mqtt_rx_buffer_count < 0){
 		ADDLOGF_ERROR("MQTT_rx buffer underflow!!!");
 		mqtt_rx_buffer_count = 0;
 		mqtt_rx_buffer_tail = mqtt_rx_buffer_head = 0;
 	}
-
-	if (l > maxlen){
-		*len = maxlen;
-	} else {
-		*len = l;
-	}
-	return l + 2;
 }
 
 static SemaphoreHandle_t g_mutex = 0;
 
-static bool MQTT_Mutex_Take(int del) {
-	int taken;
+static bool MQTT_Mutex_Take(uint32_t del) {
+	uint32_t taken;
 
 	if (g_mutex == 0)
 	{
@@ -176,11 +186,12 @@ static void MQTT_Mutex_Free()
 // NOTE: this function is now public, but only because my unit tests
 // system can use it to spoof MQTT packets to check if MQTT commands
 // are working...
-int MQTT_Post_Received(const char *topic, int topiclen, const unsigned char *data, int datalen){
+void MQTT_Post_Received(uint32_t token, const char *topic, uint32_t topiclen, const unsigned char *data, uint32_t datalen){
 	MQTT_Mutex_Take(100);
-	if ((MQTT_RX_BUFFER_MAX - 1 - mqtt_rx_buffer_count) < topiclen + datalen + 2 + 2){
+	if ((MQTT_RX_BUFFER_MAX - 1 - mqtt_rx_buffer_count) < 1 + topiclen + datalen + 2 + 2){
 		ADDLOGF_ERROR("MQTT_rx buffer overflow for topic %s", topic);
 	} else {
+		addToken(token);
 		addLenData(topiclen, (unsigned char *)topic);
 		addLenData(datalen, data);
 	}
@@ -190,22 +201,23 @@ int MQTT_Post_Received(const char *topic, int topiclen, const unsigned char *dat
 #ifdef PLATFORM_BEKEN
 	MQTT_TriggerRead();
 #endif
-	return 1;
 }
-int MQTT_Post_Received_Str(const char *topic, const char *data) {
-	return MQTT_Post_Received(topic, strlen(topic), (const unsigned char*)data, strlen(data));
+
+void MQTT_Post_Received_Str(const char *topic, const char *data) {
+	MQTT_Post_Received(1, topic, strlen(topic), (const unsigned char*)data, strlen(data));
 }
-int get_received(char **topic, int *topiclen, unsigned char **data, int *datalen) {
-	int res = 0;
+
+static uint32_t get_received(char **topic, uint32_t *topiclen, unsigned char **data, uint32_t *datalen) {
+	uint32_t res = 0;
 	MQTT_Mutex_Take(100);
 	if (mqtt_rx_buffer_tail != mqtt_rx_buffer_head){
+		getToken(&res);
 		getLenData(topiclen, temp_topic, sizeof(temp_topic)-1);
 		temp_topic[*topiclen] = 0;
 		getLenData(datalen, temp_data, sizeof(temp_data)-1);
 		temp_data[*datalen] = 0;
 		*topic = (char *)temp_topic;
 		*data = temp_data;
-		res = 1;
 	}
 	MQTT_Mutex_Free();
 	return res;
@@ -301,10 +313,6 @@ static struct mqtt_connect_client_info_t mqtt_client_info =
   , NULL
 #endif
 };
-
-// channel set callback
-int channelSet(obk_mqtt_request_t* request);
-int channelGet(obk_mqtt_request_t* request);
 
 int MQTT_GetConnectEvents(void)
 {
@@ -563,10 +571,7 @@ const char* MQTT_RemoveClientFromTopic(const char* topic, const char *prefix) {
 	}
 	return p2;
 }
-bool stribegins(const char *str, const char *needle) {
-	int l = strlen(needle);
-	return !wal_strnicmp(str, needle, l);
-}
+
 // this accepts <chan>/get to request channel publish
 int channelGet(obk_mqtt_request_t* request) {
 	//int len = request->receivedLen;
@@ -602,7 +607,6 @@ int channelSet(obk_mqtt_request_t* request) {
 	//int len = request->receivedLen;
 	int channel = 0;
 	int iValue = 0;
-	const char* p = request->topic;
 	const char *argument;
 
 	ADDLOGF_DEBUG("%s - topic %s with arg %s", __func__, request->topic, request->received);
@@ -610,27 +614,18 @@ int channelSet(obk_mqtt_request_t* request) {
 	//ADDLOGF_INFO("%s - part topic %s", __func__, p);
 
 	// atoi won't parse any non-decimal chars, so it should skip over the rest of the topic.
-	channel = atoi(p);
-
-	//ADDLOGF_INFO("%s - channel %i", __func__, channel);
-
-	// if channel out of range, stop here.
+	channel = atoi(request->topic);
 	if ((channel < 0) || (channel > CHANNEL_MAX))
 		return 0;
 
-	// make sure the topic ends with '/set'.
-	p = strchr(p, '/');
-
 	// if not /set, then stop here
-	if (strcmp(p, "/set")) {
-		//ADDLOGF_INFO("%s - NOT 'set'", __func__);
+	if (strcmp(strchr(request->topic, '/'), "/set")) {
 		return 0;
 	}
 
 	ADDLOGF_INFO("MQTT client in mqtt_incoming_data_cb data is %.*s for ch %i\n", MQTT_MAX_DATA_LOG_LENGTH, request->received, channel);
 
 	argument = ((const char*)request->received);
-
 	if (!wal_strnicmp(argument, "toggle", 6)) {
 		CHANNEL_Toggle(channel);
 	}
@@ -953,38 +948,36 @@ static void mqtt_incoming_data_cb(void* arg, const u8_t* data, u16_t len, u8_t f
 	if (g_mqtt_request.topic[0]) {
 		ADDLOGF_INFO("MQTT in topic %s", g_mqtt_request.topic);
 		mqtt_received_events++;
-		MQTT_Post_Received(g_mqtt_request.topic, strlen(g_mqtt_request.topic), data, len);
+		MQTT_Post_Received(g_mqtt_request.token, g_mqtt_request.topic, strlen(g_mqtt_request.topic), data, len);
 	}
 }
 
 // run from userland (quicktick or wakeable thread)
 int MQTT_process_received(){
 	char *topic;
-	int topiclen;
+	uint32_t topiclen;
 	unsigned char *data;
-	int datalen;
-	int found = 0;
-	int count = 0;
-	do{
-		found = get_received(&topic, &topiclen, &data, &datalen);
-		if (found) {
-			count++;
-			g_mqtt_request_cb.topic[0] = 0;
-			g_mqtt_request_cb.received = data;
-			g_mqtt_request_cb.receivedLen = datalen;
-			for (int i = 0; i < numCallbacks; i++) {
-				char* cbtopic = callbacks[i]->topic;
-				if (!strncmp(topic, cbtopic, strlen(cbtopic))) {
-					if (!g_mqtt_request_cb.topic[0])
-						strncpy(g_mqtt_request_cb.topic, topic + strlen(cbtopic), sizeof(g_mqtt_request_cb.topic));
-					// note - callback must return 1 to say it ate the mqtt, else further processing can be performed.
-					// i.e. multiple people can get each topic if required.
-					if (callbacks[i]->callback(&g_mqtt_request_cb))
-						break;
-				}
-			}
+	uint32_t datalen;
+	uint32_t token;
+	uint32_t count = 0;
+	while ((token = get_received(&topic, &topiclen, &data, &datalen))) {
+		count++;
+		token--; // turn token into index
+		strncpy(g_mqtt_request_cb.topic, topic, sizeof(g_mqtt_request_cb.topic));
+		g_mqtt_request_cb.received = data;
+		g_mqtt_request_cb.receivedLen = datalen;
+		// send the one we know about
+		if (callbacks[token]->callback(&g_mqtt_request_cb))
+			break;
+
+		// search for the ones we don't
+		char* cbtopic = callbacks[token]->topic;
+		for (token++; token < numCallbacks; token++) {
+			if (!strncmp(callbacks[token]->topic, cbtopic, strlen(cbtopic)))
+				if (callbacks[token]->callback(&g_mqtt_request_cb))
+					break;
 		}
-	} while (found);
+	}
 
 	return count;
 }
@@ -994,21 +987,30 @@ int MQTT_process_received(){
 // called from tcp_thread context
 static void mqtt_incoming_publish_cb(void* arg, const char* topic, u32_t tot_len)
 {
+	ADDLOGF_INFO("%s - MQTT client in topic %s (%d)", __func__, topic, tot_len);
 	// look for a callback save if we have one
 	g_mqtt_request.topic[0] = '\0';
 	for (uint32_t i = 0; i < numCallbacks; i++) {
-		if (!callbacks[i])
+		if (!callbacks[i]) // no callback
 			continue;
 		char* cbtopic = callbacks[i]->topic;
 		ADDLOGF_DEBUG("%s - Processing callbacks %i - %s", __func__, i, cbtopic);
-		if (!strncmp(topic, cbtopic, strlen(cbtopic))) {
-			ADDLOGF_DEBUG("%s - found match", __func__, cbtopic);
-			strncpy(g_mqtt_request.topic, topic, sizeof(g_mqtt_request.topic) - 1);
-			g_mqtt_request.topic[sizeof(g_mqtt_request.topic) - 1] = 0;
-			break;
-		}
+
+		uint32_t j;
+		for (j = 0; cbtopic[j] && topic[j]; j++)
+			if (cbtopic[j] != topic[j])
+				break;
+		if (cbtopic[j]) // still has characters, didn't match
+			continue;
+
+		uint32_t baseLen = j;
+		for (j = 0; topic[j] && j < sizeof(g_mqtt_request.topic) - 1; j++)
+			g_mqtt_request.topic[j] = topic[baseLen+j];
+		g_mqtt_request.topic[j] = 0;
+		g_mqtt_request.token = i + 1; // turn index into token
+		ADDLOGF_DEBUG("%s - found match", __func__);
+		break;
 	}
-	ADDLOGF_INFO("%s - MQTT client in topic %s", __func__, topic);
 }
 
 static void mqtt_request_cb(void* arg, err_t err)

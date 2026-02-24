@@ -83,6 +83,7 @@ typedef struct obk_mqtt_request_tag {
 	const unsigned char* received; // note: NOT terminated, may be binary
 	int receivedLen;
 	char topic[128];
+	uint32_t token;
 } obk_mqtt_request_t;
 
 #define MQTT_PUBLISH_ITEM_TOPIC_LENGTH    64
@@ -147,8 +148,8 @@ const char* MQTT_RemoveClientFromTopic(const char* topic, const char *prefix);
 // NOTE: this function is now public, but only because my unit tests
 // system can use it to spoof MQTT packets to check if MQTT commands
 // are working...
-int MQTT_Post_Received(const char *topic, int topiclen, const unsigned char *data, int datalen);
-int MQTT_Post_Received_Str(const char *topic, const char *data);
+void MQTT_Post_Received(uint32_t token, const char *topic, uint32_t topiclen, const unsigned char *data, uint32_t datalen);
+void MQTT_Post_Received_Str(const char *topic, const char *data);
 
 void MQTT_GetStats(int* outUsed, int* outMax, int* outFreeMem);
 
