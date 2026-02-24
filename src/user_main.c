@@ -91,7 +91,7 @@ bool bSafeMode;
 static char g_currentIPString[32] = { 0 };
 static HALWifiStatus_t g_newWiFiStatus = WIFI_UNDEFINED;
 static HALWifiStatus_t g_prevWiFiStatus = WIFI_UNDEFINED;
-static int g_noMQTTTime = 0;
+static uint32_t g_noMQTTTime = 0;
 
 uint8_t g_StartupDelayOver = 0;
 
@@ -384,7 +384,7 @@ void RESET_ScheduleModuleReset(int delSeconds) {
 static char scheduledDriverName[4][16];
 static int scheduledDelay[4] = { -1, -1, -1, -1 };
 void ScheduleDriverStart(const char* name, int delay) {
-	int i;
+	uint32_t i;
 
 	for (i = 0; i < 4; i++) {
 		// if already scheduled, just change delay.
@@ -671,7 +671,7 @@ void Main_OnEverySecond()
 	else
 		safe = "";
 
-	int i;
+	uint32_t i;
 
 #ifdef WINDOWS
 	Main_bHasWiFiConnected = 1;
@@ -957,34 +957,23 @@ void Main_OnEverySecond()
 		Main_bWifiRetry = true;
 
 	// config save moved here because of stack size problems
-	if (g_saveCfgAfter) {
-		g_saveCfgAfter--;
-		if (!g_saveCfgAfter) {
-			CFG_Save_IfThereArePendingChanges();
-		}
-	}
-	if (g_doUnsafeInitIn) {
-		g_doUnsafeInitIn--;
-		if (!g_doUnsafeInitIn) {
-			Main_ForceUnsafeInit();
-		}
-	}
-	if (g_reset) {
-		g_reset--;
-		if (!g_reset) {
-			// ensure any config changes are saved before reboot.
-			CFG_Save_IfThereArePendingChanges();
-#if ENABLE_DRIVER_HLW8112SPI
-			HLW8112_Save_Statistics();
-#endif 
-			ADDLOGF_INFO("Going to call HAL_RebootModule\r\n");
-			HAL_RebootModule();
-		}
-		else {
+	if (g_saveCfgAfter && g_saveCfgAfter-- && !g_saveCfgAfter)
+		CFG_Save_IfThereArePendingChanges();
 
-			ADDLOGF_INFO("Module reboot in %i...\r\n", g_reset);
-		}
+	if (g_doUnsafeInitIn && g_doUnsafeInitIn-- && !g_doUnsafeInitIn)
+		Main_ForceUnsafeInit();
+
+	if (g_reset && g_reset-- && !g_reset) {
+		// ensure any config changes are saved before reboot.
+		CFG_Save_IfThereArePendingChanges();
+#if ENABLE_DRIVER_HLW8112SPI
+		HLW8112_Save_Statistics();
+#endif 
+		ADDLOGF_INFO("Going to call HAL_RebootModule\r\n");
+		HAL_RebootModule();
 	}
+	else if (g_reset)
+		ADDLOGF_INFO("Module reboot in %i...\r\n", g_reset);
 
 #if ENABLE_DRIVER_DHT
 	if (g_dhtsCount > 0) {
@@ -1013,7 +1002,6 @@ void Main_OnEverySecond()
 
 //////////////////////////////////////////////////////
 // Quick tick
-
 unsigned int g_timeMs = 0;
 static uint32_t g_last_time = 0;
 #if ENABLE_DEEPSLEEP
